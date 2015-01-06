@@ -7,7 +7,8 @@
 # Measurements happen synchronously,
 # re-measurements are deferred to be done in bulk
 
-Numeric    = require('./Numeric')
+Numeric   = require('./Numeric')
+
 
 
 class Intrinsic extends Numeric
@@ -15,23 +16,38 @@ class Intrinsic extends Numeric
   subscribing: true
   immediate: true
   url: null
-  
-  Style:          require('../Style')
 
-  Styles:         require('../properties/Styles')
-  Units:          require('../properties/Units')
-  Types:          require('../properties/Types')
-  Transformation: require('../properties/Transformations')
-  Dimensions:     require('../properties/Dimensions')
+  Getters:      require('../properties/Getters')
+  Styles:       require('../properties/Styles')
+
+  Style:        require('../Style')
+
+  @Primitive:   require('../types/Primitive')
+  @Measurement: require('../types/Measurement')
+
+  Matrix:       require('../types/Matrix')
+  Easing:       require('../types/Easing')
+  URL:          require('../types/URL')
+
+  Number:       @Primitive.Number
+  Integer:      @Primitive.Integer
+  String:       @Primitive.String
+  Strings:      @Primitive.Strings
+  Size:         @Primitive.Size
+  Position:     @Primitive.Position
+
+  Length:       @Measurement.Size
+  Time:         @Measurement.Time
+  Frequency:    @Measurement.Frequency
+  Angle:        @Measurement.Angle
 
   Properties: do ->
-    Properties = ->
+    Properties = (engine) ->
+      @engine = engine if engine
     Properties.prototype = new Intrinsic::Styles
     Properties.prototype = new Properties
-    for property, value of Intrinsic::Dimensions::
+    for property, value of Intrinsic::Getters::
       Properties::[property] = value
-    Properties::Units = Intrinsic::Units
-    Properties::Types = Intrinsic::Types
     Properties
 
   events:
@@ -123,27 +139,28 @@ class Intrinsic extends Numeric
   get: (object, property, continuation) ->
     path = @getPath(object, property)
 
-    if (prop = @properties[path])?
-      if typeof prop == 'function'
-        value = prop.call(@, object, continuation)
-      else
-        value = prop
-      @set null, path, value
-      return value
-    else 
-      if (j = path.indexOf('[')) > -1
-        id = path.substring(0, j)
-        property = path.substring(j + 1, path.length - 1)
-        object = @identity.solve(path.substring(0, j))
+    unless (value = Numeric::get.call(@, null, path, continuation))?
+      if (prop = @properties[path])?
+        if typeof prop == 'function'
+          value = prop.call(@, object, continuation)
+        else
+          value = prop
+        @set null, path, value
+        return value
+      else 
+        if (j = path.indexOf('[')) > -1
+          id = path.substring(0, j)
+          property = path.substring(j + 1, path.length - 1)
+          object = @identity.solve(path.substring(0, j))
 
-        if (prop = @properties[property])?
-          if prop.axiom
-            return prop.call(@, object, continuation)
-          else if typeof prop != 'function'
-            return prop
-          else if !prop.matcher && property.indexOf('intrinsic') == -1
-            return prop.call(@, object, continuation)
-    return Numeric::get.call(@, null, path, continuation) || 0
+          if (prop = @properties[property])?
+            if prop.axiom
+              return prop.call(@, object, continuation)
+            else if typeof prop != 'function'
+              return prop
+            else if !prop.matcher && property.indexOf('intrinsic') == -1
+              return prop.call(@, object, continuation)
+    return value || 0
 
 
   # Triggered on possibly resized element by mutation observer
@@ -220,31 +237,23 @@ class Intrinsic extends Numeric
       if properties = @objects[id]
         for prop of properties
           switch prop
-            when "x", "intrinsic-x"
+            when "x", "intrinsic-x", "computed-x"
               @set id, prop, x + node.offsetLeft
-            when "y", "intrinsic-y"
+            when "y", "intrinsic-y", "computed-y"
               @set id, prop, y + node.offsetTop
-            when "width", "intrinsic-width"
+            when "width", "intrinsic-width"#, "computed-width"
               @set id, prop, node.offsetWidth
-            when "height", "intrinsic-height"
+            when "height", "intrinsic-height"#, "computed-height"
               @set id, prop, node.offsetHeight
             else
-              style = @getIntrinsicProperty(prop) || prop
+              style = prop.replace(/$(?:computed|intrinsic)-/, '')
               if @properties[style]?.matcher
                 @set id, prop, @getStyle(node, style)
               else
-                @set id, prop, @get(node, prop)
+                @set id, prop, @get(node, style)
 
     return
 
-  # Return name of intrinsic property used in property path 
-  getIntrinsicProperty: (path) ->
-    index = path.indexOf('intrinsic-')
-    if index > -1
-      if (last = path.indexOf(']', index)) == -1
-        last = undefined
-      return property = path.substring(index + 10, last)
- 
   camelize: (string) ->
     return string.toLowerCase().replace /-([a-z])/gi, (match) ->
       return match[1].toUpperCase()

@@ -196,6 +196,7 @@ class Inspector
     #for domain in @engine.domains
     #  domain.distances = undefined
     values = {}
+    @singles = undefined
     for property, value of @engine.values
       values[property] = value
     if @rulers
@@ -291,40 +292,42 @@ class Inspector
       @panel.parentNode?.classList.remove('active')
       element.appendChild(@panel)
 
-    for domain in @engine.domains
-      if String(domain.uid) == String(id)
-        @panel.innerHTML = domain.constraints?.map (constraint) =>
-          return @toExpressionString(constraint.operations[0])
-        .filter (string) ->
-          return true unless props
-          for prop in props
-            if string.indexOf(prop) > -1
-              if !all && props.length > 1
-                props.splice(1)
-              return true
-          return false
-        .map (string) ->
-          if props
-            for prop in props
-              prop = prop.replace(/([\[\]$])/g, '\\$1')
-              string = string.replace(new RegExp('\\>(' + prop + '[\\[\\"])', 'g'), ' mark>$1')
+    if id == 'singles'
+      domain = @singles
+    else
+      for d in @engine.domains
+        if String(d.uid) == String(id)
+          domain = d
+          break
 
-
-          return string
-        .join('\n')
+    if domain
+      @panel.innerHTML = domain.constraints?.map (constraint) =>
+        return @toExpressionString(constraint.operations[0])
+      .filter (string) ->
+        return true unless props
+        for prop in props
+          if string.indexOf(prop) > -1
+            if !all && props.length > 1
+              props.splice(1)
+            return true
+        return false
+      .map (string) ->
         if props
-          @panel.classList.add('filtered')
-        diff = element.offsetLeft + element.offsetWidth + 10 - @panel.offsetWidth
-        if diff > 0
-          @panel.style.left = diff + 'px'
-        else
-          @panel.style.left = ''
-        element.classList.add('active')
+          for prop in props
+            prop = prop.replace(/([\[\]$])/g, '\\$1')
+            string = string.replace(new RegExp('\\>(' + prop + '[\\[\\"])', 'g'), ' mark>$1')
 
 
-
-        break
-
+        return string
+      .join('\n')
+      if props
+        @panel.classList.add('filtered')
+      diff = element.offsetLeft + element.offsetWidth + 10 - @panel.offsetWidth
+      if diff > 0
+        @panel.style.left = diff + 'px'
+      else
+        @panel.style.left = ''
+      element.classList.add('active')
 
   onMouseMove: (e) =>
     target = e.target
@@ -440,8 +443,7 @@ class Inspector
     multiples = []
     for domain, index in domains by -1
       if domain.constraints.length == 1
-        if !singles
-          singles = {constraints: [], uid: 'singles', displayName: 'Singles'}
+        singles = @singles ||= {constraints: [], uid: 'singles', displayName: 'Singles'}
         singles.constraints.push(domain.constraints[0])
       else
         multiples.push(domain)

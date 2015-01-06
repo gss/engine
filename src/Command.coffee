@@ -147,7 +147,7 @@ class Command
       argument = operation[i]
       if argument?.push
         argument.parent ?= operation
-        type = engine.Command(argument, operation, i).type
+        type = (argument.domain || engine).Command(argument, operation, i).type
       else
         type = @types[typeof argument]
         if type == 'Object'
@@ -216,7 +216,8 @@ class Command
 
   # Write meta data for a foreign domain, optionally queues parent operation
   transfer: (engine, operation, continuation, scope, ascender, ascending, top, replacement) ->
-    if (meta = @getMeta(operation))
+    debugger
+    if (meta = @getMeta(operation)) && !engine.finalized
       for path of operation.variables
         if (value = (replacement || engine).values[path])?
           (meta.values ||= {})[path] = value

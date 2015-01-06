@@ -1,7 +1,7 @@
 Command = require ('../Command')
 
-class Transformation extends Command
-  type: 'Transformation'
+class Matrix extends Command
+  type: 'Matrix'
   
   @Matrix: require('../../vendor/gl-matrix')
 

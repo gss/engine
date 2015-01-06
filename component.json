@@ -15,14 +15,16 @@
     "lib/Command.js",
     "lib/Update.js",
     "lib/Query.js", 
+    "lib/Style.js", 
 
-    "lib/Condition.js", 
-    "lib/Constraint.js", 
-    "lib/Iterator.js", 
-    "lib/Selector.js", 
-    "lib/Style.js",
-    "lib/Stylesheet.js", 
-    "lib/Variable.js", 
+    "lib/commands/Condition.js", 
+    "lib/commands/Constraint.js", 
+    "lib/commands/Iterator.js", 
+    "lib/commands/Selector.js", 
+    "lib/commands/Style.js",
+    "lib/commands/Stylesheet.js", 
+    "lib/commands/Variable.js", 
+    "lib/commands/Unit.js", 
 
     "lib/domains/Numeric.js",
     "lib/domains/Abstract.js",
@@ -32,12 +34,16 @@
     "lib/domains/Linear.js", 
     "lib/domains/Finite.js", 
 
-    "lib/properties/Axioms.js",
     "lib/properties/Dimensions.js",
+    "lib/properties/Getters.js",
     "lib/properties/Styles.js",
-    "lib/properties/Types.js",
-    "lib/properties/Units.js",
-    "lib/properties/Transformations.js",
+
+    "lib/types/Color.js",
+    "lib/types/Easing.js",
+    "lib/types/Matrix.js",
+    "lib/types/Measurement.js",
+    "lib/types/Primitive.js",
+    "lib/types/URL.js",
 
     "lib/utilities/Console.js",
     "lib/utilities/Exporter.js",
@@ -55,6 +61,5 @@
     "slightlyoff/cassowary.js": "*"
   },
   "paths": ["/Users/invizko/Sites/the-gss"],
-  "locals": ["the-compiler", "ccss-compiler"],
   "main": "lib/Engine.js"
 }

@@ -1,10 +1,9 @@
 
 Numeric    = require('./Numeric')
-Constraint = require('../Constraint')
+Constraint = require('../commands/Constraint')
 
 class Boolean extends Numeric
   immutable: true
-
   
 Boolean::Constraint = Constraint.extend {
   signature: [

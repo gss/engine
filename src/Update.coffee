@@ -2,7 +2,7 @@
 # Evaluates commands and their side effects in ordered batches
 
 Updater = (engine) ->
-  Update = (problem, domain, parent, Domain) ->
+  Update = (problem, domain, parent, Domain, Auto) ->
     # Handle constructor call (e.g. new engine.update)
     if @ instanceof Update
       @problems = problem && (domain.push && problem || [problem]) || []
@@ -10,6 +10,11 @@ Updater = (engine) ->
       return
     
     update = undefined
+
+    if typeof problem[0] == 'string'
+      unless engine.domain.signatures[problem[0]]
+        Domain = problem.domain = engine.solved
+        debugger
 
     # Process arguments
     for arg, index in problem
@@ -33,7 +38,7 @@ Updater = (engine) ->
     # Replace arguments updates with parent function update
     unless problem[0] instanceof Array
       if update
-        update.wrap(problem, parent, domain || Domain)
+        update.wrap(problem, parent, domain || Domain, engine.intrinsic)
       else if problem[0] != 'remove'
         return
       else
@@ -127,7 +132,7 @@ Update.prototype =
     return
 
   # Replace queued arguments with their parent function call
-  wrap: (operation, parent, Domain) ->
+  wrap: (operation, parent, Domain, Auto) ->
     positions = undefined
     for problems, index in @problems
       if domain = @domains[index]
@@ -141,9 +146,10 @@ Update.prototype =
             (positions ||= []).push(index)
 
     # Use suggested domain if no argument domain can handle operation
-    if Domain && (!other || other.displayName != Domain.displayName)
+    if (!other || (Domain && other.displayName != Domain.displayName))
       other = Domain
-      position = @push [operation], Domain
+      debugger
+      position = @push [operation], other
 
     if !positions
       @push [operation], null

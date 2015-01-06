@@ -2,7 +2,7 @@ class Styles
 
   transform: [[
     -> mat4.create(),
-    'matrix'
+    'Matrix'
   ]]
 
   animation: [[[

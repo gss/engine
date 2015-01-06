@@ -48,20 +48,15 @@ Style = (definition, name, styles,
           max = Math.max(substyle.depth, max)
         when "string"
           # Predefined value type
-          Types = @Types
-          if type = Types[property]
+          if type = @engine[property]
             types.push(type)
             if initial == undefined
-              if type.displayName == undefined
-                for key, value of Types
-                  if value == type
-                    type.displayName = key
-                    break
-              if storage = Types[type.displayName + 's']
+              ###if storage = Types[type.displayName + 's']
                 for key of storage
                   if type.call(@, key)
                     initial = key
-                  break
+                  break\
+              ###
               
               initial ?= 0
           # Keyword
@@ -137,7 +132,7 @@ class Shorthand
               for index in [keys.indexOf(key) - 1 ... 0] by -1
                 if (k = keys[index]) != previous
                   break if @hasOwnProperty(k)
-                  if types[index] == @styles.Types.Length
+                  if types[index] == @engine.Length
                     expression = @toExpressionString(k, @[k])
                     prefix = ((string || prefix) && ' ' || '') + expression + (prefix && ' ' + prefix || '')
                     previous = k
@@ -168,7 +163,7 @@ class Shorthand
     switch typeof operation
       when 'object'
         name = operation[0]
-        if name == '%' || @styles.Units[name] || @styles.Types.Times[name]
+        if name == '%' || @styles.signatures[name]
           return @toExpressionString(key, operation[1], true) + name
         else
           string = name + '('

@@ -1,44 +1,109 @@
-/* gss-engine - version 1.0.4-beta (2015-01-05) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2015-01-06) - http://gridstylesheets.org */
+
 ;(function(){
 
 /**
- * Require the given path.
+ * Require the module at `name`.
  *
- * @param {String} path
+ * @param {String} name
  * @return {Object} exports
  * @api public
  */
 
-function require(path, parent, orig) {
-  var resolved = require.resolve(path);
+function require(name) {
+  var module = require.modules[name];
+  if (!module) throw new Error('failed to require "' + name + '"');
 
-  // lookup failed
-  if (null == resolved) {
-    orig = orig || path;
-    parent = parent || 'root';
-    var err = new Error('Failed to require "' + orig + '" from "' + parent + '"');
-    err.path = orig;
-    err.parent = parent;
-    err.require = true;
-    throw err;
-  }
-
-  var module = require.modules[resolved];
-
-  // perform real require()
-  // by invoking the module's
-  // registered function
-  if (!module._resolving && !module.exports) {
-    var mod = {};
-    mod.exports = {};
-    mod.client = mod.component = true;
-    module._resolving = true;
-    module.call(this, mod.exports, require.relative(resolved), mod);
-    delete module._resolving;
-    module.exports = mod.exports;
+  if (!('exports' in module) && typeof module.definition === 'function') {
+    module.client = module.component = true;
+    module.definition.call(this, module.exports = {}, module);
+    delete module.definition;
   }
 
   return module.exports;
+}
+
+/**
+ * Meta info, accessible in the global scope unless you use AMD option.
+ */
+
+require.loader = 'component';
+
+/**
+ * Internal helper object, contains a sorting function for semantiv versioning
+ */
+require.helper = {};
+require.helper.semVerSort = function(a, b) {
+  var aArray = a.version.split('.');
+  var bArray = b.version.split('.');
+  for (var i=0; i<aArray.length; ++i) {
+    var aInt = parseInt(aArray[i], 10);
+    var bInt = parseInt(bArray[i], 10);
+    if (aInt === bInt) {
+      var aLex = aArray[i].substr((""+aInt).length);
+      var bLex = bArray[i].substr((""+bInt).length);
+      if (aLex === '' && bLex !== '') return 1;
+      if (aLex !== '' && bLex === '') return -1;
+      if (aLex !== '' && bLex !== '') return aLex > bLex ? 1 : -1;
+      continue;
+    } else if (aInt > bInt) {
+      return 1;
+    } else {
+      return -1;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Find and require a module which name starts with the provided name.
+ * If multiple modules exists, the highest semver is used. 
+ * This function can only be used for remote dependencies.
+
+ * @param {String} name - module name: `user~repo`
+ * @param {Boolean} returnPath - returns the canonical require path if true, 
+ *                               otherwise it returns the epxorted module
+ */
+require.latest = function (name, returnPath) {
+  function showError(name) {
+    throw new Error('failed to find latest module of "' + name + '"');
+  }
+  // only remotes with semvers, ignore local files conataining a '/'
+  var versionRegexp = /(.*)~(.*)@v?(\d+\.\d+\.\d+[^\/]*)$/;
+  var remoteRegexp = /(.*)~(.*)/;
+  if (!remoteRegexp.test(name)) showError(name);
+  var moduleNames = Object.keys(require.modules);
+  var semVerCandidates = [];
+  var otherCandidates = []; // for instance: name of the git branch
+  for (var i=0; i<moduleNames.length; i++) {
+    var moduleName = moduleNames[i];
+    if (new RegExp(name + '@').test(moduleName)) {
+        var version = moduleName.substr(name.length+1);
+        var semVerMatch = versionRegexp.exec(moduleName);
+        if (semVerMatch != null) {
+          semVerCandidates.push({version: version, name: moduleName});
+        } else {
+          otherCandidates.push({version: version, name: moduleName});
+        } 
+    }
+  }
+  if (semVerCandidates.concat(otherCandidates).length === 0) {
+    showError(name);
+  }
+  if (semVerCandidates.length > 0) {
+    var module = semVerCandidates.sort(require.helper.semVerSort).pop().name;
+    if (returnPath === true) {
+      return module;
+    }
+    return require(module);
+  }
+  // if the build contains more than one branch of the same module
+  // you should not use this funciton
+  var module = otherCandidates.sort(function(a, b) {return a.name > b.name})[0].name;
+  if (returnPath === true) {
+    return module;
+  }
+  return require(module);
 }
 
 /**
@@ -48,160 +113,33 @@ function require(path, parent, orig) {
 require.modules = {};
 
 /**
- * Registered aliases.
- */
-
-require.aliases = {};
-
-/**
- * Resolve `path`.
+ * Register module at `name` with callback `definition`.
  *
- * Lookup:
- *
- *   - PATH/index.js
- *   - PATH.js
- *   - PATH
- *
- * @param {String} path
- * @return {String} path or null
- * @api private
- */
-
-require.resolve = function(path) {
-  if (path.charAt(0) === '/') path = path.slice(1);
-
-  var paths = [
-    path,
-    path + '.js',
-    path + '.json',
-    path + '/index.js',
-    path + '/index.json'
-  ];
-
-  for (var i = 0; i < paths.length; i++) {
-    var path = paths[i];
-    if (require.modules.hasOwnProperty(path)) return path;
-    if (require.aliases.hasOwnProperty(path)) return require.aliases[path];
-  }
-};
-
-/**
- * Normalize `path` relative to the current path.
- *
- * @param {String} curr
- * @param {String} path
- * @return {String}
- * @api private
- */
-
-require.normalize = function(curr, path) {
-  var segs = [];
-
-  if ('.' != path.charAt(0)) return path;
-
-  curr = curr.split('/');
-  path = path.split('/');
-
-  for (var i = 0; i < path.length; ++i) {
-    if ('..' == path[i]) {
-      curr.pop();
-    } else if ('.' != path[i] && '' != path[i]) {
-      segs.push(path[i]);
-    }
-  }
-
-  return curr.concat(segs).join('/');
-};
-
-/**
- * Register module at `path` with callback `definition`.
- *
- * @param {String} path
+ * @param {String} name
  * @param {Function} definition
  * @api private
  */
 
-require.register = function(path, definition) {
-  require.modules[path] = definition;
+require.register = function (name, definition) {
+  require.modules[name] = {
+    definition: definition
+  };
 };
 
 /**
- * Alias a module definition.
+ * Define a module's exports immediately with `exports`.
  *
- * @param {String} from
- * @param {String} to
+ * @param {String} name
+ * @param {Generic} exports
  * @api private
  */
 
-require.alias = function(from, to) {
-  if (!require.modules.hasOwnProperty(from)) {
-    throw new Error('Failed to alias "' + from + '", it does not exist');
-  }
-  require.aliases[to] = from;
-};
-
-/**
- * Return a require function relative to the `parent` path.
- *
- * @param {String} parent
- * @return {Function}
- * @api private
- */
-
-require.relative = function(parent) {
-  var p = require.normalize(parent, '..');
-
-  /**
-   * lastIndexOf helper.
-   */
-
-  function lastIndexOf(arr, obj) {
-    var i = arr.length;
-    while (i--) {
-      if (arr[i] === obj) return i;
-    }
-    return -1;
-  }
-
-  /**
-   * The relative require() itself.
-   */
-
-  function localRequire(path) {
-    var resolved = localRequire.resolve(path);
-    return require(resolved, parent, path);
-  }
-
-  /**
-   * Resolve relative to the parent.
-   */
-
-  localRequire.resolve = function(path) {
-    var c = path.charAt(0);
-    if ('/' == c) return path.slice(1);
-    if ('.' == c) return require.normalize(p, path);
-
-    // resolve deps by returning
-    // the dep in the nearest "deps"
-    // directory
-    var segs = parent.split('/');
-    var i = lastIndexOf(segs, 'deps') + 1;
-    if (!i) i = 0;
-    path = segs.slice(0, i + 1).join('/') + '/deps/' + path;
-    return path;
+require.define = function (name, exports) {
+  require.modules[name] = {
+    exports: exports
   };
-
-  /**
-   * Check if module is defined at `path`.
-   */
-
-  localRequire.exists = function(path) {
-    return require.modules.hasOwnProperty(localRequire.resolve(path));
-  };
-
-  return localRequire;
 };
-require.register("gss-error-reporter/lib/error-reporter.js", function(exports, require, module){
+require.register("gss~error-reporter@v0.1.4", function (exports, module) {
 var ErrorReporter,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -297,112 +235,32 @@ ErrorReporter = (function() {
 module.exports = ErrorReporter;
 
 });
-require.register("the-gss-error-reporter/lib/error-reporter.js", function(exports, require, module){
-var ErrorReporter,
-  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-ErrorReporter = (function() {
-  ErrorReporter.prototype._sourceCode = null;
-
-  function ErrorReporter(sourceCode) {
-    this.reportError = __bind(this.reportError, this);
-    if (sourceCode == null) {
-      throw new Error('Source code not provided');
-    }
-    if (toString.call(sourceCode) !== '[object String]') {
-      throw new TypeError('Source code must be a string');
-    }
-    this._sourceCode = sourceCode;
-  }
-
-  ErrorReporter.prototype.reportError = function(message, lineNumber, columnNumber) {
-    var condition, context, currentLine, error, errorLocator, gutterValue, item, lastLineNumber, lineValue, lines, longestLineNumberLength, nextLineIndex, nextLineNumber, padding, previousLineIndex, previousLineNumber, _i, _len;
-    if (message == null) {
-      throw new Error('Message not provided');
-    }
-    if (toString.call(message) !== '[object String]') {
-      throw new TypeError('Message must be a string');
-    }
-    if (message.length === 0) {
-      throw new Error('Message must not be empty');
-    }
-    if (lineNumber == null) {
-      throw new Error('Line number not provided');
-    }
-    if (toString.call(lineNumber) !== '[object Number]') {
-      throw new TypeError('Line number must be a number');
-    }
-    if (lineNumber <= 0) {
-      throw new RangeError('Line number is invalid');
-    }
-    if (columnNumber == null) {
-      throw new Error('Column number not provided');
-    }
-    if (toString.call(columnNumber) !== '[object Number]') {
-      throw new TypeError('Column number must be a number');
-    }
-    if (columnNumber <= 0) {
-      throw new RangeError('Column number is invalid');
-    }
-    lines = this._sourceCode.split('\n');
-    if (lineNumber > lines.length) {
-      throw new RangeError('Line number is out of range');
-    }
-    currentLine = lines[lineNumber - 1];
-    if (columnNumber > currentLine.length) {
-      throw new RangeError('Column number is out of range');
-    }
-    error = [];
-    error.push("Error on line " + lineNumber + ", column " + columnNumber + ": " + message);
-    error.push('');
-    previousLineNumber = lineNumber - 1;
-    nextLineNumber = lineNumber + 1;
-    if (previousLineNumber - 1 >= 0) {
-      previousLineIndex = previousLineNumber - 1;
-    }
-    if (nextLineNumber - 1 <= lines.length - 1) {
-      nextLineIndex = nextLineNumber - 1;
-    }
-    lastLineNumber = nextLineIndex != null ? nextLineNumber : lineNumber;
-    longestLineNumberLength = ("" + lastLineNumber).length;
-    errorLocator = "" + (Array(columnNumber).join('-')) + "^";
-    context = [];
-    context.push([previousLineNumber, lines[previousLineIndex], previousLineIndex != null]);
-    context.push([lineNumber, currentLine, true]);
-    context.push(['^', errorLocator, true]);
-    context.push([nextLineNumber, lines[nextLineIndex], nextLineIndex != null]);
-    for (_i = 0, _len = context.length; _i < _len; _i++) {
-      item = context[_i];
-      gutterValue = item[0];
-      lineValue = item[1];
-      condition = item[2];
-      padding = Array(longestLineNumberLength - ("" + gutterValue).length + 1).join(' ');
-      gutterValue = "" + padding + gutterValue;
-      if (condition) {
-        error.push("" + gutterValue + " : " + lineValue);
-      }
-    }
-    console.error(error.join('\n'));
-    throw new Error(message);
-  };
-
-  return ErrorReporter;
-
-})();
-
-module.exports = ErrorReporter;
-
+require.define("gss~error-reporter@v0.1.4/component.json", {
+  "name": "error-reporter",
+  "description": "Provide source code context when reporting errors.",
+  "author": "Paul Young",
+  "version": "0.1.4",
+  "json": [
+    "component.json"
+  ],
+  "scripts": [
+    "lib/error-reporter.js"
+  ],
+  "main": "lib/error-reporter.js",
+  "repository": "gss/error-reporter"
 });
-require.register("gss-vgl-compiler/lib/compiler.js", function(exports, require, module){
+
+require.register("gss~vfl-compiler@v1.1.3", function (exports, module) {
 var ErrorReporter, parse;
 
 if (typeof window !== "undefined" && window !== null) {
-  parse = require('./parser').parse;
+  parse = require('gss~vfl-compiler@v1.1.3/lib/parser.js').parse;
 } else {
-  parse = require('../lib/parser').parse;
+  parse = require('gss~vfl-compiler@v1.1.3/lib/parser.js').parse;
 }
 
-ErrorReporter = require('error-reporter');
+ErrorReporter = require('gss~error-reporter@v0.1.4');
 
 module.exports = {
   parse: function(source) {
@@ -421,7 +279,8711 @@ module.exports = {
 };
 
 });
-require.register("gss-vgl-compiler/lib/parser.js", function(exports, require, module){
+
+require.register("gss~vfl-compiler@v1.1.3/lib/parser.js", function (exports, module) {
+module.exports = (function() {
+  /*
+   * Generated by PEG.js 0.8.0.
+   *
+   * http://pegjs.majda.cz/
+   */
+
+  function peg$subclass(child, parent) {
+    function ctor() { this.constructor = child; }
+    ctor.prototype = parent.prototype;
+    child.prototype = new ctor();
+  }
+
+  function SyntaxError(message, expected, found, offset, line, column) {
+    this.message  = message;
+    this.expected = expected;
+    this.found    = found;
+    this.offset   = offset;
+    this.line     = line;
+    this.column   = column;
+
+    this.name     = "SyntaxError";
+  }
+
+  peg$subclass(SyntaxError, Error);
+
+  function parse(input) {
+    var options = arguments.length > 1 ? arguments[1] : {},
+
+        peg$FAILED = {},
+
+        peg$startRuleFunctions = { start: peg$parsestart },
+        peg$startRuleFunction  = peg$parsestart,
+
+        peg$c0 = peg$FAILED,
+        peg$c1 = [],
+        peg$c2 = function() { return p.getResults(); },
+        peg$c3 = function(vfl) { return p.getResults().concat(vfl); },
+        peg$c4 = function(exp) { return exp; },
+        peg$c5 = null,
+        peg$c6 = function(d, head, tail, o) {
+              var connection, result, ccss, chainedViews, withContainer,
+                tailView, tailViewObj, headView, headViewObj;
+              p.addSplatIfNeeded(head, d, o);
+              result = head;
+              headViewObj = head;
+              headView = headViewObj.view;
+              chainedViews = [];
+              if (headView !== "|") {chainedViews.push(headView);}
+              p.addPreds(headView,head.preds,d);
+              for (var i = 0; i < tail.length; i++) {
+                connection = tail[i][1];
+                tailViewObj = tail[i][3];
+                p.addSplatIfNeeded(tailViewObj, d, o);
+                tailView = tailViewObj.view;
+                if (tailView !== "|") {chainedViews.push(tailView);}
+                p.addPreds(tailView,tail[i][3].preds,d);
+                result = [
+                  //"c",
+                  connection,
+                  result,
+                  tailView
+                ];
+                if (!(headViewObj.isPoint && tailViewObj.isPoint)) {
+                  withContainer = ( headView =="|" || tailView === "|") && !(headViewObj.isPoint || tailViewObj.isPoint);          
+                  ccss = p.getLeftVar(headView, d, o, headViewObj) + " "
+                    + p.getConnectionString(connection, d, o, withContainer) + " "
+                    + p.getRightVar(tailView, d, o, tailViewObj)
+                    + p.getTrailingOptions(o)
+                    + p.getSW(o);
+                  p.addC(
+                    ccss.trim()
+                );}
+                headViewObj = tailViewObj;
+                headView = tailView;
+              }
+              p.addChains(chainedViews,o);
+              return {'vfl':d, o:o};
+            },
+        peg$c7 = "@horizontal",
+        peg$c8 = { type: "literal", value: "@horizontal", description: "\"@horizontal\"" },
+        peg$c9 = "@-gss-horizontal",
+        peg$c10 = { type: "literal", value: "@-gss-horizontal", description: "\"@-gss-horizontal\"" },
+        peg$c11 = "@-gss-h",
+        peg$c12 = { type: "literal", value: "@-gss-h", description: "\"@-gss-h\"" },
+        peg$c13 = "@h",
+        peg$c14 = { type: "literal", value: "@h", description: "\"@h\"" },
+        peg$c15 = function() {return 0;},
+        peg$c16 = "@vertical",
+        peg$c17 = { type: "literal", value: "@vertical", description: "\"@vertical\"" },
+        peg$c18 = "@-gss-vertical",
+        peg$c19 = { type: "literal", value: "@-gss-vertical", description: "\"@-gss-vertical\"" },
+        peg$c20 = "@-gss-v",
+        peg$c21 = { type: "literal", value: "@-gss-v", description: "\"@-gss-v\"" },
+        peg$c22 = "@v",
+        peg$c23 = { type: "literal", value: "@v", description: "\"@v\"" },
+        peg$c24 = function() {return 1;},
+        peg$c25 = function(os) {
+            var obj = {};
+            obj.chains = [];
+            for (var i = 0; i < os.length; i++) {
+              // proccess chains
+              if (!!os[i].chain) {
+                obj.chains.push(os[i].chain);
+              }
+              // or just add option
+              else {
+                obj[os[i].key] = os[i].value;
+              }
+            }
+            return obj;
+          },
+        peg$c26 = { type: "other", description: "Option" },
+        peg$c27 = function(chain) { return chain; },
+        peg$c28 = "in",
+        peg$c29 = { type: "literal", value: "in", description: "\"in\"" },
+        peg$c30 = "(",
+        peg$c31 = { type: "literal", value: "(", description: "\"(\"" },
+        peg$c32 = /^[^) ]/,
+        peg$c33 = { type: "class", value: "[^) ]", description: "[^) ]" },
+        peg$c34 = ")",
+        peg$c35 = { type: "literal", value: ")", description: "\")\"" },
+        peg$c36 = function(simple) {
+              return {key:"in", value:simple.join('')};
+            },
+        peg$c37 = /^[^)]/,
+        peg$c38 = { type: "class", value: "[^)]", description: "[^)]" },
+        peg$c39 = function(complex) {
+              return {key:"in", value:"(" + complex.join('') + ")"};
+            },
+        peg$c40 = function(key, value) {
+              return {key:key.join(''), value:value.join('')};
+            },
+        peg$c41 = function(sw) {return {key:"sw",value:sw}; },
+        peg$c42 = /^[^>=<!)]/,
+        peg$c43 = { type: "class", value: "[^>=<!)]", description: "[^>=<!)]" },
+        peg$c44 = /^[>=<!]/,
+        peg$c45 = { type: "class", value: "[>=<!]", description: "[>=<!]" },
+        peg$c46 = function() {
+              throw new SyntaxError('invalid character in option', null, null, null, line(), column());
+            },
+        peg$c47 = { type: "other", description: "Chain" },
+        peg$c48 = "chain-",
+        peg$c49 = { type: "literal", value: "chain-", description: "\"chain-\"" },
+        peg$c50 = function(prop, preds) { return {'chain':[prop.join(""),preds]};},
+        peg$c51 = { type: "other", description: "ChainPredicate" },
+        peg$c52 = function(items) {
+            items.raw = "";
+            items.forEach( function (item){
+              items.raw += item.raw;
+            });
+            return items;
+          },
+        peg$c53 = "()",
+        peg$c54 = { type: "literal", value: "()", description: "\"()\"" },
+        peg$c55 = function() {return {raw:""};},
+        peg$c56 = ",",
+        peg$c57 = { type: "literal", value: ",", description: "\",\"" },
+        peg$c58 = function(item) {
+            item.raw = item.headEq + item.value + item.tailEq + item.s;
+            return item;
+          },
+        peg$c59 = function(headEq, value, tailEq, s) {
+              return {headEq:p.join(headEq),value:p.join(value),tailEq:p.join(tailEq),s:p.join(s)};},
+        peg$c60 = /^[^>=<!) ]/,
+        peg$c61 = { type: "class", value: "[^>=<!) ]", description: "[^>=<!) ]" },
+        peg$c62 = { type: "other", description: "VFL Element" },
+        peg$c63 = function(point) {return {view:"|", isPoint:true, pos:point};},
+        peg$c64 = "|",
+        peg$c65 = { type: "literal", value: "|", description: "\"|\"" },
+        peg$c66 = function() {return {view:"|"};},
+        peg$c67 = function(view, pred) {
+              view = p.stringify(view); 
+              p.addSelector(view); 
+              return {view:view,preds:pred};
+            },
+        peg$c68 = /^[^()]/,
+        peg$c69 = { type: "class", value: "[^()]", description: "[^()]" },
+        peg$c70 = function(view, pred) {
+              view = "(" + p.stringify(view) + ")"; 
+              p.addSelector(view); 
+              return {view:view,preds:pred};
+            },
+        peg$c71 = "...",
+        peg$c72 = { type: "literal", value: "...", description: "\"...\"" },
+        peg$c73 = function(o, connection) {o.isSplat = true; o.connection = connection; return o;},
+        peg$c74 = { type: "other", description: "Point" },
+        peg$c75 = "<",
+        peg$c76 = { type: "literal", value: "<", description: "\"<\"" },
+        peg$c77 = /^[^>]/,
+        peg$c78 = { type: "class", value: "[^>]", description: "[^>]" },
+        peg$c79 = ">",
+        peg$c80 = { type: "literal", value: ">", description: "\">\"" },
+        peg$c81 = function(position) {
+            return p.stringify(position);
+          },
+        peg$c82 = { type: "other", description: "Predicate" },
+        peg$c83 = function(preds) {return preds;},
+        peg$c84 = { type: "other", description: "Predicate Expression" },
+        peg$c85 = "==",
+        peg$c86 = { type: "literal", value: "==", description: "\"==\"" },
+        peg$c87 = "<=",
+        peg$c88 = { type: "literal", value: "<=", description: "\"<=\"" },
+        peg$c89 = ">=",
+        peg$c90 = { type: "literal", value: ">=", description: "\">=\"" },
+        peg$c91 = "=<",
+        peg$c92 = { type: "literal", value: "=<", description: "\"=<\"" },
+        peg$c93 = function() {return "<=";},
+        peg$c94 = "=>",
+        peg$c95 = { type: "literal", value: "=>", description: "\"=>\"" },
+        peg$c96 = function() {return ">=";},
+        peg$c97 = function(eq) {return eq;},
+        peg$c98 = /^[+\-\/*]/,
+        peg$c99 = { type: "class", value: "[+\\-\\/*]", description: "[+\\-\\/*]" },
+        peg$c100 = function(op) {return op;},
+        peg$c101 = function(name) {return ["view",name.join("")];},
+        peg$c102 = function(n) {return n.join("");},
+        peg$c103 = "[",
+        peg$c104 = { type: "literal", value: "[", description: "\"[\"" },
+        peg$c105 = "]",
+        peg$c106 = { type: "literal", value: "]", description: "\"]\"" },
+        peg$c107 = function(name) {return "[" + name.join("") + "]";},
+        peg$c108 = function(view, prop) {return view.join("") + "[" + prop.join("") + "]";},
+        peg$c109 = function() {return "";},
+        peg$c110 = { type: "other", description: "VFL Connection" },
+        peg$c111 = "-",
+        peg$c112 = { type: "literal", value: "-", description: "\"-\"" },
+        peg$c113 = function(gap) {return {op:"==",gap:gap};},
+        peg$c114 = function() {return {op:"==",gap:"__STANDARD__"};},
+        peg$c115 = "~",
+        peg$c116 = { type: "literal", value: "~", description: "\"~\"" },
+        peg$c117 = function(gap) {return {op:"<=",gap:gap};},
+        peg$c118 = function() {return {op:"<=",gap:"__STANDARD__"};},
+        peg$c119 = function() {return {op:"<="};},
+        peg$c120 = "",
+        peg$c121 = function() {return {op:"=="};},
+        peg$c122 = "&",
+        peg$c123 = { type: "literal", value: "&", description: "\"&\"" },
+        peg$c124 = function(local) {
+            if (local.length > 1) {
+              throw new SyntaxError('Invalid local variable scope', null, null, null, line(), column());
+            }
+            return local.join("");
+          },
+        peg$c125 = "^",
+        peg$c126 = { type: "literal", value: "^", description: "\"^\"" },
+        peg$c127 = function(parent) {return parent.join("");},
+        peg$c128 = "$",
+        peg$c129 = { type: "literal", value: "$", description: "\"$\"" },
+        peg$c130 = function(global) {
+            if (global.length > 1) {
+              throw new SyntaxError('Invalid global variable scope', null, null, null, line(), column());
+            }
+            return global.join("");
+          },
+        peg$c131 = { type: "other", description: "VFL Connection Gap" },
+        peg$c132 = /^[a-zA-Z0-9_]/,
+        peg$c133 = { type: "class", value: "[a-zA-Z0-9_]", description: "[a-zA-Z0-9_]" },
+        peg$c134 = function(scope, gap) {return scope + gap.join("");},
+        peg$c135 = function(gap) {return gap.join("");},
+        peg$c136 = /^[^[]/,
+        peg$c137 = { type: "class", value: "[^[]", description: "[^[]" },
+        peg$c138 = /^[^\]]/,
+        peg$c139 = { type: "class", value: "[^\\]]", description: "[^\\]]" },
+        peg$c140 = function(gap, varr) {return gap.join("") + "[" + varr.join("") + "]";},
+        peg$c141 = { type: "other", description: "Strength / Weight" },
+        peg$c142 = "!",
+        peg$c143 = { type: "literal", value: "!", description: "\"!\"" },
+        peg$c144 = /^[a-zA-Z]/,
+        peg$c145 = { type: "class", value: "[a-zA-Z]", description: "[a-zA-Z]" },
+        peg$c146 = /^[0-9]/,
+        peg$c147 = { type: "class", value: "[0-9]", description: "[0-9]" },
+        peg$c148 = function(s, w) {
+            var val;
+            val = "!" + p.join(s) + p.join(w);
+            return val.trim();
+          },
+        peg$c149 = { type: "any", description: "any character" },
+        peg$c150 = function() {
+            throw new SyntaxError('Invalid Strength or Weight', null, null, null, line(), column());
+          },
+        peg$c151 = /^[a-zA-Z0-9#.\-_$:""&]/,
+        peg$c152 = { type: "class", value: "[a-zA-Z0-9#.\\-_$:\"\"&]", description: "[a-zA-Z0-9#.\\-_$:\"\"&]" },
+        peg$c153 = " ",
+        peg$c154 = { type: "literal", value: " ", description: "\" \"" },
+        peg$c155 = function(val) {
+            return [ "number",
+              val
+            ];
+          },
+        peg$c156 = function(digits) {
+            return parseInt(digits.join(""), 10);
+          },
+        peg$c157 = ".",
+        peg$c158 = { type: "literal", value: ".", description: "\".\"" },
+        peg$c159 = function(digits) {
+            return parseFloat(digits.join(""));
+          },
+        peg$c160 = /^[\-+]/,
+        peg$c161 = { type: "class", value: "[\\-+]", description: "[\\-+]" },
+        peg$c162 = { type: "other", description: "whitespace" },
+        peg$c163 = /^[\t\x0B\f \xA0\uFEFF]/,
+        peg$c164 = { type: "class", value: "[\\t\\x0B\\f \\xA0\\uFEFF]", description: "[\\t\\x0B\\f \\xA0\\uFEFF]" },
+        peg$c165 = /^[\n\r\u2028\u2029]/,
+        peg$c166 = { type: "class", value: "[\\n\\r\\u2028\\u2029]", description: "[\\n\\r\\u2028\\u2029]" },
+        peg$c167 = { type: "other", description: "end of line" },
+        peg$c168 = "\n",
+        peg$c169 = { type: "literal", value: "\n", description: "\"\\n\"" },
+        peg$c170 = "\r\n",
+        peg$c171 = { type: "literal", value: "\r\n", description: "\"\\r\\n\"" },
+        peg$c172 = "\r",
+        peg$c173 = { type: "literal", value: "\r", description: "\"\\r\"" },
+        peg$c174 = "\u2028",
+        peg$c175 = { type: "literal", value: "\u2028", description: "\"\\u2028\"" },
+        peg$c176 = "\u2029",
+        peg$c177 = { type: "literal", value: "\u2029", description: "\"\\u2029\"" },
+        peg$c178 = ";",
+        peg$c179 = { type: "literal", value: ";", description: "\";\"" },
+        peg$c180 = void 0,
+        peg$c181 = { type: "other", description: "comment" },
+        peg$c182 = "/*",
+        peg$c183 = { type: "literal", value: "/*", description: "\"/*\"" },
+        peg$c184 = "*/",
+        peg$c185 = { type: "literal", value: "*/", description: "\"*/\"" },
+        peg$c186 = "//",
+        peg$c187 = { type: "literal", value: "//", description: "\"//\"" },
+
+        peg$currPos          = 0,
+        peg$reportedPos      = 0,
+        peg$cachedPos        = 0,
+        peg$cachedPosDetails = { line: 1, column: 1, seenCR: false },
+        peg$maxFailPos       = 0,
+        peg$maxFailExpected  = [],
+        peg$silentFails      = 0,
+
+        peg$result;
+
+    if ("startRule" in options) {
+      if (!(options.startRule in peg$startRuleFunctions)) {
+        throw new Error("Can't start parsing from rule \"" + options.startRule + "\".");
+      }
+
+      peg$startRuleFunction = peg$startRuleFunctions[options.startRule];
+    }
+
+    function text() {
+      return input.substring(peg$reportedPos, peg$currPos);
+    }
+
+    function offset() {
+      return peg$reportedPos;
+    }
+
+    function line() {
+      return peg$computePosDetails(peg$reportedPos).line;
+    }
+
+    function column() {
+      return peg$computePosDetails(peg$reportedPos).column;
+    }
+
+    function expected(description) {
+      throw peg$buildException(
+        null,
+        [{ type: "other", description: description }],
+        peg$reportedPos
+      );
+    }
+
+    function error(message) {
+      throw peg$buildException(message, null, peg$reportedPos);
+    }
+
+    function peg$computePosDetails(pos) {
+      function advance(details, startPos, endPos) {
+        var p, ch;
+
+        for (p = startPos; p < endPos; p++) {
+          ch = input.charAt(p);
+          if (ch === "\n") {
+            if (!details.seenCR) { details.line++; }
+            details.column = 1;
+            details.seenCR = false;
+          } else if (ch === "\r" || ch === "\u2028" || ch === "\u2029") {
+            details.line++;
+            details.column = 1;
+            details.seenCR = true;
+          } else {
+            details.column++;
+            details.seenCR = false;
+          }
+        }
+      }
+
+      if (peg$cachedPos !== pos) {
+        if (peg$cachedPos > pos) {
+          peg$cachedPos = 0;
+          peg$cachedPosDetails = { line: 1, column: 1, seenCR: false };
+        }
+        advance(peg$cachedPosDetails, peg$cachedPos, pos);
+        peg$cachedPos = pos;
+      }
+
+      return peg$cachedPosDetails;
+    }
+
+    function peg$fail(expected) {
+      if (peg$currPos < peg$maxFailPos) { return; }
+
+      if (peg$currPos > peg$maxFailPos) {
+        peg$maxFailPos = peg$currPos;
+        peg$maxFailExpected = [];
+      }
+
+      peg$maxFailExpected.push(expected);
+    }
+
+    function peg$buildException(message, expected, pos) {
+      function cleanupExpected(expected) {
+        var i = 1;
+
+        expected.sort(function(a, b) {
+          if (a.description < b.description) {
+            return -1;
+          } else if (a.description > b.description) {
+            return 1;
+          } else {
+            return 0;
+          }
+        });
+
+        while (i < expected.length) {
+          if (expected[i - 1] === expected[i]) {
+            expected.splice(i, 1);
+          } else {
+            i++;
+          }
+        }
+      }
+
+      function buildMessage(expected, found) {
+        function stringEscape(s) {
+          function hex(ch) { return ch.charCodeAt(0).toString(16).toUpperCase(); }
+
+          return s
+            .replace(/\\/g,   '\\\\')
+            .replace(/"/g,    '\\"')
+            .replace(/\x08/g, '\\b')
+            .replace(/\t/g,   '\\t')
+            .replace(/\n/g,   '\\n')
+            .replace(/\f/g,   '\\f')
+            .replace(/\r/g,   '\\r')
+            .replace(/[\x00-\x07\x0B\x0E\x0F]/g, function(ch) { return '\\x0' + hex(ch); })
+            .replace(/[\x10-\x1F\x80-\xFF]/g,    function(ch) { return '\\x'  + hex(ch); })
+            .replace(/[\u0180-\u0FFF]/g,         function(ch) { return '\\u0' + hex(ch); })
+            .replace(/[\u1080-\uFFFF]/g,         function(ch) { return '\\u'  + hex(ch); });
+        }
+
+        var expectedDescs = new Array(expected.length),
+            expectedDesc, foundDesc, i;
+
+        for (i = 0; i < expected.length; i++) {
+          expectedDescs[i] = expected[i].description;
+        }
+
+        expectedDesc = expected.length > 1
+          ? expectedDescs.slice(0, -1).join(", ")
+              + " or "
+              + expectedDescs[expected.length - 1]
+          : expectedDescs[0];
+
+        foundDesc = found ? "\"" + stringEscape(found) + "\"" : "end of input";
+
+        return "Expected " + expectedDesc + " but " + foundDesc + " found.";
+      }
+
+      var posDetails = peg$computePosDetails(pos),
+          found      = pos < input.length ? input.charAt(pos) : null;
+
+      if (expected !== null) {
+        cleanupExpected(expected);
+      }
+
+      return new SyntaxError(
+        message !== null ? message : buildMessage(expected, found),
+        expected,
+        found,
+        pos,
+        posDetails.line,
+        posDetails.column
+      );
+    }
+
+    function peg$parsestart() {
+      var s0, s1, s2, s3;
+
+      s0 = peg$currPos;
+      s1 = peg$parse__();
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$parseStatement();
+        while (s3 !== peg$FAILED) {
+          s2.push(s3);
+          s3 = peg$parseStatement();
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parse__();
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c2();
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parsedebug() {
+      var s0, s1, s2, s3;
+
+      s0 = peg$currPos;
+      s1 = peg$parse__();
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$parseStatement();
+        while (s3 !== peg$FAILED) {
+          s2.push(s3);
+          s3 = peg$parseStatement();
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parse__();
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c3(s2);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parseStatement() {
+      var s0, s1, s2, s3;
+
+      s0 = peg$currPos;
+      s1 = peg$parseVFLStatement();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parseEOS();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parse__();
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c4(s1);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parseVFLStatement() {
+      var s0, s1, s2, s3, s4, s5, s6, s7, s8, s9;
+
+      s0 = peg$currPos;
+      s1 = peg$parseDimension();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse__();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parseView();
+          if (s3 !== peg$FAILED) {
+            s4 = [];
+            s5 = peg$currPos;
+            s6 = peg$parse__();
+            if (s6 !== peg$FAILED) {
+              s7 = peg$parseConnection();
+              if (s7 === peg$FAILED) {
+                s7 = peg$c5;
+              }
+              if (s7 !== peg$FAILED) {
+                s8 = peg$parse__();
+                if (s8 !== peg$FAILED) {
+                  s9 = peg$parseView();
+                  if (s9 !== peg$FAILED) {
+                    s6 = [s6, s7, s8, s9];
+                    s5 = s6;
+                  } else {
+                    peg$currPos = s5;
+                    s5 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s5;
+                  s5 = peg$c0;
+                }
+              } else {
+                peg$currPos = s5;
+                s5 = peg$c0;
+              }
+            } else {
+              peg$currPos = s5;
+              s5 = peg$c0;
+            }
+            while (s5 !== peg$FAILED) {
+              s4.push(s5);
+              s5 = peg$currPos;
+              s6 = peg$parse__();
+              if (s6 !== peg$FAILED) {
+                s7 = peg$parseConnection();
+                if (s7 === peg$FAILED) {
+                  s7 = peg$c5;
+                }
+                if (s7 !== peg$FAILED) {
+                  s8 = peg$parse__();
+                  if (s8 !== peg$FAILED) {
+                    s9 = peg$parseView();
+                    if (s9 !== peg$FAILED) {
+                      s6 = [s6, s7, s8, s9];
+                      s5 = s6;
+                    } else {
+                      peg$currPos = s5;
+                      s5 = peg$c0;
+                    }
+                  } else {
+                    peg$currPos = s5;
+                    s5 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s5;
+                  s5 = peg$c0;
+                }
+              } else {
+                peg$currPos = s5;
+                s5 = peg$c0;
+              }
+            }
+            if (s4 !== peg$FAILED) {
+              s5 = peg$parse__();
+              if (s5 !== peg$FAILED) {
+                s6 = peg$parseOptions();
+                if (s6 !== peg$FAILED) {
+                  peg$reportedPos = s0;
+                  s1 = peg$c6(s1, s3, s4, s6);
+                  s0 = s1;
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parseDimension() {
+      var s0, s1;
+
+      s0 = peg$currPos;
+      if (input.substr(peg$currPos, 11) === peg$c7) {
+        s1 = peg$c7;
+        peg$currPos += 11;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c8); }
+      }
+      if (s1 === peg$FAILED) {
+        if (input.substr(peg$currPos, 16) === peg$c9) {
+          s1 = peg$c9;
+          peg$currPos += 16;
+        } else {
+          s1 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c10); }
+        }
+        if (s1 === peg$FAILED) {
+          if (input.substr(peg$currPos, 7) === peg$c11) {
+            s1 = peg$c11;
+            peg$currPos += 7;
+          } else {
+            s1 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c12); }
+          }
+          if (s1 === peg$FAILED) {
+            if (input.substr(peg$currPos, 2) === peg$c13) {
+              s1 = peg$c13;
+              peg$currPos += 2;
+            } else {
+              s1 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c14); }
+            }
+          }
+        }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c15();
+      }
+      s0 = s1;
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        if (input.substr(peg$currPos, 9) === peg$c16) {
+          s1 = peg$c16;
+          peg$currPos += 9;
+        } else {
+          s1 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c17); }
+        }
+        if (s1 === peg$FAILED) {
+          if (input.substr(peg$currPos, 14) === peg$c18) {
+            s1 = peg$c18;
+            peg$currPos += 14;
+          } else {
+            s1 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c19); }
+          }
+          if (s1 === peg$FAILED) {
+            if (input.substr(peg$currPos, 7) === peg$c20) {
+              s1 = peg$c20;
+              peg$currPos += 7;
+            } else {
+              s1 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c21); }
+            }
+            if (s1 === peg$FAILED) {
+              if (input.substr(peg$currPos, 2) === peg$c22) {
+                s1 = peg$c22;
+                peg$currPos += 2;
+              } else {
+                s1 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c23); }
+              }
+            }
+          }
+        }
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c24();
+        }
+        s0 = s1;
+      }
+
+      return s0;
+    }
+
+    function peg$parseOptions() {
+      var s0, s1, s2;
+
+      s0 = peg$currPos;
+      s1 = [];
+      s2 = peg$parseOption();
+      while (s2 !== peg$FAILED) {
+        s1.push(s2);
+        s2 = peg$parseOption();
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c25(s1);
+      }
+      s0 = s1;
+
+      return s0;
+    }
+
+    function peg$parseOption() {
+      var s0, s1, s2, s3, s4, s5;
+
+      peg$silentFails++;
+      s0 = peg$currPos;
+      s1 = peg$parse__();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parseChain();
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c27(s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parse__();
+        if (s1 !== peg$FAILED) {
+          if (input.substr(peg$currPos, 2) === peg$c28) {
+            s2 = peg$c28;
+            peg$currPos += 2;
+          } else {
+            s2 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c29); }
+          }
+          if (s2 !== peg$FAILED) {
+            if (input.charCodeAt(peg$currPos) === 40) {
+              s3 = peg$c30;
+              peg$currPos++;
+            } else {
+              s3 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c31); }
+            }
+            if (s3 !== peg$FAILED) {
+              s4 = [];
+              if (peg$c32.test(input.charAt(peg$currPos))) {
+                s5 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s5 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c33); }
+              }
+              if (s5 !== peg$FAILED) {
+                while (s5 !== peg$FAILED) {
+                  s4.push(s5);
+                  if (peg$c32.test(input.charAt(peg$currPos))) {
+                    s5 = input.charAt(peg$currPos);
+                    peg$currPos++;
+                  } else {
+                    s5 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c33); }
+                  }
+                }
+              } else {
+                s4 = peg$c0;
+              }
+              if (s4 !== peg$FAILED) {
+                if (input.charCodeAt(peg$currPos) === 41) {
+                  s5 = peg$c34;
+                  peg$currPos++;
+                } else {
+                  s5 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c35); }
+                }
+                if (s5 !== peg$FAILED) {
+                  peg$reportedPos = s0;
+                  s1 = peg$c36(s4);
+                  s0 = s1;
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          s1 = peg$parse__();
+          if (s1 !== peg$FAILED) {
+            if (input.substr(peg$currPos, 2) === peg$c28) {
+              s2 = peg$c28;
+              peg$currPos += 2;
+            } else {
+              s2 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c29); }
+            }
+            if (s2 !== peg$FAILED) {
+              if (input.charCodeAt(peg$currPos) === 40) {
+                s3 = peg$c30;
+                peg$currPos++;
+              } else {
+                s3 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c31); }
+              }
+              if (s3 !== peg$FAILED) {
+                s4 = [];
+                if (peg$c37.test(input.charAt(peg$currPos))) {
+                  s5 = input.charAt(peg$currPos);
+                  peg$currPos++;
+                } else {
+                  s5 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c38); }
+                }
+                if (s5 !== peg$FAILED) {
+                  while (s5 !== peg$FAILED) {
+                    s4.push(s5);
+                    if (peg$c37.test(input.charAt(peg$currPos))) {
+                      s5 = input.charAt(peg$currPos);
+                      peg$currPos++;
+                    } else {
+                      s5 = peg$FAILED;
+                      if (peg$silentFails === 0) { peg$fail(peg$c38); }
+                    }
+                  }
+                } else {
+                  s4 = peg$c0;
+                }
+                if (s4 !== peg$FAILED) {
+                  if (input.charCodeAt(peg$currPos) === 41) {
+                    s5 = peg$c34;
+                    peg$currPos++;
+                  } else {
+                    s5 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c35); }
+                  }
+                  if (s5 !== peg$FAILED) {
+                    peg$reportedPos = s0;
+                    s1 = peg$c39(s4);
+                    s0 = s1;
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+          if (s0 === peg$FAILED) {
+            s0 = peg$currPos;
+            s1 = peg$parse__();
+            if (s1 !== peg$FAILED) {
+              s2 = [];
+              s3 = peg$parseNameChars();
+              if (s3 !== peg$FAILED) {
+                while (s3 !== peg$FAILED) {
+                  s2.push(s3);
+                  s3 = peg$parseNameChars();
+                }
+              } else {
+                s2 = peg$c0;
+              }
+              if (s2 !== peg$FAILED) {
+                if (input.charCodeAt(peg$currPos) === 40) {
+                  s3 = peg$c30;
+                  peg$currPos++;
+                } else {
+                  s3 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c31); }
+                }
+                if (s3 !== peg$FAILED) {
+                  s4 = [];
+                  s5 = peg$parseOpionValueChars();
+                  if (s5 !== peg$FAILED) {
+                    while (s5 !== peg$FAILED) {
+                      s4.push(s5);
+                      s5 = peg$parseOpionValueChars();
+                    }
+                  } else {
+                    s4 = peg$c0;
+                  }
+                  if (s4 !== peg$FAILED) {
+                    if (input.charCodeAt(peg$currPos) === 41) {
+                      s5 = peg$c34;
+                      peg$currPos++;
+                    } else {
+                      s5 = peg$FAILED;
+                      if (peg$silentFails === 0) { peg$fail(peg$c35); }
+                    }
+                    if (s5 !== peg$FAILED) {
+                      peg$reportedPos = s0;
+                      s1 = peg$c40(s2, s4);
+                      s0 = s1;
+                    } else {
+                      peg$currPos = s0;
+                      s0 = peg$c0;
+                    }
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+            if (s0 === peg$FAILED) {
+              s0 = peg$currPos;
+              s1 = peg$parse__();
+              if (s1 !== peg$FAILED) {
+                s2 = peg$parseStrengthAndWeight();
+                if (s2 !== peg$FAILED) {
+                  peg$reportedPos = s0;
+                  s1 = peg$c41(s2);
+                  s0 = s1;
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            }
+          }
+        }
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c26); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseOpionValueChars() {
+      var s0, s1;
+
+      if (peg$c42.test(input.charAt(peg$currPos))) {
+        s0 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c43); }
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        if (peg$c44.test(input.charAt(peg$currPos))) {
+          s1 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s1 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c45); }
+        }
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c46();
+        }
+        s0 = s1;
+      }
+
+      return s0;
+    }
+
+    function peg$parseChain() {
+      var s0, s1, s2, s3;
+
+      peg$silentFails++;
+      s0 = peg$currPos;
+      if (input.substr(peg$currPos, 6) === peg$c48) {
+        s1 = peg$c48;
+        peg$currPos += 6;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c49); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$parseNameChars();
+        if (s3 !== peg$FAILED) {
+          while (s3 !== peg$FAILED) {
+            s2.push(s3);
+            s3 = peg$parseNameChars();
+          }
+        } else {
+          s2 = peg$c0;
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parseChainPredicate();
+          if (s3 === peg$FAILED) {
+            s3 = peg$c5;
+          }
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c50(s2, s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c47); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseChainPredicate() {
+      var s0, s1, s2, s3;
+
+      peg$silentFails++;
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 40) {
+        s1 = peg$c30;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c31); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$parseChainPredicateItems();
+        if (s3 !== peg$FAILED) {
+          while (s3 !== peg$FAILED) {
+            s2.push(s3);
+            s3 = peg$parseChainPredicateItems();
+          }
+        } else {
+          s2 = peg$c0;
+        }
+        if (s2 !== peg$FAILED) {
+          if (input.charCodeAt(peg$currPos) === 41) {
+            s3 = peg$c34;
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c35); }
+          }
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c52(s2);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        if (input.substr(peg$currPos, 2) === peg$c53) {
+          s1 = peg$c53;
+          peg$currPos += 2;
+        } else {
+          s1 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c54); }
+        }
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c55();
+        }
+        s0 = s1;
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c51); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseChainPredicateItems() {
+      var s0, s1, s2, s3;
+
+      s0 = peg$currPos;
+      s1 = peg$parseChainPredicateItem();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 === peg$FAILED) {
+          s2 = peg$c5;
+        }
+        if (s2 !== peg$FAILED) {
+          if (input.charCodeAt(peg$currPos) === 44) {
+            s3 = peg$c56;
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c57); }
+          }
+          if (s3 === peg$FAILED) {
+            s3 = peg$c5;
+          }
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c58(s1);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parseChainPredicateItem() {
+      var s0, s1, s2, s3, s4, s5, s6, s7;
+
+      s0 = peg$currPos;
+      s1 = peg$parsePredEq();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parseChainPredVal();
+          if (s3 === peg$FAILED) {
+            s3 = peg$c5;
+          }
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parse_();
+            if (s4 === peg$FAILED) {
+              s4 = peg$c5;
+            }
+            if (s4 !== peg$FAILED) {
+              s5 = peg$parsePredEq();
+              if (s5 === peg$FAILED) {
+                s5 = peg$c5;
+              }
+              if (s5 !== peg$FAILED) {
+                s6 = peg$parse_();
+                if (s6 === peg$FAILED) {
+                  s6 = peg$c5;
+                }
+                if (s6 !== peg$FAILED) {
+                  s7 = peg$parseStrengthAndWeight();
+                  if (s7 === peg$FAILED) {
+                    s7 = peg$c5;
+                  }
+                  if (s7 !== peg$FAILED) {
+                    peg$reportedPos = s0;
+                    s1 = peg$c59(s1, s3, s5, s7);
+                    s0 = s1;
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parsePredEq();
+        if (s1 === peg$FAILED) {
+          s1 = peg$c5;
+        }
+        if (s1 !== peg$FAILED) {
+          s2 = peg$parse_();
+          if (s2 === peg$FAILED) {
+            s2 = peg$c5;
+          }
+          if (s2 !== peg$FAILED) {
+            s3 = peg$parseChainPredVal();
+            if (s3 !== peg$FAILED) {
+              s4 = peg$parse_();
+              if (s4 === peg$FAILED) {
+                s4 = peg$c5;
+              }
+              if (s4 !== peg$FAILED) {
+                s5 = peg$parsePredEq();
+                if (s5 === peg$FAILED) {
+                  s5 = peg$c5;
+                }
+                if (s5 !== peg$FAILED) {
+                  s6 = peg$parse_();
+                  if (s6 === peg$FAILED) {
+                    s6 = peg$c5;
+                  }
+                  if (s6 !== peg$FAILED) {
+                    s7 = peg$parseStrengthAndWeight();
+                    if (s7 === peg$FAILED) {
+                      s7 = peg$c5;
+                    }
+                    if (s7 !== peg$FAILED) {
+                      peg$reportedPos = s0;
+                      s1 = peg$c59(s1, s3, s5, s7);
+                      s0 = s1;
+                    } else {
+                      peg$currPos = s0;
+                      s0 = peg$c0;
+                    }
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          s1 = peg$parsePredEq();
+          if (s1 === peg$FAILED) {
+            s1 = peg$c5;
+          }
+          if (s1 !== peg$FAILED) {
+            s2 = peg$parse_();
+            if (s2 === peg$FAILED) {
+              s2 = peg$c5;
+            }
+            if (s2 !== peg$FAILED) {
+              s3 = peg$parseChainPredVal();
+              if (s3 === peg$FAILED) {
+                s3 = peg$c5;
+              }
+              if (s3 !== peg$FAILED) {
+                s4 = peg$parse_();
+                if (s4 === peg$FAILED) {
+                  s4 = peg$c5;
+                }
+                if (s4 !== peg$FAILED) {
+                  s5 = peg$parsePredEq();
+                  if (s5 === peg$FAILED) {
+                    s5 = peg$c5;
+                  }
+                  if (s5 !== peg$FAILED) {
+                    s6 = peg$parse_();
+                    if (s6 === peg$FAILED) {
+                      s6 = peg$c5;
+                    }
+                    if (s6 !== peg$FAILED) {
+                      s7 = peg$parseStrengthAndWeight();
+                      if (s7 !== peg$FAILED) {
+                        peg$reportedPos = s0;
+                        s1 = peg$c59(s1, s3, s5, s7);
+                        s0 = s1;
+                      } else {
+                        peg$currPos = s0;
+                        s0 = peg$c0;
+                      }
+                    } else {
+                      peg$currPos = s0;
+                      s0 = peg$c0;
+                    }
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        }
+      }
+
+      return s0;
+    }
+
+    function peg$parseChainPredVal() {
+      var s0, s1;
+
+      s0 = [];
+      if (peg$c60.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c61); }
+      }
+      if (s1 !== peg$FAILED) {
+        while (s1 !== peg$FAILED) {
+          s0.push(s1);
+          if (peg$c60.test(input.charAt(peg$currPos))) {
+            s1 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s1 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c61); }
+          }
+        }
+      } else {
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parseView() {
+      var s0, s1;
+
+      peg$silentFails++;
+      s0 = peg$parseSplat();
+      if (s0 === peg$FAILED) {
+        s0 = peg$parseViewSelector();
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          s1 = peg$parsePoint();
+          if (s1 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c63(s1);
+          }
+          s0 = s1;
+          if (s0 === peg$FAILED) {
+            s0 = peg$currPos;
+            if (input.charCodeAt(peg$currPos) === 124) {
+              s1 = peg$c64;
+              peg$currPos++;
+            } else {
+              s1 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c65); }
+            }
+            if (s1 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c66();
+            }
+            s0 = s1;
+          }
+        }
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c62); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseViewSelector() {
+      var s0, s1, s2, s3, s4, s5, s6, s7;
+
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 40) {
+        s1 = peg$c30;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c31); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          s3 = [];
+          s4 = peg$parseNameChars();
+          if (s4 !== peg$FAILED) {
+            while (s4 !== peg$FAILED) {
+              s3.push(s4);
+              s4 = peg$parseNameChars();
+            }
+          } else {
+            s3 = peg$c0;
+          }
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parse_();
+            if (s4 !== peg$FAILED) {
+              s5 = peg$parsePredicate();
+              if (s5 === peg$FAILED) {
+                s5 = peg$c5;
+              }
+              if (s5 !== peg$FAILED) {
+                s6 = peg$parse_();
+                if (s6 !== peg$FAILED) {
+                  if (input.charCodeAt(peg$currPos) === 41) {
+                    s7 = peg$c34;
+                    peg$currPos++;
+                  } else {
+                    s7 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c35); }
+                  }
+                  if (s7 !== peg$FAILED) {
+                    peg$reportedPos = s0;
+                    s1 = peg$c67(s3, s5);
+                    s0 = s1;
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$parseComplexViewSelector();
+      }
+
+      return s0;
+    }
+
+    function peg$parseComplexViewSelector() {
+      var s0, s1, s2, s3, s4, s5, s6, s7;
+
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 40) {
+        s1 = peg$c30;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c31); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          s3 = [];
+          if (peg$c68.test(input.charAt(peg$currPos))) {
+            s4 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s4 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c69); }
+          }
+          while (s4 !== peg$FAILED) {
+            s3.push(s4);
+            if (peg$c68.test(input.charAt(peg$currPos))) {
+              s4 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s4 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c69); }
+            }
+          }
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parse_();
+            if (s4 !== peg$FAILED) {
+              s5 = peg$parsePredicate();
+              if (s5 === peg$FAILED) {
+                s5 = peg$c5;
+              }
+              if (s5 !== peg$FAILED) {
+                s6 = peg$parse_();
+                if (s6 !== peg$FAILED) {
+                  if (input.charCodeAt(peg$currPos) === 41) {
+                    s7 = peg$c34;
+                    peg$currPos++;
+                  } else {
+                    s7 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c35); }
+                  }
+                  if (s7 !== peg$FAILED) {
+                    peg$reportedPos = s0;
+                    s1 = peg$c70(s3, s5);
+                    s0 = s1;
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parseSplat() {
+      var s0, s1, s2, s3, s4, s5;
+
+      s0 = peg$currPos;
+      s1 = peg$parseViewSelector();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse__();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parseConnection();
+          if (s3 === peg$FAILED) {
+            s3 = peg$c5;
+          }
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parse__();
+            if (s4 !== peg$FAILED) {
+              if (input.substr(peg$currPos, 3) === peg$c71) {
+                s5 = peg$c71;
+                peg$currPos += 3;
+              } else {
+                s5 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c72); }
+              }
+              if (s5 !== peg$FAILED) {
+                peg$reportedPos = s0;
+                s1 = peg$c73(s1, s3);
+                s0 = s1;
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parsePoint() {
+      var s0, s1, s2, s3, s4, s5;
+
+      peg$silentFails++;
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 60) {
+        s1 = peg$c75;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c76); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 === peg$FAILED) {
+          s2 = peg$c5;
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = [];
+          if (peg$c77.test(input.charAt(peg$currPos))) {
+            s4 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s4 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c78); }
+          }
+          if (s4 !== peg$FAILED) {
+            while (s4 !== peg$FAILED) {
+              s3.push(s4);
+              if (peg$c77.test(input.charAt(peg$currPos))) {
+                s4 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s4 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c78); }
+              }
+            }
+          } else {
+            s3 = peg$c0;
+          }
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parse_();
+            if (s4 === peg$FAILED) {
+              s4 = peg$c5;
+            }
+            if (s4 !== peg$FAILED) {
+              if (input.charCodeAt(peg$currPos) === 62) {
+                s5 = peg$c79;
+                peg$currPos++;
+              } else {
+                s5 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c80); }
+              }
+              if (s5 !== peg$FAILED) {
+                peg$reportedPos = s0;
+                s1 = peg$c81(s3);
+                s0 = s1;
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c74); }
+      }
+
+      return s0;
+    }
+
+    function peg$parsePredicate() {
+      var s0, s1, s2, s3, s4, s5, s6, s7, s8, s9;
+
+      peg$silentFails++;
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 40) {
+        s1 = peg$c30;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c31); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$currPos;
+        s4 = peg$parsePredEq();
+        if (s4 !== peg$FAILED) {
+          s5 = peg$parsePredExpression();
+          if (s5 !== peg$FAILED) {
+            s6 = peg$parseStrengthAndWeight();
+            if (s6 === peg$FAILED) {
+              s6 = peg$c5;
+            }
+            if (s6 !== peg$FAILED) {
+              s7 = peg$parse_();
+              if (s7 === peg$FAILED) {
+                s7 = peg$c5;
+              }
+              if (s7 !== peg$FAILED) {
+                s8 = peg$parsePredSeperator();
+                if (s8 !== peg$FAILED) {
+                  s9 = peg$parse_();
+                  if (s9 === peg$FAILED) {
+                    s9 = peg$c5;
+                  }
+                  if (s9 !== peg$FAILED) {
+                    s4 = [s4, s5, s6, s7, s8, s9];
+                    s3 = s4;
+                  } else {
+                    peg$currPos = s3;
+                    s3 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s3;
+                  s3 = peg$c0;
+                }
+              } else {
+                peg$currPos = s3;
+                s3 = peg$c0;
+              }
+            } else {
+              peg$currPos = s3;
+              s3 = peg$c0;
+            }
+          } else {
+            peg$currPos = s3;
+            s3 = peg$c0;
+          }
+        } else {
+          peg$currPos = s3;
+          s3 = peg$c0;
+        }
+        if (s3 !== peg$FAILED) {
+          while (s3 !== peg$FAILED) {
+            s2.push(s3);
+            s3 = peg$currPos;
+            s4 = peg$parsePredEq();
+            if (s4 !== peg$FAILED) {
+              s5 = peg$parsePredExpression();
+              if (s5 !== peg$FAILED) {
+                s6 = peg$parseStrengthAndWeight();
+                if (s6 === peg$FAILED) {
+                  s6 = peg$c5;
+                }
+                if (s6 !== peg$FAILED) {
+                  s7 = peg$parse_();
+                  if (s7 === peg$FAILED) {
+                    s7 = peg$c5;
+                  }
+                  if (s7 !== peg$FAILED) {
+                    s8 = peg$parsePredSeperator();
+                    if (s8 !== peg$FAILED) {
+                      s9 = peg$parse_();
+                      if (s9 === peg$FAILED) {
+                        s9 = peg$c5;
+                      }
+                      if (s9 !== peg$FAILED) {
+                        s4 = [s4, s5, s6, s7, s8, s9];
+                        s3 = s4;
+                      } else {
+                        peg$currPos = s3;
+                        s3 = peg$c0;
+                      }
+                    } else {
+                      peg$currPos = s3;
+                      s3 = peg$c0;
+                    }
+                  } else {
+                    peg$currPos = s3;
+                    s3 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s3;
+                  s3 = peg$c0;
+                }
+              } else {
+                peg$currPos = s3;
+                s3 = peg$c0;
+              }
+            } else {
+              peg$currPos = s3;
+              s3 = peg$c0;
+            }
+          }
+        } else {
+          s2 = peg$c0;
+        }
+        if (s2 !== peg$FAILED) {
+          if (input.charCodeAt(peg$currPos) === 41) {
+            s3 = peg$c34;
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c35); }
+          }
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c83(s2);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c82); }
+      }
+
+      return s0;
+    }
+
+    function peg$parsePredExpression() {
+      var s0, s1;
+
+      peg$silentFails++;
+      s0 = [];
+      s1 = peg$parsePredOp();
+      if (s1 === peg$FAILED) {
+        s1 = peg$parsePredLiteral();
+        if (s1 === peg$FAILED) {
+          s1 = peg$parsePredVariable();
+          if (s1 === peg$FAILED) {
+            s1 = peg$parsePredViewVariable();
+            if (s1 === peg$FAILED) {
+              s1 = peg$parsePredView();
+            }
+          }
+        }
+      }
+      if (s1 !== peg$FAILED) {
+        while (s1 !== peg$FAILED) {
+          s0.push(s1);
+          s1 = peg$parsePredOp();
+          if (s1 === peg$FAILED) {
+            s1 = peg$parsePredLiteral();
+            if (s1 === peg$FAILED) {
+              s1 = peg$parsePredVariable();
+              if (s1 === peg$FAILED) {
+                s1 = peg$parsePredViewVariable();
+                if (s1 === peg$FAILED) {
+                  s1 = peg$parsePredView();
+                }
+              }
+            }
+          }
+        }
+      } else {
+        s0 = peg$c0;
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c84); }
+      }
+
+      return s0;
+    }
+
+    function peg$parsePredEq() {
+      var s0, s1, s2, s3;
+
+      s0 = peg$currPos;
+      s1 = peg$parse_();
+      if (s1 === peg$FAILED) {
+        s1 = peg$c5;
+      }
+      if (s1 !== peg$FAILED) {
+        if (input.substr(peg$currPos, 2) === peg$c85) {
+          s2 = peg$c85;
+          peg$currPos += 2;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c86); }
+        }
+        if (s2 === peg$FAILED) {
+          if (input.substr(peg$currPos, 2) === peg$c87) {
+            s2 = peg$c87;
+            peg$currPos += 2;
+          } else {
+            s2 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c88); }
+          }
+          if (s2 === peg$FAILED) {
+            if (input.charCodeAt(peg$currPos) === 60) {
+              s2 = peg$c75;
+              peg$currPos++;
+            } else {
+              s2 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c76); }
+            }
+            if (s2 === peg$FAILED) {
+              if (input.substr(peg$currPos, 2) === peg$c89) {
+                s2 = peg$c89;
+                peg$currPos += 2;
+              } else {
+                s2 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c90); }
+              }
+              if (s2 === peg$FAILED) {
+                if (input.charCodeAt(peg$currPos) === 62) {
+                  s2 = peg$c79;
+                  peg$currPos++;
+                } else {
+                  s2 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c80); }
+                }
+                if (s2 === peg$FAILED) {
+                  s2 = peg$currPos;
+                  if (input.substr(peg$currPos, 2) === peg$c91) {
+                    s3 = peg$c91;
+                    peg$currPos += 2;
+                  } else {
+                    s3 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c92); }
+                  }
+                  if (s3 !== peg$FAILED) {
+                    peg$reportedPos = s2;
+                    s3 = peg$c93();
+                  }
+                  s2 = s3;
+                  if (s2 === peg$FAILED) {
+                    s2 = peg$currPos;
+                    if (input.substr(peg$currPos, 2) === peg$c94) {
+                      s3 = peg$c94;
+                      peg$currPos += 2;
+                    } else {
+                      s3 = peg$FAILED;
+                      if (peg$silentFails === 0) { peg$fail(peg$c95); }
+                    }
+                    if (s3 !== peg$FAILED) {
+                      peg$reportedPos = s2;
+                      s3 = peg$c96();
+                    }
+                    s2 = s3;
+                  }
+                }
+              }
+            }
+          }
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parse_();
+          if (s3 === peg$FAILED) {
+            s3 = peg$c5;
+          }
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c97(s2);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parsePredOp() {
+      var s0, s1, s2;
+
+      s0 = peg$currPos;
+      if (peg$c98.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c99); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 === peg$FAILED) {
+          s2 = peg$c5;
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c100(s1);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parsePredView() {
+      var s0, s1, s2;
+
+      s0 = peg$currPos;
+      s1 = [];
+      s2 = peg$parseNameChars();
+      if (s2 !== peg$FAILED) {
+        while (s2 !== peg$FAILED) {
+          s1.push(s2);
+          s2 = peg$parseNameChars();
+        }
+      } else {
+        s1 = peg$c0;
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 === peg$FAILED) {
+          s2 = peg$c5;
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c101(s1);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parsePredLiteral() {
+      var s0, s1, s2;
+
+      s0 = peg$currPos;
+      s1 = [];
+      s2 = peg$parseNumber();
+      if (s2 !== peg$FAILED) {
+        while (s2 !== peg$FAILED) {
+          s1.push(s2);
+          s2 = peg$parseNumber();
+        }
+      } else {
+        s1 = peg$c0;
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 === peg$FAILED) {
+          s2 = peg$c5;
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c102(s1);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parsePredVariable() {
+      var s0, s1, s2, s3, s4;
+
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 91) {
+        s1 = peg$c103;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c104); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$parseNameChars();
+        if (s3 !== peg$FAILED) {
+          while (s3 !== peg$FAILED) {
+            s2.push(s3);
+            s3 = peg$parseNameChars();
+          }
+        } else {
+          s2 = peg$c0;
+        }
+        if (s2 !== peg$FAILED) {
+          if (input.charCodeAt(peg$currPos) === 93) {
+            s3 = peg$c105;
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c106); }
+          }
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parse_();
+            if (s4 === peg$FAILED) {
+              s4 = peg$c5;
+            }
+            if (s4 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c107(s2);
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parsePredViewVariable() {
+      var s0, s1, s2, s3, s4, s5;
+
+      s0 = peg$currPos;
+      s1 = [];
+      s2 = peg$parseNameChars();
+      if (s2 !== peg$FAILED) {
+        while (s2 !== peg$FAILED) {
+          s1.push(s2);
+          s2 = peg$parseNameChars();
+        }
+      } else {
+        s1 = peg$c0;
+      }
+      if (s1 !== peg$FAILED) {
+        if (input.charCodeAt(peg$currPos) === 91) {
+          s2 = peg$c103;
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c104); }
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = [];
+          s4 = peg$parseNameChars();
+          if (s4 !== peg$FAILED) {
+            while (s4 !== peg$FAILED) {
+              s3.push(s4);
+              s4 = peg$parseNameChars();
+            }
+          } else {
+            s3 = peg$c0;
+          }
+          if (s3 !== peg$FAILED) {
+            if (input.charCodeAt(peg$currPos) === 93) {
+              s4 = peg$c105;
+              peg$currPos++;
+            } else {
+              s4 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c106); }
+            }
+            if (s4 !== peg$FAILED) {
+              s5 = peg$parse_();
+              if (s5 === peg$FAILED) {
+                s5 = peg$c5;
+              }
+              if (s5 !== peg$FAILED) {
+                peg$reportedPos = s0;
+                s1 = peg$c108(s1, s3);
+                s0 = s1;
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parsePredSeperator() {
+      var s0, s1;
+
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 44) {
+        s1 = peg$c56;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c57); }
+      }
+      if (s1 === peg$FAILED) {
+        s1 = peg$c5;
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c109();
+      }
+      s0 = s1;
+
+      return s0;
+    }
+
+    function peg$parseConnection() {
+      var s0, s1, s2, s3, s4, s5;
+
+      peg$silentFails++;
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 45) {
+        s1 = peg$c111;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c112); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parseExplicitGap();
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parse_();
+            if (s4 !== peg$FAILED) {
+              if (input.charCodeAt(peg$currPos) === 45) {
+                s5 = peg$c111;
+                peg$currPos++;
+              } else {
+                s5 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c112); }
+              }
+              if (s5 !== peg$FAILED) {
+                peg$reportedPos = s0;
+                s1 = peg$c113(s3);
+                s0 = s1;
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        if (input.charCodeAt(peg$currPos) === 45) {
+          s1 = peg$c111;
+          peg$currPos++;
+        } else {
+          s1 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c112); }
+        }
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c114();
+        }
+        s0 = s1;
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          if (input.charCodeAt(peg$currPos) === 126) {
+            s1 = peg$c115;
+            peg$currPos++;
+          } else {
+            s1 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c116); }
+          }
+          if (s1 !== peg$FAILED) {
+            s2 = peg$parse_();
+            if (s2 !== peg$FAILED) {
+              s3 = peg$parseExplicitGap();
+              if (s3 !== peg$FAILED) {
+                s4 = peg$parse_();
+                if (s4 !== peg$FAILED) {
+                  if (input.charCodeAt(peg$currPos) === 126) {
+                    s5 = peg$c115;
+                    peg$currPos++;
+                  } else {
+                    s5 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c116); }
+                  }
+                  if (s5 !== peg$FAILED) {
+                    peg$reportedPos = s0;
+                    s1 = peg$c117(s3);
+                    s0 = s1;
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+          if (s0 === peg$FAILED) {
+            s0 = peg$currPos;
+            if (input.charCodeAt(peg$currPos) === 126) {
+              s1 = peg$c115;
+              peg$currPos++;
+            } else {
+              s1 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c116); }
+            }
+            if (s1 !== peg$FAILED) {
+              if (input.charCodeAt(peg$currPos) === 45) {
+                s2 = peg$c111;
+                peg$currPos++;
+              } else {
+                s2 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c112); }
+              }
+              if (s2 !== peg$FAILED) {
+                if (input.charCodeAt(peg$currPos) === 126) {
+                  s3 = peg$c115;
+                  peg$currPos++;
+                } else {
+                  s3 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c116); }
+                }
+                if (s3 !== peg$FAILED) {
+                  peg$reportedPos = s0;
+                  s1 = peg$c118();
+                  s0 = s1;
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+            if (s0 === peg$FAILED) {
+              s0 = peg$currPos;
+              if (input.charCodeAt(peg$currPos) === 126) {
+                s1 = peg$c115;
+                peg$currPos++;
+              } else {
+                s1 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c116); }
+              }
+              if (s1 !== peg$FAILED) {
+                peg$reportedPos = s0;
+                s1 = peg$c119();
+              }
+              s0 = s1;
+              if (s0 === peg$FAILED) {
+                s0 = peg$currPos;
+                s1 = peg$c120;
+                if (s1 !== peg$FAILED) {
+                  peg$reportedPos = s0;
+                  s1 = peg$c121();
+                }
+                s0 = s1;
+              }
+            }
+          }
+        }
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c110); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseScope() {
+      var s0, s1, s2;
+
+      s0 = peg$currPos;
+      s1 = [];
+      if (input.charCodeAt(peg$currPos) === 38) {
+        s2 = peg$c122;
+        peg$currPos++;
+      } else {
+        s2 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c123); }
+      }
+      if (s2 !== peg$FAILED) {
+        while (s2 !== peg$FAILED) {
+          s1.push(s2);
+          if (input.charCodeAt(peg$currPos) === 38) {
+            s2 = peg$c122;
+            peg$currPos++;
+          } else {
+            s2 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c123); }
+          }
+        }
+      } else {
+        s1 = peg$c0;
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c124(s1);
+      }
+      s0 = s1;
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = [];
+        if (input.charCodeAt(peg$currPos) === 94) {
+          s2 = peg$c125;
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c126); }
+        }
+        if (s2 !== peg$FAILED) {
+          while (s2 !== peg$FAILED) {
+            s1.push(s2);
+            if (input.charCodeAt(peg$currPos) === 94) {
+              s2 = peg$c125;
+              peg$currPos++;
+            } else {
+              s2 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c126); }
+            }
+          }
+        } else {
+          s1 = peg$c0;
+        }
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c127(s1);
+        }
+        s0 = s1;
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          s1 = [];
+          if (input.charCodeAt(peg$currPos) === 36) {
+            s2 = peg$c128;
+            peg$currPos++;
+          } else {
+            s2 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c129); }
+          }
+          if (s2 !== peg$FAILED) {
+            while (s2 !== peg$FAILED) {
+              s1.push(s2);
+              if (input.charCodeAt(peg$currPos) === 36) {
+                s2 = peg$c128;
+                peg$currPos++;
+              } else {
+                s2 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c129); }
+              }
+            }
+          } else {
+            s1 = peg$c0;
+          }
+          if (s1 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c130(s1);
+          }
+          s0 = s1;
+        }
+      }
+
+      return s0;
+    }
+
+    function peg$parseExplicitGap() {
+      var s0, s1, s2, s3, s4;
+
+      peg$silentFails++;
+      s0 = peg$currPos;
+      s1 = peg$parseScope();
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        if (peg$c132.test(input.charAt(peg$currPos))) {
+          s3 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s3 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c133); }
+        }
+        if (s3 !== peg$FAILED) {
+          while (s3 !== peg$FAILED) {
+            s2.push(s3);
+            if (peg$c132.test(input.charAt(peg$currPos))) {
+              s3 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s3 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c133); }
+            }
+          }
+        } else {
+          s2 = peg$c0;
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c134(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = [];
+        if (peg$c132.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c133); }
+        }
+        if (s2 !== peg$FAILED) {
+          while (s2 !== peg$FAILED) {
+            s1.push(s2);
+            if (peg$c132.test(input.charAt(peg$currPos))) {
+              s2 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s2 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c133); }
+            }
+          }
+        } else {
+          s1 = peg$c0;
+        }
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c135(s1);
+        }
+        s0 = s1;
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          s1 = [];
+          if (peg$c136.test(input.charAt(peg$currPos))) {
+            s2 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s2 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c137); }
+          }
+          while (s2 !== peg$FAILED) {
+            s1.push(s2);
+            if (peg$c136.test(input.charAt(peg$currPos))) {
+              s2 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s2 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c137); }
+            }
+          }
+          if (s1 !== peg$FAILED) {
+            if (input.charCodeAt(peg$currPos) === 91) {
+              s2 = peg$c103;
+              peg$currPos++;
+            } else {
+              s2 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c104); }
+            }
+            if (s2 !== peg$FAILED) {
+              s3 = [];
+              if (peg$c138.test(input.charAt(peg$currPos))) {
+                s4 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s4 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c139); }
+              }
+              if (s4 !== peg$FAILED) {
+                while (s4 !== peg$FAILED) {
+                  s3.push(s4);
+                  if (peg$c138.test(input.charAt(peg$currPos))) {
+                    s4 = input.charAt(peg$currPos);
+                    peg$currPos++;
+                  } else {
+                    s4 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c139); }
+                  }
+                }
+              } else {
+                s3 = peg$c0;
+              }
+              if (s3 !== peg$FAILED) {
+                if (input.charCodeAt(peg$currPos) === 93) {
+                  s4 = peg$c105;
+                  peg$currPos++;
+                } else {
+                  s4 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c106); }
+                }
+                if (s4 !== peg$FAILED) {
+                  peg$reportedPos = s0;
+                  s1 = peg$c140(s1, s3);
+                  s0 = s1;
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        }
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c131); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseStrengthAndWeight() {
+      var s0, s1, s2, s3, s4;
+
+      peg$silentFails++;
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 33) {
+        s1 = peg$c142;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c143); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        if (peg$c144.test(input.charAt(peg$currPos))) {
+          s3 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s3 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c145); }
+        }
+        if (s3 !== peg$FAILED) {
+          while (s3 !== peg$FAILED) {
+            s2.push(s3);
+            if (peg$c144.test(input.charAt(peg$currPos))) {
+              s3 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s3 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c145); }
+            }
+          }
+        } else {
+          s2 = peg$c0;
+        }
+        if (s2 === peg$FAILED) {
+          s2 = peg$c5;
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = [];
+          if (peg$c146.test(input.charAt(peg$currPos))) {
+            s4 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s4 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c147); }
+          }
+          if (s4 !== peg$FAILED) {
+            while (s4 !== peg$FAILED) {
+              s3.push(s4);
+              if (peg$c146.test(input.charAt(peg$currPos))) {
+                s4 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s4 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c147); }
+              }
+            }
+          } else {
+            s3 = peg$c0;
+          }
+          if (s3 === peg$FAILED) {
+            s3 = peg$c5;
+          }
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c148(s2, s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        if (input.charCodeAt(peg$currPos) === 33) {
+          s1 = peg$c142;
+          peg$currPos++;
+        } else {
+          s1 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c143); }
+        }
+        if (s1 !== peg$FAILED) {
+          if (input.length > peg$currPos) {
+            s2 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s2 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c149); }
+          }
+          if (s2 === peg$FAILED) {
+            s2 = peg$c5;
+          }
+          if (s2 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c150();
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c141); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseNameChars() {
+      var s0;
+
+      if (peg$c151.test(input.charAt(peg$currPos))) {
+        s0 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c152); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseNameCharsWithSpace() {
+      var s0;
+
+      s0 = peg$parseNameChars();
+      if (s0 === peg$FAILED) {
+        if (input.charCodeAt(peg$currPos) === 32) {
+          s0 = peg$c153;
+          peg$currPos++;
+        } else {
+          s0 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c154); }
+        }
+      }
+
+      return s0;
+    }
+
+    function peg$parseLiteral() {
+      var s0, s1;
+
+      s0 = peg$currPos;
+      s1 = peg$parseNumber();
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c155(s1);
+      }
+      s0 = s1;
+
+      return s0;
+    }
+
+    function peg$parseNumber() {
+      var s0;
+
+      s0 = peg$parseReal();
+      if (s0 === peg$FAILED) {
+        s0 = peg$parseInteger();
+      }
+
+      return s0;
+    }
+
+    function peg$parseInteger() {
+      var s0, s1, s2;
+
+      s0 = peg$currPos;
+      s1 = [];
+      if (peg$c146.test(input.charAt(peg$currPos))) {
+        s2 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s2 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c147); }
+      }
+      if (s2 !== peg$FAILED) {
+        while (s2 !== peg$FAILED) {
+          s1.push(s2);
+          if (peg$c146.test(input.charAt(peg$currPos))) {
+            s2 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s2 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c147); }
+          }
+        }
+      } else {
+        s1 = peg$c0;
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c156(s1);
+      }
+      s0 = s1;
+
+      return s0;
+    }
+
+    function peg$parseReal() {
+      var s0, s1, s2, s3, s4;
+
+      s0 = peg$currPos;
+      s1 = peg$currPos;
+      s2 = peg$parseInteger();
+      if (s2 !== peg$FAILED) {
+        if (input.charCodeAt(peg$currPos) === 46) {
+          s3 = peg$c157;
+          peg$currPos++;
+        } else {
+          s3 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c158); }
+        }
+        if (s3 !== peg$FAILED) {
+          s4 = peg$parseInteger();
+          if (s4 !== peg$FAILED) {
+            s2 = [s2, s3, s4];
+            s1 = s2;
+          } else {
+            peg$currPos = s1;
+            s1 = peg$c0;
+          }
+        } else {
+          peg$currPos = s1;
+          s1 = peg$c0;
+        }
+      } else {
+        peg$currPos = s1;
+        s1 = peg$c0;
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c159(s1);
+      }
+      s0 = s1;
+
+      return s0;
+    }
+
+    function peg$parseSignedInteger() {
+      var s0, s1, s2, s3;
+
+      s0 = peg$currPos;
+      if (peg$c160.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c161); }
+      }
+      if (s1 === peg$FAILED) {
+        s1 = peg$c5;
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        if (peg$c146.test(input.charAt(peg$currPos))) {
+          s3 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s3 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c147); }
+        }
+        if (s3 !== peg$FAILED) {
+          while (s3 !== peg$FAILED) {
+            s2.push(s3);
+            if (peg$c146.test(input.charAt(peg$currPos))) {
+              s3 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s3 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c147); }
+            }
+          }
+        } else {
+          s2 = peg$c0;
+        }
+        if (s2 !== peg$FAILED) {
+          s1 = [s1, s2];
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parseSourceCharacter() {
+      var s0;
+
+      if (input.length > peg$currPos) {
+        s0 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c149); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseWhiteSpace() {
+      var s0, s1;
+
+      peg$silentFails++;
+      if (peg$c163.test(input.charAt(peg$currPos))) {
+        s0 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c164); }
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c162); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseLineTerminator() {
+      var s0;
+
+      if (peg$c165.test(input.charAt(peg$currPos))) {
+        s0 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c166); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseLineTerminatorSequence() {
+      var s0, s1;
+
+      peg$silentFails++;
+      if (input.charCodeAt(peg$currPos) === 10) {
+        s0 = peg$c168;
+        peg$currPos++;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c169); }
+      }
+      if (s0 === peg$FAILED) {
+        if (input.substr(peg$currPos, 2) === peg$c170) {
+          s0 = peg$c170;
+          peg$currPos += 2;
+        } else {
+          s0 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c171); }
+        }
+        if (s0 === peg$FAILED) {
+          if (input.charCodeAt(peg$currPos) === 13) {
+            s0 = peg$c172;
+            peg$currPos++;
+          } else {
+            s0 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c173); }
+          }
+          if (s0 === peg$FAILED) {
+            if (input.charCodeAt(peg$currPos) === 8232) {
+              s0 = peg$c174;
+              peg$currPos++;
+            } else {
+              s0 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c175); }
+            }
+            if (s0 === peg$FAILED) {
+              if (input.charCodeAt(peg$currPos) === 8233) {
+                s0 = peg$c176;
+                peg$currPos++;
+              } else {
+                s0 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c177); }
+              }
+            }
+          }
+        }
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c167); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseEOS() {
+      var s0, s1, s2;
+
+      s0 = peg$currPos;
+      s1 = peg$parse__();
+      if (s1 !== peg$FAILED) {
+        if (input.charCodeAt(peg$currPos) === 59) {
+          s2 = peg$c178;
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c179); }
+        }
+        if (s2 !== peg$FAILED) {
+          s1 = [s1, s2];
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parse_();
+        if (s1 !== peg$FAILED) {
+          s2 = peg$parseLineTerminatorSequence();
+          if (s2 !== peg$FAILED) {
+            s1 = [s1, s2];
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          s1 = peg$parse__();
+          if (s1 !== peg$FAILED) {
+            s2 = peg$parseEOF();
+            if (s2 !== peg$FAILED) {
+              s1 = [s1, s2];
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        }
+      }
+
+      return s0;
+    }
+
+    function peg$parseEOF() {
+      var s0, s1;
+
+      s0 = peg$currPos;
+      peg$silentFails++;
+      if (input.length > peg$currPos) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c149); }
+      }
+      peg$silentFails--;
+      if (s1 === peg$FAILED) {
+        s0 = peg$c180;
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parseComment() {
+      var s0, s1;
+
+      peg$silentFails++;
+      s0 = peg$parseMultiLineComment();
+      if (s0 === peg$FAILED) {
+        s0 = peg$parseSingleLineComment();
+      }
+      peg$silentFails--;
+      if (s0 === peg$FAILED) {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c181); }
+      }
+
+      return s0;
+    }
+
+    function peg$parseMultiLineComment() {
+      var s0, s1, s2, s3, s4, s5;
+
+      s0 = peg$currPos;
+      if (input.substr(peg$currPos, 2) === peg$c182) {
+        s1 = peg$c182;
+        peg$currPos += 2;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c183); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$currPos;
+        s4 = peg$currPos;
+        peg$silentFails++;
+        if (input.substr(peg$currPos, 2) === peg$c184) {
+          s5 = peg$c184;
+          peg$currPos += 2;
+        } else {
+          s5 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c185); }
+        }
+        peg$silentFails--;
+        if (s5 === peg$FAILED) {
+          s4 = peg$c180;
+        } else {
+          peg$currPos = s4;
+          s4 = peg$c0;
+        }
+        if (s4 !== peg$FAILED) {
+          s5 = peg$parseSourceCharacter();
+          if (s5 !== peg$FAILED) {
+            s4 = [s4, s5];
+            s3 = s4;
+          } else {
+            peg$currPos = s3;
+            s3 = peg$c0;
+          }
+        } else {
+          peg$currPos = s3;
+          s3 = peg$c0;
+        }
+        while (s3 !== peg$FAILED) {
+          s2.push(s3);
+          s3 = peg$currPos;
+          s4 = peg$currPos;
+          peg$silentFails++;
+          if (input.substr(peg$currPos, 2) === peg$c184) {
+            s5 = peg$c184;
+            peg$currPos += 2;
+          } else {
+            s5 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c185); }
+          }
+          peg$silentFails--;
+          if (s5 === peg$FAILED) {
+            s4 = peg$c180;
+          } else {
+            peg$currPos = s4;
+            s4 = peg$c0;
+          }
+          if (s4 !== peg$FAILED) {
+            s5 = peg$parseSourceCharacter();
+            if (s5 !== peg$FAILED) {
+              s4 = [s4, s5];
+              s3 = s4;
+            } else {
+              peg$currPos = s3;
+              s3 = peg$c0;
+            }
+          } else {
+            peg$currPos = s3;
+            s3 = peg$c0;
+          }
+        }
+        if (s2 !== peg$FAILED) {
+          if (input.substr(peg$currPos, 2) === peg$c184) {
+            s3 = peg$c184;
+            peg$currPos += 2;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c185); }
+          }
+          if (s3 !== peg$FAILED) {
+            s1 = [s1, s2, s3];
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parseMultiLineCommentNoLineTerminator() {
+      var s0, s1, s2, s3, s4, s5;
+
+      s0 = peg$currPos;
+      if (input.substr(peg$currPos, 2) === peg$c182) {
+        s1 = peg$c182;
+        peg$currPos += 2;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c183); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$currPos;
+        s4 = peg$currPos;
+        peg$silentFails++;
+        if (input.substr(peg$currPos, 2) === peg$c184) {
+          s5 = peg$c184;
+          peg$currPos += 2;
+        } else {
+          s5 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c185); }
+        }
+        if (s5 === peg$FAILED) {
+          s5 = peg$parseLineTerminator();
+        }
+        peg$silentFails--;
+        if (s5 === peg$FAILED) {
+          s4 = peg$c180;
+        } else {
+          peg$currPos = s4;
+          s4 = peg$c0;
+        }
+        if (s4 !== peg$FAILED) {
+          s5 = peg$parseSourceCharacter();
+          if (s5 !== peg$FAILED) {
+            s4 = [s4, s5];
+            s3 = s4;
+          } else {
+            peg$currPos = s3;
+            s3 = peg$c0;
+          }
+        } else {
+          peg$currPos = s3;
+          s3 = peg$c0;
+        }
+        while (s3 !== peg$FAILED) {
+          s2.push(s3);
+          s3 = peg$currPos;
+          s4 = peg$currPos;
+          peg$silentFails++;
+          if (input.substr(peg$currPos, 2) === peg$c184) {
+            s5 = peg$c184;
+            peg$currPos += 2;
+          } else {
+            s5 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c185); }
+          }
+          if (s5 === peg$FAILED) {
+            s5 = peg$parseLineTerminator();
+          }
+          peg$silentFails--;
+          if (s5 === peg$FAILED) {
+            s4 = peg$c180;
+          } else {
+            peg$currPos = s4;
+            s4 = peg$c0;
+          }
+          if (s4 !== peg$FAILED) {
+            s5 = peg$parseSourceCharacter();
+            if (s5 !== peg$FAILED) {
+              s4 = [s4, s5];
+              s3 = s4;
+            } else {
+              peg$currPos = s3;
+              s3 = peg$c0;
+            }
+          } else {
+            peg$currPos = s3;
+            s3 = peg$c0;
+          }
+        }
+        if (s2 !== peg$FAILED) {
+          if (input.substr(peg$currPos, 2) === peg$c184) {
+            s3 = peg$c184;
+            peg$currPos += 2;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c185); }
+          }
+          if (s3 !== peg$FAILED) {
+            s1 = [s1, s2, s3];
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parseSingleLineComment() {
+      var s0, s1, s2, s3, s4, s5;
+
+      s0 = peg$currPos;
+      if (input.substr(peg$currPos, 2) === peg$c186) {
+        s1 = peg$c186;
+        peg$currPos += 2;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c187); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$currPos;
+        s4 = peg$currPos;
+        peg$silentFails++;
+        s5 = peg$parseLineTerminator();
+        peg$silentFails--;
+        if (s5 === peg$FAILED) {
+          s4 = peg$c180;
+        } else {
+          peg$currPos = s4;
+          s4 = peg$c0;
+        }
+        if (s4 !== peg$FAILED) {
+          s5 = peg$parseSourceCharacter();
+          if (s5 !== peg$FAILED) {
+            s4 = [s4, s5];
+            s3 = s4;
+          } else {
+            peg$currPos = s3;
+            s3 = peg$c0;
+          }
+        } else {
+          peg$currPos = s3;
+          s3 = peg$c0;
+        }
+        while (s3 !== peg$FAILED) {
+          s2.push(s3);
+          s3 = peg$currPos;
+          s4 = peg$currPos;
+          peg$silentFails++;
+          s5 = peg$parseLineTerminator();
+          peg$silentFails--;
+          if (s5 === peg$FAILED) {
+            s4 = peg$c180;
+          } else {
+            peg$currPos = s4;
+            s4 = peg$c0;
+          }
+          if (s4 !== peg$FAILED) {
+            s5 = peg$parseSourceCharacter();
+            if (s5 !== peg$FAILED) {
+              s4 = [s4, s5];
+              s3 = s4;
+            } else {
+              peg$currPos = s3;
+              s3 = peg$c0;
+            }
+          } else {
+            peg$currPos = s3;
+            s3 = peg$c0;
+          }
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parseLineTerminator();
+          if (s3 === peg$FAILED) {
+            s3 = peg$parseEOF();
+          }
+          if (s3 !== peg$FAILED) {
+            s1 = [s1, s2, s3];
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parse_() {
+      var s0, s1;
+
+      s0 = [];
+      s1 = peg$parseWhiteSpace();
+      if (s1 === peg$FAILED) {
+        s1 = peg$parseMultiLineCommentNoLineTerminator();
+        if (s1 === peg$FAILED) {
+          s1 = peg$parseSingleLineComment();
+        }
+      }
+      while (s1 !== peg$FAILED) {
+        s0.push(s1);
+        s1 = peg$parseWhiteSpace();
+        if (s1 === peg$FAILED) {
+          s1 = peg$parseMultiLineCommentNoLineTerminator();
+          if (s1 === peg$FAILED) {
+            s1 = peg$parseSingleLineComment();
+          }
+        }
+      }
+
+      return s0;
+    }
+
+    function peg$parse__() {
+      var s0, s1;
+
+      s0 = [];
+      s1 = peg$parseWhiteSpace();
+      if (s1 === peg$FAILED) {
+        s1 = peg$parseLineTerminatorSequence();
+        if (s1 === peg$FAILED) {
+          s1 = peg$parseComment();
+        }
+      }
+      while (s1 !== peg$FAILED) {
+        s0.push(s1);
+        s1 = peg$parseWhiteSpace();
+        if (s1 === peg$FAILED) {
+          s1 = peg$parseLineTerminatorSequence();
+          if (s1 === peg$FAILED) {
+            s1 = peg$parseComment();
+          }
+        }
+      }
+
+      return s0;
+    }
+
+
+      var p, parser, cs, leftVarNames, superLeftVarNames, rightVarNames, superRightVarNames, standardGapNames, getSuperViewName, getGapString, sizeVarNames;
+
+      p = parser = this;
+
+      p.trickleDownOptions = ["name"];
+      sizeVarNames = p.sizeVarNames = ["width", "height"];
+      leftVarNames = p.leftVarNames = ["right", "bottom"];
+      superLeftVarNames = p.superLeftVarNames = ["left", "top"];
+      rightVarNames = p.rightVarNames = ["left", "top"];
+      superRightVarNames = p.superRightVarNames = ["right", "bottom"];
+
+      cs = p.cs = [];
+
+      p.addC = function (c) {
+        cs.push(c);
+      };
+
+
+      p.selectors = [];
+      p.addSelector = function (sel) {
+        if (p.selectors.indexOf(sel) === -1) {
+          p.selectors.push(sel);
+        }
+      }
+
+      p.addSplatIfNeeded = function (v, d, o) { // viewObj, dimension, options
+        var statement, op, gap;
+        if (v.connection) {
+          op = v.connection.op;
+          gap = v.connection.gap;
+        }
+        else {
+          op = "==";
+          gap = 0;
+        }
+        if (v.isSplat) {
+          statement = v.view + " { " +
+            "&[" + leftVarNames[d] + "] ";
+          statement += p.getConnectionString(v.connection, d, o, false) + " ";
+          statement += "&:next[" + rightVarNames[d] + "];" +
+            " }";
+
+          p.addC(statement);
+        }
+      }
+      p.addPreds = function (view,preds,d) {
+        var pred, ccss, eq, exps, exp;
+        if (preds) {
+          for (var i = 0; i < preds.length; i++) {
+            pred = preds[i];
+            eq = pred[0];
+            ccss = view + "[" + sizeVarNames[d] + "] " + eq + " ";
+            exps = pred[1];
+            for (var j = 0; j < exps.length; j++) {
+              exp = exps[j];
+              if (exp[0] === "view") {
+                exp = exp[1] + "[" + sizeVarNames[d] + "]";
+              }
+              ccss += exp + " ";
+            }
+            if (pred[2]) {
+              ccss += pred[2];
+            } // strength & weight
+            cs.push(ccss.trim());
+          }
+        }
+      };
+
+      p.defaultChainObject = {
+        headEq: "==",
+        value: "",
+        tailEq: "",
+        s: ""
+      };
+
+      p.chainTailEqMap = {
+        "<=": ">=",
+        ">=": "<=",
+        "==": "==",
+        "<" : ">",
+        ">" : "<"
+      };
+
+      p.addChains = function (views,o) {
+        var chains, chain, prop, preds, connector, ccss, view, pred;
+        chains = o.chains;
+        if (chains) {
+          for (var i = 0; i < chains.length; i++) {
+            chain = chains[i];
+            prop = chain[0];
+            preds = chain[1];
+            if (preds === "" || !preds) {
+              // load default chain predicate
+              preds = [p.defaultChainObject];
+            }
+            for (var j = 0; j < preds.length; j++) {
+              pred = preds[j];
+              ccss = "";
+              for (var k = 0; k < views.length - 1; k++) {
+                view = views[k];
+                if (pred.headEq === "") {
+                  pred.headEq = p.defaultChainObject.headEq;
+                }
+                ccss += " " + view + "[" + prop + "] " + pred.headEq;
+                if (pred.value !== "") {
+                  ccss += " " + pred.value;
+                  if (views.length > 1) {
+                    if (pred.tailEq === "") {
+                      pred.tailEq = p.chainTailEqMap[pred.headEq];
+                    }
+                    ccss += " " + pred.tailEq;
+                  }
+                  else {
+                    ccss += " " + pred.s;
+                    cs.push(ccss.trim());
+                  }
+                }
+              }
+              if (views.length > 1) {
+                 ccss += " " + views[views.length-1] + "[" + prop + "]";
+                 ccss += p.getTrailingOptions(o);
+                 ccss += " " + pred.s;
+                 cs.push(ccss.trim());
+              }
+            }
+          }
+        }
+      };
+
+      getSuperViewName = function (o) {
+        if (o.in === undefined) {
+          return "::this";
+        }
+        return o.in;
+      };
+
+      p.getLeftVar = function (view, dimension, o, viewObj) {
+        var varName;
+        if (viewObj.isPoint) {
+          return viewObj.pos;
+        }
+        else if (view === "|") {
+          view = getSuperViewName(o);
+          varName = superLeftVarNames[dimension];
+        }
+        else {
+          if (viewObj.isSplat) {
+            view += ":last";
+            if (view[0] === "(") {
+              view = "(" + view + ")";
+            }
+          }
+          varName = leftVarNames[dimension];
+        }
+        return view + "[" + varName + "]";
+      };
+
+      p.getRightVar = function (view, dimension, o, viewObj) {
+        var varName;
+        if (viewObj.isPoint) {
+          return viewObj.pos;
+        }
+        else if (view === "|") {
+          view = getSuperViewName(o);
+          varName = superRightVarNames[dimension];
+        }
+        else {
+          if (viewObj.isSplat) {
+            view += ":first";
+            if (view[0] === "(") {
+              view = "(" + view + ")";
+            }
+          }
+          varName = rightVarNames[dimension];
+        }
+        return view + "[" + varName + "]";
+      };
+
+      standardGapNames = ["[hgap]", "[vgap]"];
+
+      getGapString = function (g,d,o,withContainer) {
+        if (g === undefined) {return "";}
+        if (g === "__STANDARD__") {
+          // use gap if given with `gap()` or `outer-gap`
+          if (withContainer && o['outer-gap']) {
+            g = o['outer-gap'];
+          } else if (o.gap) {
+            g = o.gap;
+          // else use standard var
+          } else {
+            g = standardGapNames[d];
+          }
+        }
+        return "+ " + g;
+      };
+
+      p.getConnectionString = function (c, d, o, withContainer) {
+
+        return (getGapString(c.gap,d,o,withContainer) + " " + c.op).trim();
+      };
+
+      p.getTrailingOptions = function (o) {
+        var string = "";
+        if (o) {
+          p.trickleDownOptions.forEach(function(key){
+            if (o[key] != null) {
+              string = string + " " + key + "(" + o[key] + ")";
+            }
+          });
+        }
+        return string;
+      };
+
+      p.getSW = function (o) {
+        if (o.sw) {
+          return " " + o.sw.trim();
+        }
+        return "";
+      };
+
+
+      p.getResults = function () {
+        return { statements:this.cs, selectors:p.selectors};
+      };
+
+      p.flatten = function (array, isShallow) {
+
+        if (typeof array === "string") {return array;}
+
+        var index = -1,
+          length = array ? array.length : 0,
+          result = [];
+
+        while (++index < length) {
+          var value = array[index];
+
+          if (value instanceof Array) {
+            Array.prototype.push.apply(result, isShallow ? value : p.flatten(value));
+          }
+          else {
+            result.push(value);
+          }
+        }
+        return result;
+      }
+
+      p.trim = function (x) {
+        if (typeof x === "string") {return x.trim();}
+        if (x instanceof Array) {return x.join("").trim();}
+        return ""
+      };
+
+      p.join = function (a) {
+        if (!a) {return "";}
+        if (a.join){return a.join("");}
+        return a;
+      };
+
+      p.stringify = function (array) {
+        if (!array) {return "";}
+        return p.trim(p.join(p.flatten(array)));
+      };
+
+
+
+    peg$result = peg$startRuleFunction();
+
+    if (peg$result !== peg$FAILED && peg$currPos === input.length) {
+      return peg$result;
+    } else {
+      if (peg$result !== peg$FAILED && peg$currPos < input.length) {
+        peg$fail({ type: "end", description: "end of input" });
+      }
+
+      throw peg$buildException(null, peg$maxFailExpected, peg$maxFailPos);
+    }
+  }
+
+  return {
+    SyntaxError: SyntaxError,
+    parse:       parse
+  };
+})();
+});
+
+require.register("slightlyoff~cassowary.js@master", function (exports, module) {
+module.exports = require("slightlyoff~cassowary.js@master/src/c.js");
+require("slightlyoff~cassowary.js@master/src/HashTable.js");
+require("slightlyoff~cassowary.js@master/src/HashSet.js");
+require("slightlyoff~cassowary.js@master/src/Error.js");
+require("slightlyoff~cassowary.js@master/src/SymbolicWeight.js");
+require("slightlyoff~cassowary.js@master/src/Strength.js");
+require("slightlyoff~cassowary.js@master/src/Variable.js");
+require("slightlyoff~cassowary.js@master/src/Point.js");
+require("slightlyoff~cassowary.js@master/src/Expression.js");
+require("slightlyoff~cassowary.js@master/src/Constraint.js");
+require("slightlyoff~cassowary.js@master/src/Constraint.js");
+require("slightlyoff~cassowary.js@master/src/EditInfo.js");
+require("slightlyoff~cassowary.js@master/src/Tableau.js");
+require("slightlyoff~cassowary.js@master/src/SimplexSolver.js");
+require("slightlyoff~cassowary.js@master/src/Timer.js");
+require("slightlyoff~cassowary.js@master/src/parser/parser.js");
+require("slightlyoff~cassowary.js@master/src/parser/api.js");
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/c.js", function (exports, module) {
+// Copyright (C) 1998-2000 Greg J. Badros
+// Use of this source code is governed by
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
+
+(function(scope){
+"use strict";
+
+// For Safari 5.x. Go-go-gadget ridiculously long release cycle!
+try {
+  (function(){}).bind(scope);
+} catch (e) {
+  Object.defineProperty(Function.prototype, "bind", {
+    value: function(scope) {
+      var f = this;
+      return function() { return f.apply(scope, arguments); }
+    },
+    enumerable: false,
+    configurable: true,
+    writable: true,
+  });
+}
+
+var inBrowser = (typeof scope["HTMLElement"] != "undefined");
+
+var getTagName = function(proto) {
+  var tn = null;
+  while (proto && proto != Object.prototype) {
+      if (proto.tagName) {
+        tn = proto.tagName;
+        break;
+      }
+    proto = proto.prototype;
+  }
+  return tn || "div";
+};
+var epsilon = 1e-8;
+
+var  _t_map = {};
+var walkForMethod = function(ctor, name) {
+  if (!ctor || !name) return;
+
+  // Check the class-side first, the look at the prototype, then walk up
+  if (typeof ctor[name] == "function") {
+    return ctor[name];
+  }
+  var p = ctor.prototype;
+  if (p && typeof p[name] == "function") {
+    return p[name];
+  }
+  if (p === Object.prototype ||
+      p === Function.prototype) {
+    return;
+  }
+
+  if (typeof ctor.__super__ == "function") {
+    return walkForMethod(ctor.__super__, name);
+  }
+};
+
+// Global
+var c = scope.c = function() {
+  if(c._api) {
+    return c._api.apply(this, arguments);
+  }
+};
+
+//
+// Configuration
+//
+c.debug = false;
+c.trace = false;
+c.verbose = false;
+c.traceAdded = false;
+c.GC = false;
+
+//
+// Constants
+//
+c.GEQ = 1;
+c.LEQ = 2;
+
+
+//
+// Utility methods
+//
+c.inherit = function(props) {
+  var ctor = null;
+  var parent = null;
+
+  if (props["extends"]) {
+    parent = props["extends"];
+    delete props["extends"];
+  }
+
+  if (props["initialize"]) {
+    ctor = props["initialize"];
+    delete props["initialize"];
+  }
+
+  var realCtor = ctor || function() { };
+
+  Object.defineProperty(realCtor, "__super__", {
+    value: (parent) ? parent : Object,
+    enumerable: false,
+    configurable: true,
+    writable: false,
+  });
+
+  if (props["_t"]) {
+    _t_map[props["_t"]] = realCtor;
+  }
+
+  // FIXME(slightlyoff): would like to have class-side inheritance!
+  // It's easy enough to do when we have __proto__, but we don't in IE 9/10.
+  //   = (
+
+  /*
+  // NOTE: would happily do this except it's 2x slower. Boo!
+  props.__proto__ = parent ? parent.prototype : Object.prototype;
+  realCtor.prototype = props;
+  */
+
+  var rp = realCtor.prototype = Object.create(
+    ((parent) ? parent.prototype : Object.prototype)
+  );
+
+  c.extend(rp, props);
+
+  // If we're in a browser, we want to support "subclassing" HTML elements.
+  // This needs some magic and we rely on a wrapped constructor hack to make
+  // it happen.
+  if (inBrowser) {
+    if (parent && parent.prototype instanceof scope.HTMLElement) {
+      var intermediateCtor = realCtor;
+      var tn = getTagName(rp);
+      var upgrade = function(el) {
+        el.__proto__ = rp;
+        intermediateCtor.apply(el, arguments);
+        if (rp["created"]) { el.created(); }
+        if (rp["decorate"]) { el.decorate(); }
+        return el;
+      };
+      this.extend(rp, { upgrade: upgrade, });
+
+      realCtor = function() {
+        // We hack the constructor to always return an element with it's
+        // prototype wired to ours. Boo.
+        return upgrade(
+          scope.document.createElement(tn)
+        );
+      }
+      realCtor.prototype = rp;
+      this.extend(realCtor, { ctor: intermediateCtor, }); // HACK!!!
+    }
+  }
+
+  return realCtor;
+};
+
+c.own = function(obj, cb, context) {
+  Object.getOwnPropertyNames(obj).forEach(cb, context||scope);
+  return obj;
+};
+
+c.extend = function(obj, props) {
+  c.own(props, function(x) {
+    var pd = Object.getOwnPropertyDescriptor(props, x);
+    try {
+      if ( (typeof pd["get"] == "function") ||
+           (typeof pd["set"] == "function") ) {
+        Object.defineProperty(obj, x, pd);
+      } else if (typeof pd["value"] == "function" ||x.charAt(0) === "_") {
+        pd.writable = true;
+        pd.configurable = true;
+        pd.enumerable = false;
+        Object.defineProperty(obj, x, pd);
+      } else {
+          obj[x] = props[x];
+      }
+    } catch(e) {
+      // console.warn("c.extend assignment failed on property", x);
+    }
+  });
+  return obj;
+};
+
+// FIXME: legacy API to be removed
+c.traceprint = function(s /*String*/) { if (c.verbose) { console.log(s); } };
+c.fnenterprint = function(s /*String*/) { console.log("* " + s); };
+c.fnexitprint = function(s /*String*/) { console.log("- " + s); };
+
+c.assert = function(f /*boolean*/, description /*String*/) {
+  if (!f) {
+    throw new c.InternalError("Assertion failed: " + description);
+  }
+};
+
+var exprFromVarOrValue = function(v) {
+  if (typeof v == "number" ) {
+    return c.Expression.fromConstant(v);
+  } else if(v instanceof c.Variable) {
+    return c.Expression.fromVariable(v);
+  }
+  return v;
+};
+
+c.plus = function(e1, e2) {
+  e1 = exprFromVarOrValue(e1);
+  e2 = exprFromVarOrValue(e2);
+  return e1.plus(e2);
+};
+
+c.minus = function(e1, e2) {
+  e1 = exprFromVarOrValue(e1);
+  e2 = exprFromVarOrValue(e2);
+  return e1.minus(e2);
+};
+
+c.times = function(e1, e2) {
+  e1 = exprFromVarOrValue(e1);
+  e2 = exprFromVarOrValue(e2);
+  return e1.times(e2);
+};
+
+c.divide = function(e1, e2) {
+  e1 = exprFromVarOrValue(e1);
+  e2 = exprFromVarOrValue(e2);
+  return e1.divide(e2);
+};
+
+c.approx = function(a, b) {
+  if (a === b) { return true; }
+  a = +(a);
+  b = +(b);
+  if (a == 0) {
+    return (Math.abs(b) < epsilon);
+  }
+  if (b == 0) {
+    return (Math.abs(a) < epsilon);
+  }
+  return (Math.abs(a - b) < Math.abs(a) * epsilon);
+};
+
+var count = 1;
+c._inc = function() { return count++; };
+
+c.parseJSON = function(str) {
+  return JSON.parse(str, function(k, v) {
+    if (typeof v != "object" || typeof v["_t"] != "string") {
+      return v;
+    }
+    var type = v["_t"];
+    var ctor = _t_map[type];
+    if (type && ctor) {
+      var fromJSON = walkForMethod(ctor, "fromJSON");
+      if (fromJSON) {
+        return fromJSON(v, ctor);
+      }
+    }
+    return v;
+  });
+};
+
+if (typeof define === 'function' && define.amd) {
+  // Require.js
+  define(c);
+} else if (typeof module === 'object' && module.exports) {
+  // CommonJS
+  module.exports = c;
+} else {
+  // Browser without module container
+  scope.c = c;
+}
+
+})(this);
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/HashTable.js", function (exports, module) {
+/**
+ * Copyright 2012 Alex Russell <slightlyoff@google.com>.
+ *
+ * Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * This is an API compatible re-implementation of the subset of jshashtable
+ * which Cassowary actually uses.
+ *
+ * Features removed:
+ *
+ *     - multiple values per key
+ *     - error tollerent hashing of any variety
+ *     - overly careful (or lazy) size counting, etc.
+ *     - Crockford's "class" pattern. We use the system from c.js.
+ *     - any attempt at back-compat with broken runtimes.
+ *
+ * APIs removed, mostly for lack of use in Cassowary:
+ *
+ *     - support for custom hashing and equality functions as keys to ctor
+ *     - isEmpty() -> check for !ht.size()
+ *     - putAll()
+ *     - entries()
+ *     - containsKey()
+ *     - containsValue()
+ *     - keys()
+ *     - values()
+ *
+ * Additions:
+ *
+ *     - new "scope" parameter to each() and escapingEach()
+ */
+
+(function(c) {
+"use strict";
+
+var copyOwn = function(src, dest) {
+  Object.keys(src).forEach(function(x) {
+    dest[x] = src[x];
+  });
+};
+
+if (false && typeof Map != "undefined") {
+
+  c.HashTable = c.inherit({
+
+    initialize: function() {
+      this.size = 0;
+      this._store = new Map();
+      this._keys = [];
+      // this.get = this._store.get.bind(this._store);
+    },
+
+    set: function(key, value) {
+      this._store.set(key, value);
+      if (this._keys.indexOf(key) == -1) {
+        this.size++;
+        // delete this._keys[this._keys.indexOf(key)];
+        this._keys.push(key);
+      } /* else {
+        delete this._keys[this._keys.indexOf(key)];
+        this._keys.push(key);
+      }
+      */
+    },
+
+    get: function(key) {
+      return this._store.get(key);
+    },
+
+    clear: function() {
+      this.size = 0;
+      this._store = new Map();
+      this._keys = [];
+    },
+
+    delete: function(key) {
+      if (this._store.delete(key) && this.size > 0) {
+        delete this._keys[this._keys.indexOf(key)];
+        this.size--;
+      }
+    },
+
+    each: function(callback, scope) {
+      if (!this.size) { return; }
+      this._keys.forEach(function(k){
+        if (typeof k == "undefined") { return; }
+        var v = this._store.get(k);
+        if (typeof v != "undefined") {
+          callback.call(scope||null, k, v);
+        }
+      }, this);
+    },
+
+    escapingEach: function(callback, scope) {
+      if (!this.size) { return; }
+
+      var that = this;
+      var kl = this._keys.length;
+      var context;
+      for (var x = 0; x < kl; x++) {
+        if (typeof this._keys[x] != "undefined") {
+          (function(k) {
+            var v = that._store.get(k);
+            if (typeof v != "undefined") {
+              context = callback.call(scope||null, k, v);
+            }
+          })(this._keys[x]);
+
+          if (context) {
+            if (context.retval !== undefined) {
+              return context;
+            }
+            if (context.brk) {
+              break;
+            }
+          }
+        }
+      }
+    },
+
+    clone: function() {
+      var n = new c.HashTable();
+      if (this.size) {
+        this.each(function(k, v) {
+          n.set(k, v);
+        });
+      }
+      return n;
+    }
+  });
+} else {
+  // For escapingEach
+  var defaultContext = {};
+
+  c.HashTable = c.inherit({
+
+    initialize: function() {
+      this.size = 0;
+      this._store = {};
+      this._keyStrMap = {};
+      this._deleted = 0;
+    },
+
+    set: function(key, value) {
+      var hash = key.hashCode;
+
+      if (typeof this._store[hash] == "undefined") {
+        // FIXME(slightlyoff): if size gooes above the V8 property limit,
+        // compact or go to a tree.
+        this.size++;
+      }
+      this._store[hash] = value;
+      this._keyStrMap[hash] = key;
+    },
+
+    get: function(key) {
+      if(!this.size) { return null; }
+
+      key = key.hashCode;
+
+      var v = this._store[key];
+      if (typeof v != "undefined") {
+        return this._store[key];
+      }
+      return null;
+    },
+
+    clear: function() {
+      this.size = 0;
+      this._store = {};
+      this._keyStrMap = {};
+    },
+
+    _compact: function() {
+      // console.time("HashTable::_compact()");
+      var ns = {};
+      copyOwn(this._store, ns);
+      this._store = ns;
+      // console.timeEnd("HashTable::_compact()");
+    },
+
+    _compactThreshold: 100,
+    _perhapsCompact: function() {
+      // If we have more properties than V8's fast property lookup limit, don't
+      // bother
+      if (this._size > 30) return;
+      if (this._deleted > this._compactThreshold) {
+        this._compact();
+        this._deleted = 0;
+      }
+    },
+
+    delete: function(key) {
+      key = key.hashCode;
+      if (!this._store.hasOwnProperty(key)) {
+        return;
+      }
+      this._deleted++;
+
+      // FIXME(slightlyoff):
+      //    I hate this because it causes these objects to go megamorphic = (
+      //    Sadly, Cassowary is hugely sensitive to iteration order changes, and
+      //    "delete" preserves order when Object.keys() is called later.
+      delete this._store[key];
+      // Note: we don't delete from _keyStrMap because we only get the
+      // Object.keys() from _store, so it's the only one we need to keep up-to-
+      // date.
+
+      if (this.size > 0) {
+        this.size--;
+      }
+    },
+
+    each: function(callback, scope) {
+      if (!this.size) { return; }
+
+      this._perhapsCompact();
+
+      var store = this._store;
+      var keyMap = this._keyStrMap;
+      for (var x in this._store) {
+        if (this._store.hasOwnProperty(x)) {
+          callback.call(scope||null, keyMap[x], store[x]);
+        }
+      }
+    },
+
+    escapingEach: function(callback, scope) {
+      if (!this.size) { return; }
+
+      this._perhapsCompact();
+
+      var that = this;
+      var store = this._store;
+      var keyMap = this._keyStrMap;
+      var context = defaultContext;
+      var kl = Object.keys(store);
+      for (var x = 0; x < kl.length; x++) {
+        (function(v) {
+          if (that._store.hasOwnProperty(v)) {
+            context = callback.call(scope||null, keyMap[v], store[v]);
+          }
+        })(kl[x]);
+
+        if (context) {
+          if (context.retval !== undefined) {
+            return context;
+          }
+          if (context.brk) {
+            break;
+          }
+        }
+      }
+    },
+
+    clone: function() {
+      var n = new c.HashTable();
+      if (this.size) {
+        n.size = this.size;
+        copyOwn(this._store, n._store);
+        copyOwn(this._keyStrMap, n._keyStrMap);
+      }
+      return n;
+    },
+
+    equals: function(other) {
+      if (other === this) {
+        return true;
+      }
+
+      if (!(other instanceof c.HashTable) || other._size !== this._size) {
+        return false;
+      }
+
+      var codes = Object.keys(this._store);
+      for (var i = 0; i < codes.length; i++) {
+        var code = codes[i];
+        if (this._keyStrMap[code] !== other._keyStrMap[code] ||
+            this._store[code] !== other._store[code]) {
+          return false;
+        }
+      }
+
+      return true;
+    },
+
+    toString: function(h) {
+      var answer = "";
+      this.each(function(k, v) { answer += k + " => " + v + "\n"; });
+      return answer;
+    },
+  });
+}
+
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/HashSet.js", function (exports, module) {
+/**
+ * Copyright 2011, Alex Russell <slightlyoff@google.com>
+ *
+ * Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * API compatible re-implementation of jshashset.js, including only what
+ * Cassowary needs. Built for speed, not comfort.
+ */
+(function(c) {
+"use strict";
+
+c.HashSet = c.inherit({
+  _t: "c.HashSet",
+
+  initialize: function() {
+    this.storage = [];
+    this.size = 0;
+    this.hashCode = c._inc();
+  },
+
+  add: function(item) {
+    var s = this.storage, io = s.indexOf(item);
+    if (s.indexOf(item) == -1) { s[s.length] = item; }
+    this.size = this.storage.length;
+  },
+
+  values: function() {
+    // FIXME(slightlyoff): is it safe to assume we won't be mutated by our caller?
+    //                     if not, return this.storage.slice(0);
+    return this.storage;
+  },
+
+  has: function(item) {
+    var s = this.storage;
+    return (s.indexOf(item) != -1);
+  },
+
+  delete: function(item) {
+    var io = this.storage.indexOf(item);
+    if (io == -1) { return null; }
+    this.storage.splice(io, 1)[0];
+    this.size = this.storage.length;
+  },
+
+  clear: function() {
+    this.storage.length = 0;
+  },
+
+  each: function(func, scope) {
+    if(this.size)
+      this.storage.forEach(func, scope);
+  },
+
+  escapingEach: function(func, scope) {
+    // FIXME(slightlyoff): actually escape!
+    if (this.size)
+      this.storage.forEach(func, scope);
+  },
+
+  toString: function() {
+    var answer = this.size + " {";
+    var first = true;
+    this.each(function(e) {
+      if (!first) {
+        answer += ", ";
+      } else {
+        first = false;
+      }
+      answer += e;
+    });
+    answer += "}\n";
+    return answer;
+  },
+
+  toJSON: function() {
+    var d = [];
+    this.each(function(e) {
+      d[d.length] = e.toJSON();
+    });
+    return {
+      _t: "c.HashSet",
+      data: d
+    };
+  },
+
+  fromJSON: function(o) {
+    var r = new c.HashSet();
+    if (o.data) {
+      r.size = o.data.length;
+      r.storage = o.data;
+    }
+    return r;
+  },
+});
+
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/Error.js", function (exports, module) {
+// Copyright (C) 1998-2000 Greg J. Badros
+// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+//
+// Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
+
+(function(c){
+  "use strict";
+
+  c.Error = c.inherit({
+    // extends: Error,
+    initialize: function(s /*String*/) { if (s) { this._description = s; } },
+    _name: "c.Error",
+    _description: "An error has occured in Cassowary",
+    set description(v)   { this._description = v; },
+    get description()    { return "(" + this._name + ") " + this._description; },
+    get message()        { return this.description; },
+    toString: function() { return this.description; },
+  });
+
+  var errorType = function(name, error) {
+    return c.inherit({
+      extends: c.Error,
+      initialize: function() { c.Error.apply(this, arguments); },
+      _name: name||"", _description: error||""
+    });
+  };
+
+  c.ConstraintNotFound =
+    errorType("c.ConstraintNotFound",
+        "Tried to remove a constraint never added to the tableu");
+
+  c.InternalError =
+    errorType("c.InternalError");
+
+  c.NonExpression =
+    errorType("c.NonExpression",
+        "The resulting expression would be non");
+
+  c.NotEnoughStays =
+    errorType("c.NotEnoughStays",
+        "There are not enough stays to give specific values to every variable");
+
+  c.RequiredFailure =
+    errorType("c.RequiredFailure", "A required constraint cannot be satisfied");
+
+  c.TooDifficult =
+    errorType("c.TooDifficult", "The constraints are too difficult to solve");
+
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/SymbolicWeight.js", function (exports, module) {
+// Copyright (C) 1998-2000 Greg J. Badros
+// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+//
+// Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
+
+(function(c) {
+"use strict";
+
+var multiplier = 1000;
+
+c.SymbolicWeight = c.inherit({
+  _t: "c.SymbolicWeight",
+  initialize: function(/*w1, w2, w3*/) {
+    this.value = 0;
+    var factor = 1;
+    for (var i = arguments.length - 1; i >= 0; --i) {
+      this.value += arguments[i] * factor;
+      factor *= multiplier;
+    }
+  },
+
+  toJSON: function() {
+    return {
+      _t: this._t,
+      value: this.value
+    };
+  },
+});
+
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/Strength.js", function (exports, module) {
+// Copyright (C) 1998-2000 Greg J. Badros
+// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+//
+// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
+
+// FILE: EDU.Washington.grad.gjb.cassowary
+// package EDU.Washington.grad.gjb.cassowary;
+
+(function(c) {
+
+c.Strength = c.inherit({
+  initialize: function(name /*String*/, symbolicWeight, w2, w3) {
+    this.name = name;
+    if (symbolicWeight instanceof c.SymbolicWeight) {
+      this.symbolicWeight = symbolicWeight;
+    } else {
+      this.symbolicWeight = new c.SymbolicWeight(symbolicWeight, w2, w3);
+    }
+  },
+
+  get required() {
+    return (this === c.Strength.required);
+  },
+
+  toString: function() {
+    return this.name + (!this.isRequired ? (":" + this.symbolicWeight) : "");
+  },
+});
+
+/* public static final */
+c.Strength.required = new c.Strength("<Required>", 1000, 1000, 1000);
+/* public static final  */
+c.Strength.strong = new c.Strength("strong", 1, 0, 0);
+/* public static final  */
+c.Strength.medium = new c.Strength("medium", 0, 1, 0);
+/* public static final  */
+c.Strength.weak = new c.Strength("weak", 0, 0, 1);
+
+})(this["c"]||((typeof module != "undefined") ? module.parent.exports.c : {}));
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/Variable.js", function (exports, module) {
+// Copyright (C) 1998-2000 Greg J. Badros
+// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+//
+// Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
+
+(function(c) {
+"use strict";
+
+c.AbstractVariable = c.inherit({
+  isDummy:      false,
+  isExternal:   false,
+  isPivotable:  false,
+  isRestricted: false,
+
+  _init: function(args, varNamePrefix) {
+    // Common mixin initialization.
+    this.hashCode = c._inc();
+    this.name = (varNamePrefix||"") + this.hashCode;
+    if (args) {
+      if (typeof args.name != "undefined") {
+        this.name = args.name;
+      }
+      if (typeof args.value != "undefined") {
+        this.value = args.value;
+      }
+      if (typeof args.prefix != "undefined") {
+        this._prefix = args.prefix;
+      }
+    }
+  },
+
+  _prefix: "",
+  name: "",
+  value: 0,
+
+  valueOf: function() { return this.value; },
+
+  toJSON: function() {
+    var o = {};
+    if (this._t) {
+      o._t = this._t;
+    }
+    if (this.name) {
+      o.name = this.name;
+    }
+    if (typeof this.value != "undefined") {
+      o.value = this.value;
+    }
+    if (this._prefix) {
+      o._prefix = this._prefix;
+    }
+    if (this._t) {
+      o._t = this._t;
+    }
+    return o;
+  },
+
+  fromJSON: function(o, Ctor) {
+    var r = new Ctor();
+    c.extend(r, o);
+    return r;
+  },
+
+  toString: function() {
+    return this._prefix + "[" + this.name + ":" + this.value + "]";
+  },
+
+});
+
+c.Variable = c.inherit({
+  _t: "c.Variable",
+  extends: c.AbstractVariable,
+  initialize: function(args) {
+    this._init(args, "v");
+    var vm = c.Variable._map;
+    if (vm) { vm[this.name] = this; }
+  },
+  isExternal:     true,
+});
+
+/* static */
+// c.Variable._map = [];
+
+c.DummyVariable = c.inherit({
+  _t: "c.DummyVariable",
+  extends: c.AbstractVariable,
+  initialize: function(args) {
+    this._init(args, "d");
+  },
+  isDummy:        true,
+  isRestricted:   true,
+  value:         "dummy",
+});
+
+c.ObjectiveVariable = c.inherit({
+  _t: "c.ObjectiveVariable",
+  extends: c.AbstractVariable,
+  initialize: function(args) {
+    this._init(args, "o");
+  },
+  value:         "obj",
+});
+
+c.SlackVariable = c.inherit({
+  _t: "c.SlackVariable",
+  extends: c.AbstractVariable,
+  initialize: function(args) {
+    this._init(args, "s");
+  },
+  isPivotable:    true,
+  isRestricted:   true,
+  value:         "slack",
+});
+
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/Point.js", function (exports, module) {
+// Copyright (C) 1998-2000 Greg J. Badros
+// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+//
+// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
+
+(function(c) {
+"use strict";
+c.Point = c.inherit({
+  initialize: function(x, y, suffix) {
+    if (x instanceof c.Variable) {
+      this._x = x;
+    } else {
+      var xArgs = { value: x };
+      if (suffix) {
+        xArgs.name = "x" + suffix;
+      }
+      this._x = new c.Variable(xArgs);
+    }
+    if (y instanceof c.Variable) {
+      this._y = y;
+    } else {
+      var yArgs = { value: y };
+      if (suffix) {
+        yArgs.name = "y" + suffix;
+      }
+      this._y = new c.Variable(yArgs);
+    }
+  },
+
+  get x() { return this._x; },
+  set x(xVar) {
+    if (xVar instanceof c.Variable) {
+      this._x = xVar;
+    } else {
+      this._x.value = xVar;
+    }
+  },
+
+  get y() { return this._y; },
+  set y(yVar) {
+    if (yVar instanceof c.Variable) {
+      this._y = yVar;
+    } else {
+      this._y.value = yVar;
+    }
+  },
+
+  toString: function() {
+    return "(" + this.x + ", " + this.y + ")";
+  },
+});
+
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/Expression.js", function (exports, module) {
+// Copyright (C) 1998-2000 Greg J. Badros
+// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+//
+// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
+
+// FILE: EDU.Washington.grad.gjb.cassowary
+// package EDU.Washington.grad.gjb.cassowary;
+
+(function(c) {
+"use strict";
+
+var checkNumber = function(value, otherwise){
+  // if(isNaN(value)) { debugger; }
+  return (typeof value === "number") ? value : otherwise;
+};
+
+c.Expression = c.inherit({
+
+  initialize: function(cvar /*c.AbstractVariable*/,
+                       value /*double*/,
+                       constant /*double*/) {
+    this.constant = checkNumber(constant, 0);
+    this.terms = new c.HashTable();
+    if (cvar instanceof c.AbstractVariable) {
+      value = checkNumber(value, 1);
+      this.setVariable(cvar, value);
+    } else if (typeof cvar == "number") {
+      if (!isNaN(cvar)) {
+        this.constant = cvar;
+      } else {
+        console.trace();
+      }
+    }
+  },
+
+  initializeFromHash: function(constant /*ClDouble*/, terms /*c.Hashtable*/) {
+    if (c.verbose) {
+      console.log("*******************************");
+      console.log("clone c.initializeFromHash");
+      console.log("*******************************");
+    }
+
+    if (c.GC) console.log("clone c.Expression");
+    this.constant = constant;
+    this.terms = terms.clone();
+    return this;
+  },
+
+  multiplyMe: function(x /*double*/) {
+    this.constant *= x;
+    var t = this.terms;
+    t.each(function(clv, coeff) { t.set(clv, coeff * x); });
+    return this;
+  },
+
+  clone: function() {
+    if (c.verbose) {
+      console.log("*******************************");
+      console.log("clone c.Expression");
+      console.log("*******************************");
+    }
+
+    var e = c.Expression.empty();
+    e.initializeFromHash(this.constant, this.terms);
+    return e;
+  },
+
+  times: function(x) {
+    if (typeof x == 'number') {
+      return (this.clone()).multiplyMe(x);
+    } else {
+      if (this.isConstant) {
+        return x.times(this.constant);
+      } else if (x.isConstant) {
+        return this.times(x.constant);
+      } else {
+        throw new c.NonExpression();
+      }
+    }
+  },
+
+  plus: function(expr /*c.Expression*/) {
+    if (expr instanceof c.Expression) {
+      return this.clone().addExpression(expr, 1);
+    } else if (expr instanceof c.Variable) {
+      return this.clone().addVariable(expr, 1);
+    }
+  },
+
+  minus: function(expr /*c.Expression*/) {
+    if (expr instanceof c.Expression) {
+      return this.clone().addExpression(expr, -1);
+    } else if (expr instanceof c.Variable) {
+      return this.clone().addVariable(expr, -1);
+    }
+  },
+
+  divide: function(x) {
+    if (typeof x == 'number') {
+      if (c.approx(x, 0)) {
+        throw new c.NonExpression();
+      }
+      return this.times(1 / x);
+    } else if (x instanceof c.Expression) {
+      if (!x.isConstant) {
+        throw new c.NonExpression();
+      }
+      return this.times(1 / x.constant);
+    }
+  },
+
+  addExpression: function(expr /*c.Expression*/,
+                          n /*double*/,
+                          subject /*c.AbstractVariable*/,
+                          solver /*c.Tableau*/) {
+
+    // console.log("c.Expression::addExpression()", expr, n);
+    // console.trace();
+    if (expr instanceof c.AbstractVariable) {
+      expr = c.Expression.fromVariable(expr);
+      // if(c.trace) console.log("addExpression: Had to cast a var to an expression");
+    }
+    n = checkNumber(n, 1);
+    this.constant += (n * expr.constant);
+    expr.terms.each(function(clv, coeff) {
+      // console.log("clv:", clv, "coeff:", coeff, "subject:", subject);
+      this.addVariable(clv, coeff * n, subject, solver);
+    }, this);
+    return this;
+  },
+
+  addVariable: function(v /*c.AbstractVariable*/, cd /*double*/, subject, solver) {
+    if (cd == null) {
+      cd = 1;
+    }
+
+    /*
+    if (c.trace) console.log("c.Expression::addVariable():", v , cd);
+    */
+    var coeff = this.terms.get(v);
+    if (coeff) {
+      var newCoefficient = coeff + cd;
+      if (newCoefficient == 0 || c.approx(newCoefficient, 0)) {
+        if (solver) {
+          solver.noteRemovedVariable(v, subject);
+        }
+        this.terms.delete(v);
+      } else {
+        this.setVariable(v, newCoefficient);
+      }
+    } else {
+      if (!c.approx(cd, 0)) {
+        this.setVariable(v, cd);
+        if (solver) {
+          solver.noteAddedVariable(v, subject);
+        }
+      }
+    }
+    return this;
+  },
+
+  setVariable: function(v /*c.AbstractVariable*/, c /*double*/) {
+    // console.log("terms.set(", v, c, ")");
+    this.terms.set(v, c);
+    return this;
+  },
+
+  anyPivotableVariable: function() {
+    if (this.isConstant) {
+      throw new c.InternalError("anyPivotableVariable called on a constant");
+    }
+
+    var rv = this.terms.escapingEach(function(clv, c) {
+      if (clv.isPivotable) return { retval: clv };
+    });
+
+    if (rv && rv.retval !== undefined) {
+      return rv.retval;
+    }
+
+    return null;
+  },
+
+  substituteOut: function(outvar  /*c.AbstractVariable*/,
+                          expr    /*c.Expression*/,
+                          subject /*c.AbstractVariable*/,
+                          solver  /*ClTableau*/) {
+
+    /*
+    if (c.trace) {
+      c.fnenterprint("CLE:substituteOut: " + outvar + ", " + expr + ", " + subject + ", ...");
+      c.traceprint("this = " + this);
+    }
+    */
+    var setVariable = this.setVariable.bind(this);
+    var terms = this.terms;
+    var multiplier = terms.get(outvar);
+    terms.delete(outvar);
+    this.constant += (multiplier * expr.constant);
+    /*
+    console.log("substituteOut:",
+                "\n\toutvar:", outvar,
+                "\n\texpr:", expr.toString(),
+                "\n\tmultiplier:", multiplier,
+                "\n\tterms:", terms);
+    */
+    expr.terms.each(function(clv, coeff) {
+      var oldCoefficient = terms.get(clv);
+      if (oldCoefficient) {
+        var newCoefficient = oldCoefficient + multiplier * coeff;
+        if (c.approx(newCoefficient, 0)) {
+          solver.noteRemovedVariable(clv, subject);
+          terms.delete(clv);
+        } else {
+          terms.set(clv, newCoefficient);
+        }
+      } else {
+        terms.set(clv, multiplier * coeff);
+        if (solver) {
+          solver.noteAddedVariable(clv, subject);
+        }
+      }
+    });
+    // if (c.trace) c.traceprint("Now this is " + this);
+  },
+
+  changeSubject: function(old_subject /*c.AbstractVariable*/,
+                          new_subject /*c.AbstractVariable*/) {
+    this.setVariable(old_subject, this.newSubject(new_subject));
+  },
+
+  newSubject: function(subject /*c.AbstractVariable*/) {
+    // if (c.trace) c.fnenterprint("newSubject:" + subject);
+
+    var reciprocal = 1 / this.terms.get(subject);
+    this.terms.delete(subject);
+    this.multiplyMe(-reciprocal);
+    return reciprocal;
+  },
+
+  // Return the coefficient corresponding to variable var, i.e.,
+  // the 'ci' corresponding to the 'vi' that var is:
+  //     v1*c1 + v2*c2 + .. + vn*cn + c
+  coefficientFor: function(clv /*c.AbstractVariable*/) {
+    return this.terms.get(clv) || 0;
+  },
+
+  get isConstant() {
+    return this.terms.size == 0;
+  },
+
+  toString: function() {
+    var bstr = ''; // answer
+    var needsplus = false;
+    if (!c.approx(this.constant, 0) || this.isConstant) {
+      bstr += this.constant;
+      if (this.isConstant) {
+        return bstr;
+      } else {
+        needsplus = true;
+      }
+    }
+    this.terms.each( function(clv, coeff) {
+      if (needsplus) {
+        bstr += " + ";
+      }
+      bstr += coeff + "*" + clv;
+      needsplus = true;
+    });
+    return bstr;
+  },
+
+  equals: function(other) {
+    if (other === this) {
+      return true;
+    }
+
+    return other instanceof c.Expression &&
+           other.constant === this.constant &&
+           other.terms.equals(this.terms);
+  },
+
+  Plus: function(e1 /*c.Expression*/, e2 /*c.Expression*/) {
+    return e1.plus(e2);
+  },
+
+  Minus: function(e1 /*c.Expression*/, e2 /*c.Expression*/) {
+    return e1.minus(e2);
+  },
+
+  Times: function(e1 /*c.Expression*/, e2 /*c.Expression*/) {
+    return e1.times(e2);
+  },
+
+  Divide: function(e1 /*c.Expression*/, e2 /*c.Expression*/) {
+    return e1.divide(e2);
+  },
+});
+
+c.Expression.empty = function() {
+  return new c.Expression(undefined, 1, 0);
+};
+
+c.Expression.fromConstant = function(cons) {
+  return new c.Expression(cons);
+};
+
+c.Expression.fromValue = function(v) {
+  v = +(v);
+  return new c.Expression(undefined, v, 0);
+};
+
+c.Expression.fromVariable = function(v) {
+  return new c.Expression(v, 1, 0);
+}
+
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/Constraint.js", function (exports, module) {
+// Copyright (C) 1998-2000 Greg J. Badros
+// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+//
+// Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
+
+(function(c) {
+"use strict";
+
+c.AbstractConstraint = c.inherit({
+  initialize: function(strength /*c.Strength*/, weight /*double*/) {
+    this.hashCode = c._inc();
+    this.strength = strength || c.Strength.required;
+    this.weight = weight || 1;
+  },
+
+  isEditConstraint: false,
+  isInequality:     false,
+  isStayConstraint: false,
+  get required() { return (this.strength === c.Strength.required); },
+
+  toString: function() {
+    // this is abstract -- it intentionally leaves the parens unbalanced for
+    // the subclasses to complete (e.g., with ' = 0', etc.
+    return this.strength + " {" + this.weight + "} (" + this.expression +")";
+  },
+});
+
+var ts = c.AbstractConstraint.prototype.toString;
+
+var EditOrStayCtor = function(cv /*c.Variable*/, strength /*c.Strength*/, weight /*double*/) {
+  c.AbstractConstraint.call(this, strength || c.Strength.strong, weight);
+  this.variable = cv;
+  this.expression = new c.Expression(cv, -1, cv.value);
+};
+
+c.EditConstraint = c.inherit({
+  extends: c.AbstractConstraint,
+  initialize: function() { EditOrStayCtor.apply(this, arguments); },
+  isEditConstraint: true,
+  toString: function() { return "edit:" + ts.call(this); },
+});
+
+c.StayConstraint = c.inherit({
+  extends: c.AbstractConstraint,
+  initialize: function() { EditOrStayCtor.apply(this, arguments); },
+  isStayConstraint: true,
+  toString: function() { return "stay:" + ts.call(this); },
+});
+
+var lc =
+c.Constraint = c.inherit({
+  extends: c.AbstractConstraint,
+  initialize: function(cle /*c.Expression*/,
+                       strength /*c.Strength*/,
+                       weight /*double*/) {
+    c.AbstractConstraint.call(this, strength, weight);
+    this.expression = cle;
+  },
+});
+
+c.Inequality = c.inherit({
+  extends: c.Constraint,
+
+  _cloneOrNewCle: function(cle) {
+    // FIXME(D4): move somewhere else?
+    if (cle.clone)  {
+      return cle.clone();
+    } else {
+      return new c.Expression(cle);
+    }
+  },
+
+  initialize: function(a1, a2, a3, a4, a5) {
+    // FIXME(slightlyoff): what a disgusting mess. Should at least add docs.
+    // console.log("c.Inequality.initialize(", a1, a2, a3, a4, a5, ")");
+
+    var a1IsExp = a1 instanceof c.Expression,
+        a3IsExp = a3 instanceof c.Expression,
+        a1IsVar = a1 instanceof c.AbstractVariable,
+        a3IsVar = a3 instanceof c.AbstractVariable,
+        a1IsNum = typeof(a1) == 'number',
+        a3IsNum = typeof(a3) == 'number';
+
+    // (cle || number), op, cv
+    if ((a1IsExp || a1IsNum) && a3IsVar) {
+      var cle = a1, op = a2, cv = a3, strength = a4, weight = a5;
+      lc.call(this, this._cloneOrNewCle(cle), strength, weight);
+      if (op == c.LEQ) {
+        this.expression.multiplyMe(-1);
+        this.expression.addVariable(cv);
+      } else if (op == c.GEQ) {
+        this.expression.addVariable(cv, -1);
+      } else {
+        throw new c.InternalError("Invalid operator in c.Inequality constructor");
+      }
+    // cv, op, (cle || number)
+    } else if (a1IsVar && (a3IsExp || a3IsNum)) {
+      var cle = a3, op = a2, cv = a1, strength = a4, weight = a5;
+      lc.call(this, this._cloneOrNewCle(cle), strength, weight);
+      if (op == c.GEQ) {
+        this.expression.multiplyMe(-1);
+        this.expression.addVariable(cv);
+      } else if (op == c.LEQ) {
+        this.expression.addVariable(cv, -1);
+      } else {
+        throw new c.InternalError("Invalid operator in c.Inequality constructor");
+      }
+    // cle, op, num
+    } else if (a1IsExp && a3IsNum) {
+      var cle1 = a1, op = a2, cle2 = a3, strength = a4, weight = a5;
+      lc.call(this, this._cloneOrNewCle(cle1), strength, weight);
+      if (op == c.LEQ) {
+        this.expression.multiplyMe(-1);
+        this.expression.addExpression(this._cloneOrNewCle(cle2));
+      } else if (op == c.GEQ) {
+        this.expression.addExpression(this._cloneOrNewCle(cle2), -1);
+      } else {
+        throw new c.InternalError("Invalid operator in c.Inequality constructor");
+      }
+      return this
+    // num, op, cle
+    } else if (a1IsNum && a3IsExp) {
+      var cle1 = a3, op = a2, cle2 = a1, strength = a4, weight = a5;
+      lc.call(this, this._cloneOrNewCle(cle1), strength, weight);
+      if (op == c.GEQ) {
+        this.expression.multiplyMe(-1);
+        this.expression.addExpression(this._cloneOrNewCle(cle2));
+      } else if (op == c.LEQ) {
+        this.expression.addExpression(this._cloneOrNewCle(cle2), -1);
+      } else {
+        throw new c.InternalError("Invalid operator in c.Inequality constructor");
+      }
+      return this
+    // cle op cle
+    } else if (a1IsExp && a3IsExp) {
+      var cle1 = a1, op = a2, cle2 = a3, strength = a4, weight = a5;
+      lc.call(this, this._cloneOrNewCle(cle2), strength, weight);
+      if (op == c.GEQ) {
+        this.expression.multiplyMe(-1);
+        this.expression.addExpression(this._cloneOrNewCle(cle1));
+      } else if (op == c.LEQ) {
+        this.expression.addExpression(this._cloneOrNewCle(cle1), -1);
+      } else {
+        throw new c.InternalError("Invalid operator in c.Inequality constructor");
+      }
+    // cle
+    } else if (a1IsExp) {
+      return lc.call(this, a1, a2, a3);
+    // >=
+    } else if (a2 == c.GEQ) {
+      lc.call(this, new c.Expression(a3), a4, a5);
+      this.expression.multiplyMe(-1);
+      this.expression.addVariable(a1);
+    // <=
+    } else if (a2 == c.LEQ) {
+      lc.call(this, new c.Expression(a3), a4, a5);
+      this.expression.addVariable(a1,-1);
+    // error
+    } else {
+      throw new c.InternalError("Invalid operator in c.Inequality constructor");
+    }
+  },
+
+  isInequality: true,
+
+  toString: function() {
+    // return "c.Inequality: " + this.hashCode;
+    return lc.prototype.toString.call(this) + " >= 0) id: " + this.hashCode;
+  },
+});
+
+c.Equation = c.inherit({
+  extends: c.Constraint,
+  initialize: function(a1, a2, a3, a4) {
+    // FIXME(slightlyoff): this is just a huge mess.
+    if (a1 instanceof c.Expression && !a2 || a2 instanceof c.Strength) {
+      lc.call(this, a1, a2, a3);
+    } else if ((a1 instanceof c.AbstractVariable) &&
+               (a2 instanceof c.Expression)) {
+
+      var cv = a1, cle = a2, strength = a3, weight = a4;
+      lc.call(this, cle.clone(), strength, weight);
+      this.expression.addVariable(cv, -1);
+
+    } else if ((a1 instanceof c.AbstractVariable) &&
+               (typeof(a2) == 'number')) {
+
+      var cv = a1, val = a2, strength = a3, weight = a4;
+      lc.call(this, new c.Expression(val), strength, weight);
+      this.expression.addVariable(cv, -1);
+
+    } else if ((a1 instanceof c.Expression) &&
+               (a2 instanceof c.AbstractVariable)) {
+
+      var cle = a1, cv = a2, strength = a3, weight = a4;
+      lc.call(this, cle.clone(), strength, weight);
+      this.expression.addVariable(cv, -1);
+
+    } else if (((a1 instanceof c.Expression) || (a1 instanceof c.AbstractVariable) ||
+                (typeof(a1) == 'number')) &&
+               ((a2 instanceof c.Expression) || (a2 instanceof c.AbstractVariable) ||
+                (typeof(a2) == 'number'))) {
+
+      if (a1 instanceof c.Expression) {
+        a1 = a1.clone();
+      } else {
+        a1 = new c.Expression(a1);
+      }
+
+      if (a2 instanceof c.Expression) {
+        a2 = a2.clone();
+      } else {
+        a2 = new c.Expression(a2);
+      }
+
+      lc.call(this, a1, a3, a4);
+      this.expression.addExpression(a2, -1);
+
+    } else {
+      throw "Bad initializer to c.Equation";
+    }
+    c.assert(this.strength instanceof c.Strength, "_strength not set");
+  },
+
+  toString: function() {
+    return lc.prototype.toString.call(this) + " = 0)";
+  },
+});
+
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/EditInfo.js", function (exports, module) {
+// Copyright (C) 1998-2000 Greg J. Badros
+// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+//
+// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
+
+(function(c) {
+"use strict";
+
+c.EditInfo = c.inherit({
+  initialize: function(cn      /*c.Constraint*/,
+                       eplus   /*c.SlackVariable*/,
+                       eminus  /*c.SlackVariable*/,
+                       prevEditConstant /*double*/,
+                       i /*int*/) {
+    this.constraint = cn;
+    this.editPlus = eplus;
+    this.editMinus = eminus;
+    this.prevEditConstant = prevEditConstant;
+    this.index = i;
+  },
+  toString: function() {
+    return "<cn=" + this.constraint +
+           ", ep=" + this.editPlus +
+           ", em=" + this.editMinus +
+           ", pec=" + this.prevEditConstant +
+           ", index=" + this.index + ">";
+  }
+});
+
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/Tableau.js", function (exports, module) {
+// Copyright (C) 1998-2000 Greg J. Badros
+// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+//
+// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
+
+(function(c) {
+"use strict";
+
+c.Tableau = c.inherit({
+  initialize: function() {
+    // columns is a mapping from variables which occur in expressions to the
+    // set of basic variables whose expressions contain them
+    // i.e., it's a mapping from variables in expressions (a column) to the
+    // set of rows that contain them
+    this.columns = new c.HashTable(); // values are sets
+
+    // _rows maps basic variables to the expressions for that row in the tableau
+    this.rows = new c.HashTable();    // values are c.Expressions
+
+    // the collection of basic variables that have infeasible rows
+    // (used when reoptimizing)
+    this._infeasibleRows = new c.HashSet();
+
+    // the set of rows where the basic variable is external this was added to
+    // the C++ version to reduce time in setExternalVariables()
+    this._externalRows = new c.HashSet();
+
+    // the set of external variables which are parametric this was added to the
+    // C++ version to reduce time in setExternalVariables()
+    this._externalParametricVars = new c.HashSet();
+  },
+
+  // Variable v has been removed from an Expression.  If the Expression is in a
+  // tableau the corresponding basic variable is subject (or if subject is nil
+  // then it's in the objective function). Update the column cross-indices.
+  noteRemovedVariable: function(v /*c.AbstractVariable*/,
+                                subject /*c.AbstractVariable*/) {
+    c.trace && console.log("c.Tableau::noteRemovedVariable: ", v, subject);
+    var column = this.columns.get(v);
+    if (subject && column) {
+      column.delete(subject);
+    }
+  },
+
+  noteAddedVariable: function(v /*c.AbstractVariable*/, subject /*c.AbstractVariable*/) {
+    // if (c.trace) console.log("c.Tableau::noteAddedVariable:", v, subject);
+    if (subject) {
+      this.insertColVar(v, subject);
+    }
+  },
+
+  getInternalInfo: function() {
+    var retstr = "Tableau Information:\n";
+    retstr += "Rows: " + this.rows.size;
+    retstr += " (= " + (this.rows.size - 1) + " constraints)";
+    retstr += "\nColumns: " + this.columns.size;
+    retstr += "\nInfeasible Rows: " + this._infeasibleRows.size;
+    retstr += "\nExternal basic variables: " + this._externalRows.size;
+    retstr += "\nExternal parametric variables: ";
+    retstr += this._externalParametricVars.size;
+    retstr += "\n";
+    return retstr;
+  },
+
+  toString: function() {
+    var bstr = "Tableau:\n";
+    this.rows.each(function(clv, expr) {
+      bstr += clv;
+      bstr += " <==> ";
+      bstr += expr;
+      bstr += "\n";
+    });
+    bstr += "\nColumns:\n";
+    bstr += this.columns;
+    bstr += "\nInfeasible rows: ";
+    bstr += this._infeasibleRows;
+    bstr += "External basic variables: ";
+    bstr += this._externalRows;
+    bstr += "External parametric variables: ";
+    bstr += this._externalParametricVars;
+    return bstr;
+  },
+
+  /*
+  toJSON: function() {
+    // Creates an object representation of the Tableau.
+  },
+  */
+
+  // Convenience function to insert a variable into
+  // the set of rows stored at columns[param_var],
+  // creating a new set if needed
+  insertColVar: function(param_var /*c.Variable*/,
+                         rowvar /*c.Variable*/) {
+    var rowset = /* Set */ this.columns.get(param_var);
+    if (!rowset) {
+      rowset = new c.HashSet();
+      this.columns.set(param_var, rowset);
+    }
+    rowset.add(rowvar);
+  },
+
+  addRow: function(aVar /*c.AbstractVariable*/,
+                   expr /*c.Expression*/) {
+    if (c.trace) c.fnenterprint("addRow: " + aVar + ", " + expr);
+    this.rows.set(aVar, expr);
+    expr.terms.each(function(clv, coeff) {
+      this.insertColVar(clv, aVar);
+      if (clv.isExternal) {
+        this._externalParametricVars.add(clv);
+      }
+    }, this);
+    if (aVar.isExternal) {
+      this._externalRows.add(aVar);
+    }
+    if (c.trace) c.traceprint(this.toString());
+  },
+
+  removeColumn: function(aVar /*c.AbstractVariable*/) {
+    if (c.trace) c.fnenterprint("removeColumn:" + aVar);
+    var rows = /* Set */ this.columns.get(aVar);
+    if (rows) {
+      this.columns.delete(aVar);
+      rows.each(function(clv) {
+        var expr = /* c.Expression */this.rows.get(clv);
+        expr.terms.delete(aVar);
+      }, this);
+    } else {
+      if (c.trace) console.log("Could not find var", aVar, "in columns");
+    }
+    if (aVar.isExternal) {
+      this._externalRows.delete(aVar);
+      this._externalParametricVars.delete(aVar);
+    }
+  },
+
+  removeRow: function(aVar /*c.AbstractVariable*/) {
+    if (c.trace) c.fnenterprint("removeRow:" + aVar);
+    var expr = /* c.Expression */this.rows.get(aVar);
+    c.assert(expr != null);
+    expr.terms.each(function(clv, coeff) {
+      var varset = this.columns.get(clv);
+      if (varset != null) {
+        if (c.trace) console.log("removing from varset:", aVar);
+        varset.delete(aVar);
+      }
+    }, this);
+    this._infeasibleRows.delete(aVar);
+    if (aVar.isExternal) {
+      this._externalRows.delete(aVar);
+    }
+    this.rows.delete(aVar);
+    if (c.trace) c.fnexitprint("returning " + expr);
+    return expr;
+  },
+
+  substituteOut: function(oldVar /*c.AbstractVariable*/,
+                          expr /*c.Expression*/) {
+    if (c.trace) c.fnenterprint("substituteOut:" + oldVar + ", " + expr);
+    if (c.trace) c.traceprint(this.toString());
+
+    var varset = this.columns.get(oldVar);
+    varset.each(function(v) {
+      var row = this.rows.get(v);
+      row.substituteOut(oldVar, expr, v, this);
+      if (v.isRestricted && row.constant < 0) {
+        this._infeasibleRows.add(v);
+      }
+    }, this);
+
+    if (oldVar.isExternal) {
+      this._externalRows.add(oldVar);
+      this._externalParametricVars.delete(oldVar);
+    }
+
+    this.columns.delete(oldVar);
+  },
+
+  columnsHasKey: function(subject /*c.AbstractVariable*/) {
+    return !!this.columns.get(subject);
+  },
+});
+
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/SimplexSolver.js", function (exports, module) {
+// Copyright (C) 1998-2000 Greg J. Badros
+// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+//
+// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
+
+(function(c) {
+var t = c.Tableau;
+var tp = t.prototype;
+var epsilon = 1e-8;
+var weak = c.Strength.weak;
+
+c.SimplexSolver = c.inherit({
+  extends: c.Tableau,
+  initialize: function(){
+
+    c.Tableau.call(this);
+    this._stayMinusErrorVars = [];
+    this._stayPlusErrorVars = [];
+
+    this._errorVars = new c.HashTable(); // cn -> Set of cv
+
+    this._markerVars = new c.HashTable(); // cn -> Set of cv
+
+    // this._resolve_pair = [0, 0];
+    this._objective = new c.ObjectiveVariable({ name: "Z" });
+
+    this._editVarMap = new c.HashTable(); // cv -> c.EditInfo
+    this._editVarList = [];
+
+    this._slackCounter = 0;
+    this._artificialCounter = 0;
+    this._dummyCounter = 0;
+    this.autoSolve = true;
+    this._needsSolving = false;
+
+    this._optimizeCount = 0;
+
+    this.rows.set(this._objective, c.Expression.empty());
+    this._editVariableStack = [0]; // Stack
+    if (c.trace)
+      c.traceprint("objective expr == " + this.rows.get(this._objective));
+  },
+
+  add: function(/*c.Constraint, ...*/) {
+    for (var x = 0; x < arguments.length; x++) {
+      this.addConstraint(arguments[x]);
+    }
+    return this;
+  },
+
+  _addEditConstraint: function(cn, eplus_eminus, prevEConstant) {
+      var i = this._editVarMap.size;
+      var cvEplus = /* c.SlackVariable */eplus_eminus[0];
+      var cvEminus = /* c.SlackVariable */eplus_eminus[1];
+      /*
+      if (!cvEplus instanceof c.SlackVariable) {
+        console.warn("cvEplus not a slack variable =", cvEplus);
+      }
+      if (!cvEminus instanceof c.SlackVariable) {
+        console.warn("cvEminus not a slack variable =", cvEminus);
+      }
+      c.debug && console.log("new c.EditInfo(" + cn + ", " + cvEplus + ", " +
+                                  cvEminus + ", " + prevEConstant + ", " +
+                                  i +")");
+      */
+      var ei = new c.EditInfo(cn, cvEplus, cvEminus, prevEConstant, i)
+      this._editVarMap.set(cn.variable, ei);
+      this._editVarList[i] = { v: cn.variable, info: ei };
+  },
+
+  addConstraint: function(cn /*c.Constraint*/) {
+    c.trace && c.fnenterprint("addConstraint: " + cn);
+    var eplus_eminus = new Array(2);
+    var prevEConstant = new Array(1); // so it can be output to
+    var expr = this.newExpression(cn, /*output to*/ eplus_eminus, prevEConstant);
+    prevEConstant = prevEConstant[0];
+
+    if (!this.tryAddingDirectly(expr)) {
+      this.addWithArtificialVariable(expr);
+    }
+
+
+    this._needsSolving = true;
+    if (cn.isEditConstraint) {
+      this._addEditConstraint(cn, eplus_eminus, prevEConstant);
+    }
+    if (this.autoSolve) {
+      this.optimize(this._objective);
+      this._setExternalVariables();
+    }
+    return this;
+  },
+
+  addConstraintNoException: function(cn /*c.Constraint*/) {
+    c.trace && c.fnenterprint("addConstraintNoException: " + cn);
+    // FIXME(slightlyoff): change this to enable chaining
+    try {
+      this.addConstraint(cn);
+      return true;
+    } catch (e /*c.RequiredFailure*/){
+      return false;
+    }
+  },
+
+  addEditVar: function(v /*c.Variable*/, strength /*c.Strength*/, weight /*double*/) {
+    c.trace && c.fnenterprint("addEditVar: " + v + " @ " + strength + " {" + weight + "}");
+    return this.addConstraint(
+        new c.EditConstraint(v, strength || c.Strength.strong, weight));
+  },
+
+  beginEdit: function() {
+    // FIXME(slightlyoff): we shouldn't throw here. Log instead
+    c.assert(this._editVarMap.size > 0, "_editVarMap.size > 0");
+    this._infeasibleRows.clear();
+    this._resetStayConstants();
+    this._editVariableStack[this._editVariableStack.length] = this._editVarMap.size;
+    return this;
+  },
+
+  endEdit: function() {
+    // FIXME(slightlyoff): we shouldn't throw here. Log instead
+    c.assert(this._editVarMap.size > 0, "_editVarMap.size > 0");
+    this.resolve();
+    this._editVariableStack.pop();
+    this.removeEditVarsTo(
+      this._editVariableStack[this._editVariableStack.length - 1]
+    );
+    return this;
+  },
+
+  removeAllEditVars: function() {
+    return this.removeEditVarsTo(0);
+  },
+
+  removeEditVarsTo: function(n /*int*/) {
+    try {
+      var evll = this._editVarList.length;
+      // only remove the variable if it's not in the set of variable
+      // from a previous nested outer edit
+      // e.g., if I do:
+      // Edit x,y
+      // Edit w,h,x,y
+      // EndEdit
+      // The end edit needs to only get rid of the edits on w,h
+      // not the ones on x,y
+      for(var x = n; x < evll; x++) {
+        if (this._editVarList[x]) {
+          this.removeConstraint(
+            this._editVarMap.get(this._editVarList[x].v).constraint
+          );
+        }
+      }
+      this._editVarList.length = n;
+      c.assert(this._editVarMap.size == n, "_editVarMap.size == n");
+      return this;
+    } catch (e /*ConstraintNotFound*/){
+      throw new c.InternalError("Constraint not found in removeEditVarsTo");
+    }
+  },
+
+  // Add weak stays to the x and y parts of each point. These have
+  // increasing weights so that the solver will try to satisfy the x
+  // and y stays on the same point, rather than the x stay on one and
+  // the y stay on another.
+  addPointStays: function(points /*[{ x: .., y: ..}, ...]*/) {
+    c.trace && console.log("addPointStays", points);
+    points.forEach(function(p, idx) {
+      this.addStay(p.x, weak, Math.pow(2, idx));
+      this.addStay(p.y, weak, Math.pow(2, idx));
+    }, this);
+    return this;
+  },
+
+  addStay: function(v /*c.Variable*/, strength /*c.Strength*/, weight /*double*/) {
+    var cn = new c.StayConstraint(v,
+                                  strength || weak,
+                                  weight   || 1);
+    return this.addConstraint(cn);
+  },
+
+  // FIXME(slightlyoff): add a removeStay
+
+  removeConstraint: function(cn /*c.Constraint*/) {
+    // console.log("removeConstraint('", cn, "')");
+    c.trace && c.fnenterprint("removeConstraintInternal: " + cn);
+    c.trace && c.traceprint(this.toString());
+    this._needsSolving = true;
+    this._resetStayConstants();
+    var zRow = this.rows.get(this._objective);
+    var eVars = /* Set */this._errorVars.get(cn);
+    c.trace && c.traceprint("eVars == " + eVars);
+    if (eVars != null) {
+      eVars.each(function(cv) {
+        var expr = this.rows.get(cv);
+        if (expr == null) {
+          zRow.addVariable(cv,
+                           -cn.weight * cn.strength.symbolicWeight.value,
+                           this._objective,
+                           this);
+        } else {
+          zRow.addExpression(expr,
+                             -cn.weight * cn.strength.symbolicWeight.value,
+                             this._objective,
+                             this);
+        }
+        c.trace && c.traceprint("now eVars == " + eVars);
+      }, this);
+    }
+    var marker = this._markerVars.get(cn);
+    this._markerVars.delete(cn);
+    if (marker == null) {
+      throw new c.InternalError("Constraint not found in removeConstraintInternal");
+    }
+    c.trace && c.traceprint("Looking to remove var " + marker);
+    if (this.rows.get(marker) == null) {
+      var col = this.columns.get(marker);
+      // console.log("col is:", col, "from marker:", marker);
+      c.trace && c.traceprint("Must pivot -- columns are " + col);
+      var exitVar = null;
+      var minRatio = 0;
+      col.each(function(v) {
+        if (v.isRestricted) {
+          var expr = this.rows.get(v);
+          var coeff = expr.coefficientFor(marker);
+          c.trace && c.traceprint("Marker " + marker + "'s coefficient in " + expr + " is " + coeff);
+          if (coeff < 0) {
+            var r = -expr.constant / coeff;
+            if (
+              exitVar == null ||
+              r < minRatio    ||
+              (c.approx(r, minRatio) && v.hashCode < exitVar.hashCode)
+            ) {
+              minRatio = r;
+              exitVar = v;
+            }
+          }
+        }
+      }, this);
+      if (exitVar == null) {
+        c.trace && c.traceprint("exitVar is still null");
+        col.each(function(v) {
+          if (v.isRestricted) {
+            var expr = this.rows.get(v);
+            var coeff = expr.coefficientFor(marker);
+            var r = expr.constant / coeff;
+            if (exitVar == null || r < minRatio) {
+              minRatio = r;
+              exitVar = v;
+            }
+          }
+        }, this);
+      }
+      if (exitVar == null) {
+        if (col.size == 0) {
+          this.removeColumn(marker);
+        } else {
+          col.escapingEach(function(v) {
+            if (v != this._objective) {
+              exitVar = v;
+              return { brk: true };
+            }
+          }, this);
+        }
+      }
+      if (exitVar != null) {
+        this.pivot(marker, exitVar);
+      }
+    }
+    if (this.rows.get(marker) != null) {
+      var expr = this.removeRow(marker);
+    }
+
+    if (eVars != null) {
+      eVars.each(function(v) {
+        if (v != marker) { this.removeColumn(v); }
+      }, this);
+    }
+
+    if (cn.isStayConstraint) {
+      if (eVars != null) {
+        for (var i = 0; i < this._stayPlusErrorVars.length; i++) {
+          eVars.delete(this._stayPlusErrorVars[i]);
+          eVars.delete(this._stayMinusErrorVars[i]);
+        }
+      }
+    } else if (cn.isEditConstraint) {
+      c.assert(eVars != null, "eVars != null");
+      var cei = this._editVarMap.get(cn.variable);
+      this.removeColumn(cei.editMinus);
+      this._editVarMap.delete(cn.variable);
+    }
+
+    if (eVars != null) {
+      this._errorVars.delete(eVars);
+    }
+
+    if (this.autoSolve) {
+      this.optimize(this._objective);
+      this._setExternalVariables();
+    }
+
+    return this;
+  },
+
+  reset: function() {
+    c.trace && c.fnenterprint("reset");
+    throw new c.InternalError("reset not implemented");
+  },
+
+  resolveArray: function(newEditConstants) {
+    c.trace && c.fnenterprint("resolveArray" + newEditConstants);
+    var l = newEditConstants.length
+    this._editVarMap.each(function(v, cei) {
+      var i = cei.index;
+      if (i < l)
+        this.suggestValue(v, newEditConstants[i]);
+    }, this);
+    this.resolve();
+  },
+
+  resolvePair: function(x /*double*/, y /*double*/) {
+    this.suggestValue(this._editVarList[0].v, x);
+    this.suggestValue(this._editVarList[1].v, y);
+    this.resolve();
+  },
+
+  resolve: function() {
+    c.trace && c.fnenterprint("resolve()");
+    this.dualOptimize();
+    this._setExternalVariables();
+    this._infeasibleRows.clear();
+    this._resetStayConstants();
+  },
+
+  suggestValue: function(v /*c.Variable*/, x /*double*/) {
+    c.trace && console.log("suggestValue(" + v + ", " + x + ")");
+    var cei = this._editVarMap.get(v);
+    if (!cei) {
+      throw new c.Error("suggestValue for variable " + v + ", but var is not an edit variable");
+    }
+    var delta = x - cei.prevEditConstant;
+    cei.prevEditConstant = x;
+    this.deltaEditConstant(delta, cei.editPlus, cei.editMinus);
+    return this;
+  },
+
+  solve: function() {
+    if (this._needsSolving) {
+      this.optimize(this._objective);
+      this._setExternalVariables();
+    }
+    return this;
+  },
+
+  setEditedValue: function(v /*c.Variable*/, n /*double*/) {
+    if (!(this.columnsHasKey(v) || (this.rows.get(v) != null))) {
+      v.value = n;
+      return this;
+    }
+
+    if (!c.approx(n, v.value)) {
+      this.addEditVar(v);
+      this.beginEdit();
+
+      try {
+        this.suggestValue(v, n);
+      } catch (e) {
+        throw new c.InternalError("Error in setEditedValue");
+      }
+
+      this.endEdit();
+    }
+    return this;
+  },
+
+  addVar: function(v /*c.Variable*/) {
+    if (!(this.columnsHasKey(v) || (this.rows.get(v) != null))) {
+      try {
+        this.addStay(v);
+      } catch (e /*c.RequiredFailure*/){
+        throw new c.InternalError("Error in addVar -- required failure is impossible");
+      }
+
+      c.trace && c.traceprint("added initial stay on " + v);
+    }
+    return this;
+  },
+
+  getInternalInfo: function() {
+    var retstr = tp.getInternalInfo.call(this);
+    retstr += "\nSolver info:\n";
+    retstr += "Stay Error Variables: ";
+    retstr += this._stayPlusErrorVars.length + this._stayMinusErrorVars.length;
+    retstr += " (" + this._stayPlusErrorVars.length + " +, ";
+    retstr += this._stayMinusErrorVars.length + " -)\n";
+    retstr += "Edit Variables: " + this._editVarMap.size;
+    retstr += "\n";
+    return retstr;
+  },
+
+  getDebugInfo: function() {
+    return this.toString() + this.getInternalInfo() + "\n";
+  },
+
+  toString: function() {
+    var bstr = tp.getInternalInfo.call(this);
+    bstr += "\n_stayPlusErrorVars: ";
+    bstr += '[' + this._stayPlusErrorVars + ']';
+    bstr += "\n_stayMinusErrorVars: ";
+    bstr += '[' + this._stayMinusErrorVars + ']';
+    bstr += "\n";
+    bstr += "_editVarMap:\n" + this._editVarMap;
+    bstr += "\n";
+    return bstr;
+  },
+
+  addWithArtificialVariable: function(expr /*c.Expression*/) {
+    c.trace && c.fnenterprint("addWithArtificialVariable: " + expr);
+    var av = new c.SlackVariable({
+      value: ++this._artificialCounter,
+      prefix: "a"
+    });
+    var az = new c.ObjectiveVariable({ name: "az" });
+    var azRow = /* c.Expression */expr.clone();
+    c.trace && c.traceprint("before addRows:\n" + this);
+    this.addRow(az, azRow);
+    this.addRow(av, expr);
+    c.trace && c.traceprint("after addRows:\n" + this);
+    this.optimize(az);
+    var azTableauRow = this.rows.get(az);
+    c.trace && c.traceprint("azTableauRow.constant == " + azTableauRow.constant);
+    if (!c.approx(azTableauRow.constant, 0)) {
+      this.removeRow(az);
+      this.removeColumn(av);
+      throw new c.RequiredFailure();
+    }
+    var e = this.rows.get(av);
+    if (e != null) {
+      if (e.isConstant) {
+        this.removeRow(av);
+        this.removeRow(az);
+        return;
+      }
+      var entryVar = e.anyPivotableVariable();
+      this.pivot(entryVar, av);
+    }
+    c.assert(this.rows.get(av) == null, "rowExpression(av) == null");
+    this.removeColumn(av);
+    this.removeRow(az);
+  },
+
+  tryAddingDirectly: function(expr /*c.Expression*/) {
+    c.trace && c.fnenterprint("tryAddingDirectly: " + expr);
+    var subject = this.chooseSubject(expr);
+    if (subject == null) {
+      c.trace && c.fnexitprint("returning false");
+      return false;
+    }
+    expr.newSubject(subject);
+    if (this.columnsHasKey(subject)) {
+      this.substituteOut(subject, expr);
+    }
+    this.addRow(subject, expr);
+    c.trace && c.fnexitprint("returning true");
+    return true;
+  },
+
+  chooseSubject: function(expr /*c.Expression*/) {
+    c.trace && c.fnenterprint("chooseSubject: " + expr);
+    var subject = null;
+    var foundUnrestricted = false;
+    var foundNewRestricted = false;
+    var terms = expr.terms;
+    var rv = terms.escapingEach(function(v, c) {
+      if (foundUnrestricted) {
+        if (!v.isRestricted) {
+          if (!this.columnsHasKey(v)) {
+            return { retval: v };
+          }
+        }
+      } else {
+        if (v.isRestricted) {
+          if (!foundNewRestricted && !v.isDummy && c < 0) {
+            var col = this.columns.get(v);
+            if (col == null ||
+                (col.size == 1 && this.columnsHasKey(this._objective))
+            ) {
+              subject = v;
+              foundNewRestricted = true;
+            }
+          }
+        } else {
+          subject = v;
+          foundUnrestricted = true;
+        }
+      }
+    }, this);
+    if (rv && rv.retval !== undefined) {
+      return rv.retval;
+    }
+
+    if (subject != null) {
+      return subject;
+    }
+
+    var coeff = 0;
+
+    // subject is nil.
+    // Make one last check -- if all of the variables in expr are dummy
+    // variables, then we can pick a dummy variable as the subject
+    var rv = terms.escapingEach(function(v,c) {
+      if (!v.isDummy)  {
+        return {retval:null};
+      }
+      if (!this.columnsHasKey(v)) {
+        subject = v;
+        coeff = c;
+      }
+    }, this);
+    if (rv && rv.retval !== undefined) return rv.retval;
+
+    if (!c.approx(expr.constant, 0)) {
+      throw new c.RequiredFailure();
+    }
+    if (coeff > 0) {
+      expr.multiplyMe(-1);
+    }
+    return subject;
+  },
+
+  deltaEditConstant: function(delta /*double*/,
+                              plusErrorVar /*c.AbstractVariable*/,
+                              minusErrorVar /*c.AbstractVariable*/) {
+    if (c.trace)
+      c.fnenterprint("deltaEditConstant :" + delta + ", " + plusErrorVar + ", " + minusErrorVar);
+
+    var exprPlus = this.rows.get(plusErrorVar);
+    if (exprPlus != null) {
+      exprPlus.constant += delta;
+      if (exprPlus.constant < 0) {
+        this._infeasibleRows.add(plusErrorVar);
+      }
+      return;
+    }
+    var exprMinus = this.rows.get(minusErrorVar);
+    if (exprMinus != null) {
+      exprMinus.constant += -delta;
+      if (exprMinus.constant < 0) {
+        this._infeasibleRows.add(minusErrorVar);
+      }
+      return;
+    }
+    var columnVars = this.columns.get(minusErrorVar);
+    if (!columnVars) {
+      console.log("columnVars is null -- tableau is:\n" + this);
+    }
+    columnVars.each(function(basicVar) {
+      var expr = this.rows.get(basicVar);
+      var c = expr.coefficientFor(minusErrorVar);
+      expr.constant += (c * delta);
+      if (basicVar.isRestricted && expr.constant < 0) {
+        this._infeasibleRows.add(basicVar);
+      }
+    }, this);
+  },
+
+  // We have set new values for the constants in the edit constraints.
+  // Re-Optimize using the dual simplex algorithm.
+  dualOptimize: function() {
+    c.trace && c.fnenterprint("dualOptimize:");
+    var zRow = this.rows.get(this._objective);
+    // need to handle infeasible rows
+    while (this._infeasibleRows.size) {
+      var exitVar = this._infeasibleRows.values()[0];
+      this._infeasibleRows.delete(exitVar);
+      var entryVar = null;
+      var expr = this.rows.get(exitVar);
+      // exitVar might have become basic after some other pivoting
+      // so allow for the case of its not being there any longer
+      if (expr) {
+        if (expr.constant < 0) {
+          var ratio = Number.MAX_VALUE;
+          var r;
+          var terms = expr.terms;
+          terms.each(function(v, cd) {
+            if (cd > 0 && v.isPivotable) {
+              var zc = zRow.coefficientFor(v);
+              r = zc / cd;
+              if (r < ratio ||
+                  (c.approx(r, ratio) && v.hashCode < entryVar.hashCode)
+              ) {
+                entryVar = v;
+                ratio = r;
+              }
+            }
+          });
+          if (ratio == Number.MAX_VALUE) {
+            throw new c.InternalError("ratio == nil (MAX_VALUE) in dualOptimize");
+          }
+          this.pivot(entryVar, exitVar);
+        }
+      }
+    }
+  },
+
+  // Make a new linear Expression representing the constraint cn,
+  // replacing any basic variables with their defining expressions.
+  // Normalize if necessary so that the Constant is non-negative.  If
+  // the constraint is non-required give its error variables an
+  // appropriate weight in the objective function.
+  newExpression: function(cn /*c.Constraint*/,
+                          /** outputs to **/ eplus_eminus /*Array*/,
+                          prevEConstant) {
+    if (c.trace) {
+      c.fnenterprint("newExpression: " + cn);
+      c.traceprint("cn.isInequality == " + cn.isInequality);
+      c.traceprint("cn.required == " + cn.required);
+    }
+
+    var cnExpr = cn.expression;
+    var expr = c.Expression.fromConstant(cnExpr.constant);
+    var slackVar = new c.SlackVariable();
+    var dummyVar = new c.DummyVariable();
+    var eminus = new c.SlackVariable();
+    var eplus = new c.SlackVariable();
+    var cnTerms = cnExpr.terms;
+    // console.log(cnTerms.size);
+
+    cnTerms.each(function(v, c) {
+      var e = this.rows.get(v);
+      if (!e) {
+        expr.addVariable(v, c);
+      } else {
+        expr.addExpression(e, c);
+      }
+    }, this);
+
+    if (cn.isInequality) {
+      // cn is an inequality, so Add a slack variable. The original constraint
+      // is expr>=0, so that the resulting equality is expr-slackVar=0. If cn is
+      // also non-required Add a negative error variable, giving:
+      //
+      //    expr - slackVar = -errorVar
+      //
+      // in other words:
+      //
+      //    expr - slackVar + errorVar = 0
+      //
+      // Since both of these variables are newly created we can just Add
+      // them to the Expression (they can't be basic).
+      c.trace && c.traceprint("Inequality, adding slack");
+      ++this._slackCounter;
+      slackVar = new c.SlackVariable({
+        value: this._slackCounter,
+        prefix: "s"
+      });
+      expr.setVariable(slackVar, -1);
+
+      this._markerVars.set(cn, slackVar);
+      if (!cn.required) {
+        ++this._slackCounter;
+        eminus = new c.SlackVariable({
+          value: this._slackCounter,
+          prefix: "em"
+        });
+        expr.setVariable(eminus, 1);
+        var zRow = this.rows.get(this._objective);
+        zRow.setVariable(eminus, cn.strength.symbolicWeight.value * cn.weight);
+        this.insertErrorVar(cn, eminus);
+        this.noteAddedVariable(eminus, this._objective);
+      }
+    } else {
+      if (cn.required) {
+        c.trace && c.traceprint("Equality, required");
+        // Add a dummy variable to the Expression to serve as a marker for this
+        // constraint.  The dummy variable is never allowed to enter the basis
+        // when pivoting.
+        ++this._dummyCounter;
+        dummyVar = new c.DummyVariable({
+          value: this._dummyCounter,
+          prefix: "d"
+        });
+        eplus_eminus[0] = dummyVar;
+        eplus_eminus[1] = dummyVar;
+        prevEConstant[0] = cnExpr.constant;
+        expr.setVariable(dummyVar, 1);
+        this._markerVars.set(cn, dummyVar);
+        c.trace && c.traceprint("Adding dummyVar == d" + this._dummyCounter);
+      } else {
+        // cn is a non-required equality. Add a positive and a negative error
+        // variable, making the resulting constraint
+        //       expr = eplus - eminus
+        // in other words:
+        //       expr - eplus + eminus = 0
+        c.trace && c.traceprint("Equality, not required");
+        ++this._slackCounter;
+        eplus = new c.SlackVariable({
+          value: this._slackCounter,
+          prefix: "ep"
+        });
+        eminus = new c.SlackVariable({
+          value: this._slackCounter,
+          prefix: "em"
+        });
+        expr.setVariable(eplus, -1);
+        expr.setVariable(eminus, 1);
+        this._markerVars.set(cn, eplus);
+        var zRow = this.rows.get(this._objective);
+        c.trace && console.log(zRow);
+        var swCoeff = cn.strength.symbolicWeight.value * cn.weight;
+        if (swCoeff == 0) {
+          c.trace && c.traceprint("cn == " + cn);
+          c.trace && c.traceprint("adding " + eplus + " and " + eminus + " with swCoeff == " + swCoeff);
+        }
+        zRow.setVariable(eplus, swCoeff);
+        this.noteAddedVariable(eplus, this._objective);
+        zRow.setVariable(eminus, swCoeff);
+        this.noteAddedVariable(eminus, this._objective);
+
+        this.insertErrorVar(cn, eminus);
+        this.insertErrorVar(cn, eplus);
+
+        if (cn.isStayConstraint) {
+          this._stayPlusErrorVars[this._stayPlusErrorVars.length] = eplus;
+          this._stayMinusErrorVars[this._stayMinusErrorVars.length] = eminus;
+        } else if (cn.isEditConstraint) {
+          eplus_eminus[0] = eplus;
+          eplus_eminus[1] = eminus;
+          prevEConstant[0] = cnExpr.constant;
+        }
+      }
+    }
+    // the Constant in the Expression should be non-negative. If necessary
+    // normalize the Expression by multiplying by -1
+    if (expr.constant < 0) expr.multiplyMe(-1);
+    c.trace && c.fnexitprint("returning " + expr);
+    return expr;
+  },
+
+  // Minimize the value of the objective.  (The tableau should already be
+  // feasible.)
+  optimize: function(zVar /*c.ObjectiveVariable*/) {
+    c.trace && c.fnenterprint("optimize: " + zVar);
+    c.trace && c.traceprint(this.toString());
+    this._optimizeCount++;
+
+    var zRow = this.rows.get(zVar);
+    c.assert(zRow != null, "zRow != null");
+    var entryVar = null;
+    var exitVar = null;
+    var objectiveCoeff, terms;
+
+    while (true) {
+      objectiveCoeff = 0;
+      terms = zRow.terms;
+
+      // Find the most negative coefficient in the objective function (ignoring
+      // the non-pivotable dummy variables). If all coefficients are positive
+      // we're done
+      terms.escapingEach(function(v, c) {
+        if (v.isPivotable && c < objectiveCoeff) {
+          objectiveCoeff = c;
+          entryVar = v;
+          // Break on success
+          return { brk: 1 };
+        }
+      }, this);
+
+      if (objectiveCoeff >= -epsilon)
+        return;
+
+      c.trace && console.log("entryVar:", entryVar,
+                             "objectiveCoeff:", objectiveCoeff);
+
+      // choose which variable to move out of the basis
+      // Only consider pivotable basic variables
+      // (i.e. restricted, non-dummy variables)
+      var minRatio = Number.MAX_VALUE;
+      var columnVars = this.columns.get(entryVar);
+      var r = 0;
+
+      columnVars.each(function(v) {
+        c.trace && c.traceprint("Checking " + v);
+        if (v.isPivotable) {
+          var expr = this.rows.get(v);
+          var coeff = expr.coefficientFor(entryVar);
+          c.trace && c.traceprint("pivotable, coeff = " + coeff);
+          // only consider negative coefficients
+          if (coeff < 0) {
+            r = -expr.constant / coeff;
+            // Bland's anti-cycling rule:
+            // if multiple variables are about the same,
+            // always pick the lowest via some total
+            // ordering -- I use their addresses in memory
+            //    if (r < minRatio ||
+            //              (c.approx(r, minRatio) &&
+            //               v.get_pclv() < exitVar.get_pclv()))
+            if (r < minRatio ||
+                (c.approx(r, minRatio) &&
+                 v.hashCode < exitVar.hashCode)
+            ) {
+              minRatio = r;
+              exitVar = v;
+            }
+          }
+        }
+      }, this);
+
+      // If minRatio is still nil at this point, it means that the
+      // objective function is unbounded, i.e. it can become
+      // arbitrarily negative.  This should never happen in this
+      // application.
+      if (minRatio == Number.MAX_VALUE) {
+        throw new c.InternalError("Objective function is unbounded in optimize");
+      }
+
+      // console.time("SimplexSolver::optimize pivot()");
+      this.pivot(entryVar, exitVar);
+      // console.timeEnd("SimplexSolver::optimize pivot()");
+
+      c.trace && c.traceprint(this.toString());
+    }
+  },
+
+  // Do a Pivot.  Move entryVar into the basis (i.e. make it a basic variable),
+  // and move exitVar out of the basis (i.e., make it a parametric variable)
+  pivot: function(entryVar /*c.AbstractVariable*/, exitVar /*c.AbstractVariable*/) {
+    c.trace && console.log("pivot: ", entryVar, exitVar);
+    var time = false;
+
+    time && console.time(" SimplexSolver::pivot");
+
+    // the entryVar might be non-pivotable if we're doing a RemoveConstraint --
+    // otherwise it should be a pivotable variable -- enforced at call sites,
+    // hopefully
+    if (entryVar == null) {
+      console.warn("pivot: entryVar == null");
+    }
+
+    if (exitVar == null) {
+      console.warn("pivot: exitVar == null");
+    }
+    // console.log("SimplexSolver::pivot(", entryVar, exitVar, ")")
+
+    // expr is the Expression for the exit variable (about to leave the basis) --
+    // so that the old tableau includes the equation:
+    //   exitVar = expr
+    time && console.time("  removeRow");
+    var expr = this.removeRow(exitVar);
+    time && console.timeEnd("  removeRow");
+
+    // Compute an Expression for the entry variable.  Since expr has
+    // been deleted from the tableau we can destructively modify it to
+    // build this Expression.
+    time && console.time("  changeSubject");
+    expr.changeSubject(exitVar, entryVar);
+    time && console.timeEnd("  changeSubject");
+
+    time && console.time("  substituteOut");
+    this.substituteOut(entryVar, expr);
+    time && console.timeEnd("  substituteOut");
+    /*
+    if (entryVar.isExternal) {
+      // entry var is no longer a parametric variable since we're moving
+      // it into the basis
+      console.log("entryVar is external!");
+      this._externalParametricVars.delete(entryVar);
+    }
+    */
+
+    time && console.time("  addRow")
+    this.addRow(entryVar, expr);
+    time && console.timeEnd("  addRow")
+
+    time && console.timeEnd(" SimplexSolver::pivot");
+  },
+
+  // Each of the non-required stays will be represented by an equation
+  // of the form
+  //     v = c + eplus - eminus
+  // where v is the variable with the stay, c is the previous value of
+  // v, and eplus and eminus are slack variables that hold the error
+  // in satisfying the stay constraint.  We are about to change
+  // something, and we want to fix the constants in the equations
+  // representing the stays.  If both eplus and eminus are nonbasic
+  // they have value 0 in the current solution, meaning the previous
+  // stay was exactly satisfied.  In this case nothing needs to be
+  // changed.  Otherwise one of them is basic, and the other must
+  // occur only in the Expression for that basic error variable.
+  // Reset the Constant in this Expression to 0.
+  _resetStayConstants: function() {
+    c.trace && console.log("_resetStayConstants");
+    var spev = this._stayPlusErrorVars;
+    var l = spev.length;
+    for (var i = 0; i < l; i++) {
+      var expr = this.rows.get(spev[i]);
+      if (expr === null) {
+        expr = this.rows.get(this._stayMinusErrorVars[i]);
+      }
+      if (expr != null) {
+        expr.constant = 0;
+      }
+    }
+  },
+
+  _setExternalVariables: function() {
+    c.trace && c.fnenterprint("_setExternalVariables:");
+    c.trace && c.traceprint(this.toString());
+    var changed = {};
+
+    // console.log("this._externalParametricVars:", this._externalParametricVars);
+    this._externalParametricVars.each(function(v) {
+      if (this.rows.get(v) != null) {
+        if (c.trace)
+          console.log("Error: variable" + v + " in _externalParametricVars is basic");
+      } else {
+        v.value = 0;
+        changed[v.name] = 0;
+      }
+    }, this);
+    // console.log("this._externalRows:", this._externalRows);
+    this._externalRows.each(function(v) {
+      var expr = this.rows.get(v);
+      if (v.value != expr.constant) {
+        // console.log(v.toString(), v.value, expr.constant);
+        v.value = expr.constant;
+        changed[v.name] = expr.constant;
+      }
+      // c.trace && console.log("v == " + v);
+      // c.trace && console.log("expr == " + expr);
+    }, this);
+    this._changed = changed;
+    this._needsSolving = false;
+    this._informCallbacks();
+    this.onsolved();
+  },
+
+  onsolved: function() {
+    // Lifecycle stub. Here for dirty, dirty monkey patching.
+  },
+
+  _informCallbacks: function() {
+    if(!this._callbacks) return;
+
+    var changed = this._changed;
+    this._callbacks.forEach(function(fn) {
+      fn(changed);
+    });
+  },
+
+  _addCallback: function(fn) {
+    var a = (this._callbacks || (this._callbacks = []));
+    a[a.length] = fn;
+  },
+
+  insertErrorVar: function(cn /*c.Constraint*/, aVar /*c.AbstractVariable*/) {
+    c.trace && c.fnenterprint("insertErrorVar:" + cn + ", " + aVar);
+    var constraintSet = /* Set */this._errorVars.get(aVar);
+    if (!constraintSet) {
+      constraintSet = new c.HashSet();
+      this._errorVars.set(cn, constraintSet);
+    }
+    constraintSet.add(aVar);
+  },
+});
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/Timer.js", function (exports, module) {
+// Copyright (C) 1998-2000 Greg J. Badros
+// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+//
+// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
+
+(function(c) {
+"use strict";
+
+c.Timer = c.inherit({
+  initialize: function() {
+    this.isRunning = false;
+    this._elapsedMs = 0;
+  },
+
+  start: function() {
+    this.isRunning = true;
+    this._startReading = new Date();
+    return this;
+  },
+
+  stop: function() {
+    this.isRunning = false;
+    this._elapsedMs += (new Date()) - this._startReading;
+    return this;
+  },
+
+  reset: function() {
+    this.isRunning = false;
+    this._elapsedMs = 0;
+    return this;
+  },
+
+  elapsedTime : function() {
+    if (!this.isRunning) {
+      return this._elapsedMs / 1000;
+    } else {
+      return (this._elapsedMs + (new Date() - this._startReading)) / 1000;
+    }
+  },
+});
+
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/parser/parser.js", function (exports, module) {
+this.c.parser = (function(){
+  /*
+   * Generated by PEG.js 0.7.0.
+   *
+   * http://pegjs.majda.cz/
+   */
+  
+  function quote(s) {
+    /*
+     * ECMA-262, 5th ed., 7.8.4: All characters may appear literally in a
+     * string literal except for the closing quote character, backslash,
+     * carriage return, line separator, paragraph separator, and line feed.
+     * Any character may appear in the form of an escape sequence.
+     *
+     * For portability, we also escape escape all control and non-ASCII
+     * characters. Note that "\0" and "\v" escape sequences are not used
+     * because JSHint does not like the first and IE the second.
+     */
+     return '"' + s
+      .replace(/\\/g, '\\\\')  // backslash
+      .replace(/"/g, '\\"')    // closing quote character
+      .replace(/\x08/g, '\\b') // backspace
+      .replace(/\t/g, '\\t')   // horizontal tab
+      .replace(/\n/g, '\\n')   // line feed
+      .replace(/\f/g, '\\f')   // form feed
+      .replace(/\r/g, '\\r')   // carriage return
+      .replace(/[\x00-\x07\x0B\x0E-\x1F\x80-\uFFFF]/g, escape)
+      + '"';
+  }
+  
+  var result = {
+    /*
+     * Parses the input with a generated parser. If the parsing is successfull,
+     * returns a value explicitly or implicitly specified by the grammar from
+     * which the parser was generated (see |PEG.buildParser|). If the parsing is
+     * unsuccessful, throws |PEG.parser.SyntaxError| describing the error.
+     */
+    parse: function(input, startRule) {
+      var parseFunctions = {
+        "start": parse_start,
+        "Statement": parse_Statement,
+        "SourceCharacter": parse_SourceCharacter,
+        "IdentifierStart": parse_IdentifierStart,
+        "WhiteSpace": parse_WhiteSpace,
+        "LineTerminator": parse_LineTerminator,
+        "LineTerminatorSequence": parse_LineTerminatorSequence,
+        "EOS": parse_EOS,
+        "EOF": parse_EOF,
+        "Comment": parse_Comment,
+        "MultiLineComment": parse_MultiLineComment,
+        "MultiLineCommentNoLineTerminator": parse_MultiLineCommentNoLineTerminator,
+        "SingleLineComment": parse_SingleLineComment,
+        "_": parse__,
+        "__": parse___,
+        "Literal": parse_Literal,
+        "Integer": parse_Integer,
+        "Real": parse_Real,
+        "SignedInteger": parse_SignedInteger,
+        "Identifier": parse_Identifier,
+        "IdentifierName": parse_IdentifierName,
+        "PrimaryExpression": parse_PrimaryExpression,
+        "UnaryExpression": parse_UnaryExpression,
+        "UnaryOperator": parse_UnaryOperator,
+        "MultiplicativeExpression": parse_MultiplicativeExpression,
+        "MultiplicativeOperator": parse_MultiplicativeOperator,
+        "AdditiveExpression": parse_AdditiveExpression,
+        "AdditiveOperator": parse_AdditiveOperator,
+        "InequalityExpression": parse_InequalityExpression,
+        "InequalityOperator": parse_InequalityOperator,
+        "LinearExpression": parse_LinearExpression
+      };
+      
+      if (startRule !== undefined) {
+        if (parseFunctions[startRule] === undefined) {
+          throw new Error("Invalid rule name: " + quote(startRule) + ".");
+        }
+      } else {
+        startRule = "start";
+      }
+      
+      var pos = 0;
+      var reportFailures = 0;
+      var rightmostFailuresPos = 0;
+      var rightmostFailuresExpected = [];
+      
+      function padLeft(input, padding, length) {
+        var result = input;
+        
+        var padLength = length - input.length;
+        for (var i = 0; i < padLength; i++) {
+          result = padding + result;
+        }
+        
+        return result;
+      }
+      
+      function escape(ch) {
+        var charCode = ch.charCodeAt(0);
+        var escapeChar;
+        var length;
+        
+        if (charCode <= 0xFF) {
+          escapeChar = 'x';
+          length = 2;
+        } else {
+          escapeChar = 'u';
+          length = 4;
+        }
+        
+        return '\\' + escapeChar + padLeft(charCode.toString(16).toUpperCase(), '0', length);
+      }
+      
+      function matchFailed(failure) {
+        if (pos < rightmostFailuresPos) {
+          return;
+        }
+        
+        if (pos > rightmostFailuresPos) {
+          rightmostFailuresPos = pos;
+          rightmostFailuresExpected = [];
+        }
+        
+        rightmostFailuresExpected.push(failure);
+      }
+      
+      function parse_start() {
+        var result0, result1, result2;
+        var pos0, pos1;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse___();
+        if (result0 !== null) {
+          result1 = [];
+          result2 = parse_Statement();
+          while (result2 !== null) {
+            result1.push(result2);
+            result2 = parse_Statement();
+          }
+          if (result1 !== null) {
+            result2 = parse___();
+            if (result2 !== null) {
+              result0 = [result0, result1, result2];
+            } else {
+              result0 = null;
+              pos = pos1;
+            }
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, statements) { return statements; })(pos0, result0[1]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_Statement() {
+        var result0, result1;
+        var pos0, pos1;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_LinearExpression();
+        if (result0 !== null) {
+          result1 = parse_EOS();
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, expression) { return expression; })(pos0, result0[0]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_SourceCharacter() {
+        var result0;
+        
+        if (input.length > pos) {
+          result0 = input.charAt(pos);
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("any character");
+          }
+        }
+        return result0;
+      }
+      
+      function parse_IdentifierStart() {
+        var result0;
+        
+        if (/^[a-zA-Z]/.test(input.charAt(pos))) {
+          result0 = input.charAt(pos);
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("[a-zA-Z]");
+          }
+        }
+        if (result0 === null) {
+          if (input.charCodeAt(pos) === 36) {
+            result0 = "$";
+            pos++;
+          } else {
+            result0 = null;
+            if (reportFailures === 0) {
+              matchFailed("\"$\"");
+            }
+          }
+          if (result0 === null) {
+            if (input.charCodeAt(pos) === 95) {
+              result0 = "_";
+              pos++;
+            } else {
+              result0 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"_\"");
+              }
+            }
+          }
+        }
+        return result0;
+      }
+      
+      function parse_WhiteSpace() {
+        var result0;
+        
+        reportFailures++;
+        if (/^[\t\x0B\f \xA0\uFEFF]/.test(input.charAt(pos))) {
+          result0 = input.charAt(pos);
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("[\\t\\x0B\\f \\xA0\\uFEFF]");
+          }
+        }
+        reportFailures--;
+        if (reportFailures === 0 && result0 === null) {
+          matchFailed("whitespace");
+        }
+        return result0;
+      }
+      
+      function parse_LineTerminator() {
+        var result0;
+        
+        if (/^[\n\r\u2028\u2029]/.test(input.charAt(pos))) {
+          result0 = input.charAt(pos);
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("[\\n\\r\\u2028\\u2029]");
+          }
+        }
+        return result0;
+      }
+      
+      function parse_LineTerminatorSequence() {
+        var result0;
+        
+        reportFailures++;
+        if (input.charCodeAt(pos) === 10) {
+          result0 = "\n";
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"\\n\"");
+          }
+        }
+        if (result0 === null) {
+          if (input.substr(pos, 2) === "\r\n") {
+            result0 = "\r\n";
+            pos += 2;
+          } else {
+            result0 = null;
+            if (reportFailures === 0) {
+              matchFailed("\"\\r\\n\"");
+            }
+          }
+          if (result0 === null) {
+            if (input.charCodeAt(pos) === 13) {
+              result0 = "\r";
+              pos++;
+            } else {
+              result0 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"\\r\"");
+              }
+            }
+            if (result0 === null) {
+              if (input.charCodeAt(pos) === 8232) {
+                result0 = "\u2028";
+                pos++;
+              } else {
+                result0 = null;
+                if (reportFailures === 0) {
+                  matchFailed("\"\\u2028\"");
+                }
+              }
+              if (result0 === null) {
+                if (input.charCodeAt(pos) === 8233) {
+                  result0 = "\u2029";
+                  pos++;
+                } else {
+                  result0 = null;
+                  if (reportFailures === 0) {
+                    matchFailed("\"\\u2029\"");
+                  }
+                }
+              }
+            }
+          }
+        }
+        reportFailures--;
+        if (reportFailures === 0 && result0 === null) {
+          matchFailed("end of line");
+        }
+        return result0;
+      }
+      
+      function parse_EOS() {
+        var result0, result1;
+        var pos0;
+        
+        pos0 = pos;
+        result0 = parse___();
+        if (result0 !== null) {
+          if (input.charCodeAt(pos) === 59) {
+            result1 = ";";
+            pos++;
+          } else {
+            result1 = null;
+            if (reportFailures === 0) {
+              matchFailed("\";\"");
+            }
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos0;
+          }
+        } else {
+          result0 = null;
+          pos = pos0;
+        }
+        if (result0 === null) {
+          pos0 = pos;
+          result0 = parse__();
+          if (result0 !== null) {
+            result1 = parse_LineTerminatorSequence();
+            if (result1 !== null) {
+              result0 = [result0, result1];
+            } else {
+              result0 = null;
+              pos = pos0;
+            }
+          } else {
+            result0 = null;
+            pos = pos0;
+          }
+          if (result0 === null) {
+            pos0 = pos;
+            result0 = parse___();
+            if (result0 !== null) {
+              result1 = parse_EOF();
+              if (result1 !== null) {
+                result0 = [result0, result1];
+              } else {
+                result0 = null;
+                pos = pos0;
+              }
+            } else {
+              result0 = null;
+              pos = pos0;
+            }
+          }
+        }
+        return result0;
+      }
+      
+      function parse_EOF() {
+        var result0;
+        var pos0;
+        
+        pos0 = pos;
+        reportFailures++;
+        if (input.length > pos) {
+          result0 = input.charAt(pos);
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("any character");
+          }
+        }
+        reportFailures--;
+        if (result0 === null) {
+          result0 = "";
+        } else {
+          result0 = null;
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_Comment() {
+        var result0;
+        
+        reportFailures++;
+        result0 = parse_MultiLineComment();
+        if (result0 === null) {
+          result0 = parse_SingleLineComment();
+        }
+        reportFailures--;
+        if (reportFailures === 0 && result0 === null) {
+          matchFailed("comment");
+        }
+        return result0;
+      }
+      
+      function parse_MultiLineComment() {
+        var result0, result1, result2, result3;
+        var pos0, pos1, pos2;
+        
+        pos0 = pos;
+        if (input.substr(pos, 2) === "/*") {
+          result0 = "/*";
+          pos += 2;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"/*\"");
+          }
+        }
+        if (result0 !== null) {
+          result1 = [];
+          pos1 = pos;
+          pos2 = pos;
+          reportFailures++;
+          if (input.substr(pos, 2) === "*/") {
+            result2 = "*/";
+            pos += 2;
+          } else {
+            result2 = null;
+            if (reportFailures === 0) {
+              matchFailed("\"*/\"");
+            }
+          }
+          reportFailures--;
+          if (result2 === null) {
+            result2 = "";
+          } else {
+            result2 = null;
+            pos = pos2;
+          }
+          if (result2 !== null) {
+            result3 = parse_SourceCharacter();
+            if (result3 !== null) {
+              result2 = [result2, result3];
+            } else {
+              result2 = null;
+              pos = pos1;
+            }
+          } else {
+            result2 = null;
+            pos = pos1;
+          }
+          while (result2 !== null) {
+            result1.push(result2);
+            pos1 = pos;
+            pos2 = pos;
+            reportFailures++;
+            if (input.substr(pos, 2) === "*/") {
+              result2 = "*/";
+              pos += 2;
+            } else {
+              result2 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"*/\"");
+              }
+            }
+            reportFailures--;
+            if (result2 === null) {
+              result2 = "";
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+            if (result2 !== null) {
+              result3 = parse_SourceCharacter();
+              if (result3 !== null) {
+                result2 = [result2, result3];
+              } else {
+                result2 = null;
+                pos = pos1;
+              }
+            } else {
+              result2 = null;
+              pos = pos1;
+            }
+          }
+          if (result1 !== null) {
+            if (input.substr(pos, 2) === "*/") {
+              result2 = "*/";
+              pos += 2;
+            } else {
+              result2 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"*/\"");
+              }
+            }
+            if (result2 !== null) {
+              result0 = [result0, result1, result2];
+            } else {
+              result0 = null;
+              pos = pos0;
+            }
+          } else {
+            result0 = null;
+            pos = pos0;
+          }
+        } else {
+          result0 = null;
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_MultiLineCommentNoLineTerminator() {
+        var result0, result1, result2, result3;
+        var pos0, pos1, pos2;
+        
+        pos0 = pos;
+        if (input.substr(pos, 2) === "/*") {
+          result0 = "/*";
+          pos += 2;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"/*\"");
+          }
+        }
+        if (result0 !== null) {
+          result1 = [];
+          pos1 = pos;
+          pos2 = pos;
+          reportFailures++;
+          if (input.substr(pos, 2) === "*/") {
+            result2 = "*/";
+            pos += 2;
+          } else {
+            result2 = null;
+            if (reportFailures === 0) {
+              matchFailed("\"*/\"");
+            }
+          }
+          if (result2 === null) {
+            result2 = parse_LineTerminator();
+          }
+          reportFailures--;
+          if (result2 === null) {
+            result2 = "";
+          } else {
+            result2 = null;
+            pos = pos2;
+          }
+          if (result2 !== null) {
+            result3 = parse_SourceCharacter();
+            if (result3 !== null) {
+              result2 = [result2, result3];
+            } else {
+              result2 = null;
+              pos = pos1;
+            }
+          } else {
+            result2 = null;
+            pos = pos1;
+          }
+          while (result2 !== null) {
+            result1.push(result2);
+            pos1 = pos;
+            pos2 = pos;
+            reportFailures++;
+            if (input.substr(pos, 2) === "*/") {
+              result2 = "*/";
+              pos += 2;
+            } else {
+              result2 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"*/\"");
+              }
+            }
+            if (result2 === null) {
+              result2 = parse_LineTerminator();
+            }
+            reportFailures--;
+            if (result2 === null) {
+              result2 = "";
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+            if (result2 !== null) {
+              result3 = parse_SourceCharacter();
+              if (result3 !== null) {
+                result2 = [result2, result3];
+              } else {
+                result2 = null;
+                pos = pos1;
+              }
+            } else {
+              result2 = null;
+              pos = pos1;
+            }
+          }
+          if (result1 !== null) {
+            if (input.substr(pos, 2) === "*/") {
+              result2 = "*/";
+              pos += 2;
+            } else {
+              result2 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"*/\"");
+              }
+            }
+            if (result2 !== null) {
+              result0 = [result0, result1, result2];
+            } else {
+              result0 = null;
+              pos = pos0;
+            }
+          } else {
+            result0 = null;
+            pos = pos0;
+          }
+        } else {
+          result0 = null;
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_SingleLineComment() {
+        var result0, result1, result2, result3;
+        var pos0, pos1, pos2;
+        
+        pos0 = pos;
+        if (input.substr(pos, 2) === "//") {
+          result0 = "//";
+          pos += 2;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"//\"");
+          }
+        }
+        if (result0 !== null) {
+          result1 = [];
+          pos1 = pos;
+          pos2 = pos;
+          reportFailures++;
+          result2 = parse_LineTerminator();
+          reportFailures--;
+          if (result2 === null) {
+            result2 = "";
+          } else {
+            result2 = null;
+            pos = pos2;
+          }
+          if (result2 !== null) {
+            result3 = parse_SourceCharacter();
+            if (result3 !== null) {
+              result2 = [result2, result3];
+            } else {
+              result2 = null;
+              pos = pos1;
+            }
+          } else {
+            result2 = null;
+            pos = pos1;
+          }
+          while (result2 !== null) {
+            result1.push(result2);
+            pos1 = pos;
+            pos2 = pos;
+            reportFailures++;
+            result2 = parse_LineTerminator();
+            reportFailures--;
+            if (result2 === null) {
+              result2 = "";
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+            if (result2 !== null) {
+              result3 = parse_SourceCharacter();
+              if (result3 !== null) {
+                result2 = [result2, result3];
+              } else {
+                result2 = null;
+                pos = pos1;
+              }
+            } else {
+              result2 = null;
+              pos = pos1;
+            }
+          }
+          if (result1 !== null) {
+            result2 = parse_LineTerminator();
+            if (result2 === null) {
+              result2 = parse_EOF();
+            }
+            if (result2 !== null) {
+              result0 = [result0, result1, result2];
+            } else {
+              result0 = null;
+              pos = pos0;
+            }
+          } else {
+            result0 = null;
+            pos = pos0;
+          }
+        } else {
+          result0 = null;
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse__() {
+        var result0, result1;
+        
+        result0 = [];
+        result1 = parse_WhiteSpace();
+        if (result1 === null) {
+          result1 = parse_MultiLineCommentNoLineTerminator();
+          if (result1 === null) {
+            result1 = parse_SingleLineComment();
+          }
+        }
+        while (result1 !== null) {
+          result0.push(result1);
+          result1 = parse_WhiteSpace();
+          if (result1 === null) {
+            result1 = parse_MultiLineCommentNoLineTerminator();
+            if (result1 === null) {
+              result1 = parse_SingleLineComment();
+            }
+          }
+        }
+        return result0;
+      }
+      
+      function parse___() {
+        var result0, result1;
+        
+        result0 = [];
+        result1 = parse_WhiteSpace();
+        if (result1 === null) {
+          result1 = parse_LineTerminatorSequence();
+          if (result1 === null) {
+            result1 = parse_Comment();
+          }
+        }
+        while (result1 !== null) {
+          result0.push(result1);
+          result1 = parse_WhiteSpace();
+          if (result1 === null) {
+            result1 = parse_LineTerminatorSequence();
+            if (result1 === null) {
+              result1 = parse_Comment();
+            }
+          }
+        }
+        return result0;
+      }
+      
+      function parse_Literal() {
+        var result0;
+        var pos0;
+        
+        pos0 = pos;
+        result0 = parse_Real();
+        if (result0 === null) {
+          result0 = parse_Integer();
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, val) {
+            return {
+              type: "NumericLiteral",
+              value: val
+            }
+          })(pos0, result0);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_Integer() {
+        var result0, result1;
+        var pos0;
+        
+        pos0 = pos;
+        if (/^[0-9]/.test(input.charAt(pos))) {
+          result1 = input.charAt(pos);
+          pos++;
+        } else {
+          result1 = null;
+          if (reportFailures === 0) {
+            matchFailed("[0-9]");
+          }
+        }
+        if (result1 !== null) {
+          result0 = [];
+          while (result1 !== null) {
+            result0.push(result1);
+            if (/^[0-9]/.test(input.charAt(pos))) {
+              result1 = input.charAt(pos);
+              pos++;
+            } else {
+              result1 = null;
+              if (reportFailures === 0) {
+                matchFailed("[0-9]");
+              }
+            }
+          }
+        } else {
+          result0 = null;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, digits) {
+            return parseInt(digits.join(""));
+          })(pos0, result0);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_Real() {
+        var result0, result1, result2;
+        var pos0, pos1;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_Integer();
+        if (result0 !== null) {
+          if (input.charCodeAt(pos) === 46) {
+            result1 = ".";
+            pos++;
+          } else {
+            result1 = null;
+            if (reportFailures === 0) {
+              matchFailed("\".\"");
+            }
+          }
+          if (result1 !== null) {
+            result2 = parse_Integer();
+            if (result2 !== null) {
+              result0 = [result0, result1, result2];
+            } else {
+              result0 = null;
+              pos = pos1;
+            }
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, digits) {
+            return parseFloat(digits.join(""));
+          })(pos0, result0);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_SignedInteger() {
+        var result0, result1, result2;
+        var pos0;
+        
+        pos0 = pos;
+        if (/^[\-+]/.test(input.charAt(pos))) {
+          result0 = input.charAt(pos);
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("[\\-+]");
+          }
+        }
+        result0 = result0 !== null ? result0 : "";
+        if (result0 !== null) {
+          if (/^[0-9]/.test(input.charAt(pos))) {
+            result2 = input.charAt(pos);
+            pos++;
+          } else {
+            result2 = null;
+            if (reportFailures === 0) {
+              matchFailed("[0-9]");
+            }
+          }
+          if (result2 !== null) {
+            result1 = [];
+            while (result2 !== null) {
+              result1.push(result2);
+              if (/^[0-9]/.test(input.charAt(pos))) {
+                result2 = input.charAt(pos);
+                pos++;
+              } else {
+                result2 = null;
+                if (reportFailures === 0) {
+                  matchFailed("[0-9]");
+                }
+              }
+            }
+          } else {
+            result1 = null;
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos0;
+          }
+        } else {
+          result0 = null;
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_Identifier() {
+        var result0;
+        var pos0;
+        
+        reportFailures++;
+        pos0 = pos;
+        result0 = parse_IdentifierName();
+        if (result0 !== null) {
+          result0 = (function(offset, name) { return name; })(pos0, result0);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        reportFailures--;
+        if (reportFailures === 0 && result0 === null) {
+          matchFailed("identifier");
+        }
+        return result0;
+      }
+      
+      function parse_IdentifierName() {
+        var result0, result1, result2;
+        var pos0, pos1;
+        
+        reportFailures++;
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_IdentifierStart();
+        if (result0 !== null) {
+          result1 = [];
+          result2 = parse_IdentifierStart();
+          while (result2 !== null) {
+            result1.push(result2);
+            result2 = parse_IdentifierStart();
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, start, parts) {
+              return start + parts.join("");
+            })(pos0, result0[0], result0[1]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        reportFailures--;
+        if (reportFailures === 0 && result0 === null) {
+          matchFailed("identifier");
+        }
+        return result0;
+      }
+      
+      function parse_PrimaryExpression() {
+        var result0, result1, result2, result3, result4;
+        var pos0, pos1;
+        
+        pos0 = pos;
+        result0 = parse_Identifier();
+        if (result0 !== null) {
+          result0 = (function(offset, name) { return { type: "Variable", name: name }; })(pos0, result0);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        if (result0 === null) {
+          result0 = parse_Literal();
+          if (result0 === null) {
+            pos0 = pos;
+            pos1 = pos;
+            if (input.charCodeAt(pos) === 40) {
+              result0 = "(";
+              pos++;
+            } else {
+              result0 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"(\"");
+              }
+            }
+            if (result0 !== null) {
+              result1 = parse___();
+              if (result1 !== null) {
+                result2 = parse_LinearExpression();
+                if (result2 !== null) {
+                  result3 = parse___();
+                  if (result3 !== null) {
+                    if (input.charCodeAt(pos) === 41) {
+                      result4 = ")";
+                      pos++;
+                    } else {
+                      result4 = null;
+                      if (reportFailures === 0) {
+                        matchFailed("\")\"");
+                      }
+                    }
+                    if (result4 !== null) {
+                      result0 = [result0, result1, result2, result3, result4];
+                    } else {
+                      result0 = null;
+                      pos = pos1;
+                    }
+                  } else {
+                    result0 = null;
+                    pos = pos1;
+                  }
+                } else {
+                  result0 = null;
+                  pos = pos1;
+                }
+              } else {
+                result0 = null;
+                pos = pos1;
+              }
+            } else {
+              result0 = null;
+              pos = pos1;
+            }
+            if (result0 !== null) {
+              result0 = (function(offset, expression) { return expression; })(pos0, result0[2]);
+            }
+            if (result0 === null) {
+              pos = pos0;
+            }
+          }
+        }
+        return result0;
+      }
+      
+      function parse_UnaryExpression() {
+        var result0, result1, result2;
+        var pos0, pos1;
+        
+        result0 = parse_PrimaryExpression();
+        if (result0 === null) {
+          pos0 = pos;
+          pos1 = pos;
+          result0 = parse_UnaryOperator();
+          if (result0 !== null) {
+            result1 = parse___();
+            if (result1 !== null) {
+              result2 = parse_UnaryExpression();
+              if (result2 !== null) {
+                result0 = [result0, result1, result2];
+              } else {
+                result0 = null;
+                pos = pos1;
+              }
+            } else {
+              result0 = null;
+              pos = pos1;
+            }
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+          if (result0 !== null) {
+            result0 = (function(offset, operator, expression) {
+                return {
+                  type:       "UnaryExpression",
+                  operator:   operator,
+                  expression: expression
+                };
+              })(pos0, result0[0], result0[2]);
+          }
+          if (result0 === null) {
+            pos = pos0;
+          }
+        }
+        return result0;
+      }
+      
+      function parse_UnaryOperator() {
+        var result0;
+        
+        if (input.charCodeAt(pos) === 43) {
+          result0 = "+";
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"+\"");
+          }
+        }
+        if (result0 === null) {
+          if (input.charCodeAt(pos) === 45) {
+            result0 = "-";
+            pos++;
+          } else {
+            result0 = null;
+            if (reportFailures === 0) {
+              matchFailed("\"-\"");
+            }
+          }
+          if (result0 === null) {
+            if (input.charCodeAt(pos) === 33) {
+              result0 = "!";
+              pos++;
+            } else {
+              result0 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"!\"");
+              }
+            }
+          }
+        }
+        return result0;
+      }
+      
+      function parse_MultiplicativeExpression() {
+        var result0, result1, result2, result3, result4, result5;
+        var pos0, pos1, pos2;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_UnaryExpression();
+        if (result0 !== null) {
+          result1 = [];
+          pos2 = pos;
+          result2 = parse___();
+          if (result2 !== null) {
+            result3 = parse_MultiplicativeOperator();
+            if (result3 !== null) {
+              result4 = parse___();
+              if (result4 !== null) {
+                result5 = parse_UnaryExpression();
+                if (result5 !== null) {
+                  result2 = [result2, result3, result4, result5];
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          } else {
+            result2 = null;
+            pos = pos2;
+          }
+          while (result2 !== null) {
+            result1.push(result2);
+            pos2 = pos;
+            result2 = parse___();
+            if (result2 !== null) {
+              result3 = parse_MultiplicativeOperator();
+              if (result3 !== null) {
+                result4 = parse___();
+                if (result4 !== null) {
+                  result5 = parse_UnaryExpression();
+                  if (result5 !== null) {
+                    result2 = [result2, result3, result4, result5];
+                  } else {
+                    result2 = null;
+                    pos = pos2;
+                  }
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, head, tail) {
+              var result = head;
+              for (var i = 0; i < tail.length; i++) {
+                result = {
+                  type:     "MultiplicativeExpression",
+                  operator: tail[i][1],
+                  left:     result,
+                  right:    tail[i][3]
+                };
+              }
+              return result;
+            })(pos0, result0[0], result0[1]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_MultiplicativeOperator() {
+        var result0;
+        
+        if (input.charCodeAt(pos) === 42) {
+          result0 = "*";
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"*\"");
+          }
+        }
+        if (result0 === null) {
+          if (input.charCodeAt(pos) === 47) {
+            result0 = "/";
+            pos++;
+          } else {
+            result0 = null;
+            if (reportFailures === 0) {
+              matchFailed("\"/\"");
+            }
+          }
+        }
+        return result0;
+      }
+      
+      function parse_AdditiveExpression() {
+        var result0, result1, result2, result3, result4, result5;
+        var pos0, pos1, pos2;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_MultiplicativeExpression();
+        if (result0 !== null) {
+          result1 = [];
+          pos2 = pos;
+          result2 = parse___();
+          if (result2 !== null) {
+            result3 = parse_AdditiveOperator();
+            if (result3 !== null) {
+              result4 = parse___();
+              if (result4 !== null) {
+                result5 = parse_MultiplicativeExpression();
+                if (result5 !== null) {
+                  result2 = [result2, result3, result4, result5];
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          } else {
+            result2 = null;
+            pos = pos2;
+          }
+          while (result2 !== null) {
+            result1.push(result2);
+            pos2 = pos;
+            result2 = parse___();
+            if (result2 !== null) {
+              result3 = parse_AdditiveOperator();
+              if (result3 !== null) {
+                result4 = parse___();
+                if (result4 !== null) {
+                  result5 = parse_MultiplicativeExpression();
+                  if (result5 !== null) {
+                    result2 = [result2, result3, result4, result5];
+                  } else {
+                    result2 = null;
+                    pos = pos2;
+                  }
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, head, tail) {
+              var result = head;
+              for (var i = 0; i < tail.length; i++) {
+                result = {
+                  type:     "AdditiveExpression",
+                  operator: tail[i][1],
+                  left:     result,
+                  right:    tail[i][3]
+                };
+              }
+              return result;
+            })(pos0, result0[0], result0[1]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_AdditiveOperator() {
+        var result0;
+        
+        if (input.charCodeAt(pos) === 43) {
+          result0 = "+";
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"+\"");
+          }
+        }
+        if (result0 === null) {
+          if (input.charCodeAt(pos) === 45) {
+            result0 = "-";
+            pos++;
+          } else {
+            result0 = null;
+            if (reportFailures === 0) {
+              matchFailed("\"-\"");
+            }
+          }
+        }
+        return result0;
+      }
+      
+      function parse_InequalityExpression() {
+        var result0, result1, result2, result3, result4, result5;
+        var pos0, pos1, pos2;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_AdditiveExpression();
+        if (result0 !== null) {
+          result1 = [];
+          pos2 = pos;
+          result2 = parse___();
+          if (result2 !== null) {
+            result3 = parse_InequalityOperator();
+            if (result3 !== null) {
+              result4 = parse___();
+              if (result4 !== null) {
+                result5 = parse_AdditiveExpression();
+                if (result5 !== null) {
+                  result2 = [result2, result3, result4, result5];
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          } else {
+            result2 = null;
+            pos = pos2;
+          }
+          while (result2 !== null) {
+            result1.push(result2);
+            pos2 = pos;
+            result2 = parse___();
+            if (result2 !== null) {
+              result3 = parse_InequalityOperator();
+              if (result3 !== null) {
+                result4 = parse___();
+                if (result4 !== null) {
+                  result5 = parse_AdditiveExpression();
+                  if (result5 !== null) {
+                    result2 = [result2, result3, result4, result5];
+                  } else {
+                    result2 = null;
+                    pos = pos2;
+                  }
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, head, tail) {
+              var result = head;
+              for (var i = 0; i < tail.length; i++) {
+                result = {
+                  type:     "Inequality",
+                  operator: tail[i][1],
+                  left:     result,
+                  right:    tail[i][3]
+                };
+              }
+              return result;
+            })(pos0, result0[0], result0[1]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_InequalityOperator() {
+        var result0;
+        
+        if (input.substr(pos, 2) === "<=") {
+          result0 = "<=";
+          pos += 2;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"<=\"");
+          }
+        }
+        if (result0 === null) {
+          if (input.substr(pos, 2) === ">=") {
+            result0 = ">=";
+            pos += 2;
+          } else {
+            result0 = null;
+            if (reportFailures === 0) {
+              matchFailed("\">=\"");
+            }
+          }
+          if (result0 === null) {
+            if (input.charCodeAt(pos) === 60) {
+              result0 = "<";
+              pos++;
+            } else {
+              result0 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"<\"");
+              }
+            }
+            if (result0 === null) {
+              if (input.charCodeAt(pos) === 62) {
+                result0 = ">";
+                pos++;
+              } else {
+                result0 = null;
+                if (reportFailures === 0) {
+                  matchFailed("\">\"");
+                }
+              }
+            }
+          }
+        }
+        return result0;
+      }
+      
+      function parse_LinearExpression() {
+        var result0, result1, result2, result3, result4, result5;
+        var pos0, pos1, pos2;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_InequalityExpression();
+        if (result0 !== null) {
+          result1 = [];
+          pos2 = pos;
+          result2 = parse___();
+          if (result2 !== null) {
+            if (input.substr(pos, 2) === "==") {
+              result3 = "==";
+              pos += 2;
+            } else {
+              result3 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"==\"");
+              }
+            }
+            if (result3 !== null) {
+              result4 = parse___();
+              if (result4 !== null) {
+                result5 = parse_InequalityExpression();
+                if (result5 !== null) {
+                  result2 = [result2, result3, result4, result5];
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          } else {
+            result2 = null;
+            pos = pos2;
+          }
+          while (result2 !== null) {
+            result1.push(result2);
+            pos2 = pos;
+            result2 = parse___();
+            if (result2 !== null) {
+              if (input.substr(pos, 2) === "==") {
+                result3 = "==";
+                pos += 2;
+              } else {
+                result3 = null;
+                if (reportFailures === 0) {
+                  matchFailed("\"==\"");
+                }
+              }
+              if (result3 !== null) {
+                result4 = parse___();
+                if (result4 !== null) {
+                  result5 = parse_InequalityExpression();
+                  if (result5 !== null) {
+                    result2 = [result2, result3, result4, result5];
+                  } else {
+                    result2 = null;
+                    pos = pos2;
+                  }
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, head, tail) {
+              var result = head;
+              for (var i = 0; i < tail.length; i++) {
+                result = {
+                  type:     "Equality",
+                  operator: tail[i][1],
+                  left:     result,
+                  right:    tail[i][3]
+                };
+              }
+              return result;
+            })(pos0, result0[0], result0[1]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      
+      function cleanupExpected(expected) {
+        expected.sort();
+        
+        var lastExpected = null;
+        var cleanExpected = [];
+        for (var i = 0; i < expected.length; i++) {
+          if (expected[i] !== lastExpected) {
+            cleanExpected.push(expected[i]);
+            lastExpected = expected[i];
+          }
+        }
+        return cleanExpected;
+      }
+      
+      function computeErrorPosition() {
+        /*
+         * The first idea was to use |String.split| to break the input up to the
+         * error position along newlines and derive the line and column from
+         * there. However IE's |split| implementation is so broken that it was
+         * enough to prevent it.
+         */
+        
+        var line = 1;
+        var column = 1;
+        var seenCR = false;
+        
+        for (var i = 0; i < Math.max(pos, rightmostFailuresPos); i++) {
+          var ch = input.charAt(i);
+          if (ch === "\n") {
+            if (!seenCR) { line++; }
+            column = 1;
+            seenCR = false;
+          } else if (ch === "\r" || ch === "\u2028" || ch === "\u2029") {
+            line++;
+            column = 1;
+            seenCR = true;
+          } else {
+            column++;
+            seenCR = false;
+          }
+        }
+        
+        return { line: line, column: column };
+      }
+      
+      
+      var result = parseFunctions[startRule]();
+      
+      /*
+       * The parser is now in one of the following three states:
+       *
+       * 1. The parser successfully parsed the whole input.
+       *
+       *    - |result !== null|
+       *    - |pos === input.length|
+       *    - |rightmostFailuresExpected| may or may not contain something
+       *
+       * 2. The parser successfully parsed only a part of the input.
+       *
+       *    - |result !== null|
+       *    - |pos < input.length|
+       *    - |rightmostFailuresExpected| may or may not contain something
+       *
+       * 3. The parser did not successfully parse any part of the input.
+       *
+       *   - |result === null|
+       *   - |pos === 0|
+       *   - |rightmostFailuresExpected| contains at least one failure
+       *
+       * All code following this comment (including called functions) must
+       * handle these states.
+       */
+      if (result === null || pos !== input.length) {
+        var offset = Math.max(pos, rightmostFailuresPos);
+        var found = offset < input.length ? input.charAt(offset) : null;
+        var errorPosition = computeErrorPosition();
+        
+        throw new this.SyntaxError(
+          cleanupExpected(rightmostFailuresExpected),
+          found,
+          offset,
+          errorPosition.line,
+          errorPosition.column
+        );
+      }
+      
+      return result;
+    },
+    
+    /* Returns the parser source code. */
+    toSource: function() { return this._source; }
+  };
+  
+  /* Thrown when a parser encounters a syntax error. */
+  
+  result.SyntaxError = function(expected, found, offset, line, column) {
+    function buildMessage(expected, found) {
+      var expectedHumanized, foundHumanized;
+      
+      switch (expected.length) {
+        case 0:
+          expectedHumanized = "end of input";
+          break;
+        case 1:
+          expectedHumanized = expected[0];
+          break;
+        default:
+          expectedHumanized = expected.slice(0, expected.length - 1).join(", ")
+            + " or "
+            + expected[expected.length - 1];
+      }
+      
+      foundHumanized = found ? quote(found) : "end of input";
+      
+      return "Expected " + expectedHumanized + " but " + foundHumanized + " found.";
+    }
+    
+    this.name = "SyntaxError";
+    this.expected = expected;
+    this.found = found;
+    this.message = buildMessage(expected, found);
+    this.offset = offset;
+    this.line = line;
+    this.column = column;
+  };
+  
+  result.SyntaxError.prototype = Error.prototype;
+  
+  return result;
+})();
+
+});
+
+require.register("slightlyoff~cassowary.js@master/src/parser/api.js", function (exports, module) {
+// Copyright (C) 2013, Alex Russell <slightlyoff@chromium.org>
+// Use of this source code is governed by
+//    http://www.apache.org/licenses/LICENSE-2.0
+
+(function(c){
+"use strict";
+
+var solver = new c.SimplexSolver();
+var vars = {};
+var exprs = {};
+
+var weak = c.Strength.weak;
+var medium = c.Strength.medium;
+var strong = c.Strength.strong;
+var required = c.Strength.required;
+
+var _c = function(expr) {
+  if (exprs[expr]) {
+    return exprs[expr];
+  }
+  switch(expr.type) {
+    case "Inequality":
+      var op = (expr.operator == "<=") ? c.LEQ : c.GEQ;
+      var i = new c.Inequality(_c(expr.left), op, _c(expr.right), weak);
+      solver.addConstraint(i);
+      return i;
+    case "Equality":
+      var i = new c.Equation(_c(expr.left), _c(expr.right), weak);
+      solver.addConstraint(i);
+      return i;
+    case "MultiplicativeExpression":
+      var i = c.times(_c(expr.left), _c(expr.right));
+      solver.addConstraint(i);
+      return i;
+    case "AdditiveExpression":
+      if (expr.operator == "+") {
+        return c.plus(_c(expr.left), _c(expr.right));
+      } else {
+        return c.minus(_c(expr.left), _c(expr.right));
+      }
+    case "NumericLiteral":
+      return new c.Expression(expr.value);
+    case "Variable":
+      // console.log(expr);
+      if(!vars[expr.name]) {
+        vars[expr.name] = new c.Variable({ name: expr.name });
+      }
+      return vars[expr.name];
+    case "UnaryExpression":
+      console.log("UnaryExpression...WTF?");
+      break;
+  }
+};
+
+var compile = function(expressions) {
+  return expressions.map(_c);
+};
+
+// Global API entrypoint
+c._api = function() {
+  var args = Array.prototype.slice.call(arguments);
+  if (args.length == 1) {
+    if(typeof args[0] == "string") {
+      // Parse and execute it
+      var r = c.parser.parse(args[0]);
+      return compile(r);
+    } else if(typeof args[0] == "function") {
+      solver._addCallback(args[0]);
+    }
+  }
+};
+
+})(this["c"]||module.parent.exports||{});
+
+});
+
+require.register("gss~vgl-compiler@v0.0.6", function (exports, module) {
+var ErrorReporter, parse;
+
+if (typeof window !== "undefined" && window !== null) {
+  parse = require('gss~vgl-compiler@v0.0.6/lib/parser.js').parse;
+} else {
+  parse = require('gss~vgl-compiler@v0.0.6/lib/parser.js').parse;
+}
+
+ErrorReporter = require('gss~error-reporter@v0.1.4');
+
+module.exports = {
+  parse: function(source) {
+    var columnNumber, error, errorReporter, lineNumber, message, results;
+    results = null;
+    try {
+      results = parse(source);
+    } catch (_error) {
+      error = _error;
+      errorReporter = new ErrorReporter(source);
+      message = error.message, lineNumber = error.line, columnNumber = error.column;
+      errorReporter.reportError(message, lineNumber, columnNumber);
+    }
+    return results;
+  }
+};
+
+});
+
+require.register("gss~vgl-compiler@v0.0.6/lib/parser.js", function (exports, module) {
 module.exports = (function() {
   /*
    * Generated by PEG.js 0.8.0.
@@ -4187,6 +12749,30 @@ module.exports = (function() {
         gaps = {};
         hasGap = false;
         
+        g = options.gap;
+        if (g) { 
+          hasGap = true;
+          gaps.top = g;
+          gaps.right = g;
+          gaps.bottom = g;
+          gaps.left = g;
+          gaps.h = g;
+          gaps.v = g;
+        }    
+        g = options['h-gap'];
+        if (g) { 
+          hasGap = true;
+          gaps.right = g;
+          gaps.left = g;
+          gaps.h = g;
+        }
+        g = options['v-gap'];
+        if (g) { 
+          hasGap = true;
+          gaps.top = g;
+          gaps.bottom = g;
+          gaps.v = g;
+        }
         g = options['outer-gap'];
         if (g) { 
           hasGap = true;
@@ -4216,31 +12802,6 @@ module.exports = (function() {
           gaps.left = g;
         }
         
-        
-        g = options.gap;
-        if (g) { 
-          hasGap = true;
-          gaps.top = g;
-          gaps.right = g;
-          gaps.bottom = g;
-          gaps.left = g;
-          gaps.h = g;
-          gaps.v = g;
-        }    
-        g = options['h-gap'];
-        if (g) { 
-          hasGap = true;
-          gaps.right = g;
-          gaps.left = g;
-          gaps.h = g;
-        }
-        g = options['v-gap'];
-        if (g) { 
-          hasGap = true;
-          gaps.top = g;
-          gaps.bottom = g;
-          gaps.v = g;
-        }
         
         if (hasGap) {
           mdOp = "<=";
@@ -4543,22 +13104,23 @@ module.exports = (function() {
   };
 })();
 });
-require.register("gss-ccss-compiler/lib/compiler.js", function(exports, require, module){
+
+require.register("gss~ccss-compiler@550e442f2c64992f3a8c7babdaf90b5c643c4465", function (exports, module) {
 var ErrorReporter, parse, parser, scoper, vfl, vflHook, vgl, vglHook;
 
 if (typeof window !== "undefined" && window !== null) {
-  parser = require('./parser');
-  scoper = require('./scoper');
+  parser = require('gss~ccss-compiler@550e442f2c64992f3a8c7babdaf90b5c643c4465/lib/parser.js');
+  scoper = require('gss~ccss-compiler@550e442f2c64992f3a8c7babdaf90b5c643c4465/lib/scoper.js');
 } else {
-  parser = require('../lib/parser');
-  scoper = require('../lib/scoper');
+  parser = require('gss~ccss-compiler@550e442f2c64992f3a8c7babdaf90b5c643c4465/lib/parser.js');
+  scoper = require('gss~ccss-compiler@550e442f2c64992f3a8c7babdaf90b5c643c4465/lib/scoper.js');
 }
 
-vfl = require('vfl-compiler');
+vfl = require('gss~vfl-compiler@v1.1.3');
 
-vgl = require('vgl-compiler');
+vgl = require('gss~vgl-compiler@v0.0.6');
 
-ErrorReporter = require('error-reporter');
+ErrorReporter = require('gss~error-reporter@v0.1.4');
 
 parse = function(source) {
   var columnNumber, error, errorReporter, lineNumber, message, results;
@@ -4658,7 +13220,8 @@ module.exports = {
 };
 
 });
-require.register("gss-ccss-compiler/lib/grammar.js", function(exports, require, module){
+
+require.register("gss~ccss-compiler@550e442f2c64992f3a8c7babdaf90b5c643c4465/lib/grammar.js", function (exports, module) {
 var Grammar, cloneCommand;
 
 cloneCommand = function(command) {
@@ -5088,7 +13651,8 @@ Grammar = (function() {
 module.exports = Grammar;
 
 });
-require.register("gss-ccss-compiler/lib/parser.js", function(exports, require, module){
+
+require.register("gss~ccss-compiler@550e442f2c64992f3a8c7babdaf90b5c643c4465/lib/parser.js", function (exports, module) {
 module.exports = (function() {
   /*
    * Generated by PEG.js 0.8.0.
@@ -10949,7 +19513,7 @@ module.exports = (function() {
           return SyntaxError;
         };
 
-        var Grammar = require('./grammar');
+        var Grammar = require('gss~ccss-compiler@550e442f2c64992f3a8c7babdaf90b5c643c4465/lib/grammar.js');
 
         return new Grammar(p, getLineNumber, getColumnNumber, getErrorType);
       })();
@@ -10974,7 +19538,8 @@ module.exports = (function() {
   };
 })();
 });
-require.register("gss-ccss-compiler/lib/scoper.js", function(exports, require, module){
+
+require.register("gss~ccss-compiler@550e442f2c64992f3a8c7babdaf90b5c643c4465/lib/scoper.js", function (exports, module) {
 var analyze, mutate, _analyze, _mutate,
   _this = this;
 
@@ -11096,8691 +19661,32 @@ _mutate = function(node) {
 };
 
 });
-require.register("gss-vfl-compiler/lib/compiler.js", function(exports, require, module){
-var ErrorReporter, parse;
 
-if (typeof window !== "undefined" && window !== null) {
-  parse = require('./parser').parse;
-} else {
-  parse = require('../lib/parser').parse;
-}
-
-ErrorReporter = require('error-reporter');
-
-module.exports = {
-  parse: function(source) {
-    var columnNumber, error, errorReporter, lineNumber, message, results;
-    results = null;
-    try {
-      results = parse(source);
-    } catch (_error) {
-      error = _error;
-      errorReporter = new ErrorReporter(source);
-      message = error.message, lineNumber = error.line, columnNumber = error.column;
-      errorReporter.reportError(message, lineNumber, columnNumber);
-    }
-    return results;
-  }
-};
-
-});
-require.register("gss-vfl-compiler/lib/parser.js", function(exports, require, module){
-module.exports = (function() {
-  /*
-   * Generated by PEG.js 0.8.0.
-   *
-   * http://pegjs.majda.cz/
-   */
-
-  function peg$subclass(child, parent) {
-    function ctor() { this.constructor = child; }
-    ctor.prototype = parent.prototype;
-    child.prototype = new ctor();
-  }
-
-  function SyntaxError(message, expected, found, offset, line, column) {
-    this.message  = message;
-    this.expected = expected;
-    this.found    = found;
-    this.offset   = offset;
-    this.line     = line;
-    this.column   = column;
-
-    this.name     = "SyntaxError";
-  }
-
-  peg$subclass(SyntaxError, Error);
-
-  function parse(input) {
-    var options = arguments.length > 1 ? arguments[1] : {},
-
-        peg$FAILED = {},
-
-        peg$startRuleFunctions = { start: peg$parsestart },
-        peg$startRuleFunction  = peg$parsestart,
-
-        peg$c0 = peg$FAILED,
-        peg$c1 = [],
-        peg$c2 = function() { return p.getResults(); },
-        peg$c3 = function(vfl) { return p.getResults().concat(vfl); },
-        peg$c4 = function(exp) { return exp; },
-        peg$c5 = null,
-        peg$c6 = function(d, head, tail, o) {
-              var connection, result, ccss, chainedViews, withContainer,
-                tailView, tailViewObj, headView, headViewObj;
-              p.addSplatIfNeeded(head, d, o);
-              result = head;
-              headViewObj = head;
-              headView = headViewObj.view;
-              chainedViews = [];
-              if (headView !== "|") {chainedViews.push(headView);}
-              p.addPreds(headView,head.preds,d);
-              for (var i = 0; i < tail.length; i++) {
-                connection = tail[i][1];
-                tailViewObj = tail[i][3];
-                p.addSplatIfNeeded(tailViewObj, d, o);
-                tailView = tailViewObj.view;
-                if (tailView !== "|") {chainedViews.push(tailView);}
-                p.addPreds(tailView,tail[i][3].preds,d);
-                result = [
-                  //"c",
-                  connection,
-                  result,
-                  tailView
-                ];
-                if (!(headViewObj.isPoint && tailViewObj.isPoint)) {
-                  withContainer = ( headView =="|" || tailView === "|") && !(headViewObj.isPoint || tailViewObj.isPoint);          
-                  ccss = p.getLeftVar(headView, d, o, headViewObj) + " "
-                    + p.getConnectionString(connection, d, o, withContainer) + " "
-                    + p.getRightVar(tailView, d, o, tailViewObj)
-                    + p.getTrailingOptions(o)
-                    + p.getSW(o);
-                  p.addC(
-                    ccss.trim()
-                );}
-                headViewObj = tailViewObj;
-                headView = tailView;
-              }
-              p.addChains(chainedViews,o);
-              return {'vfl':d, o:o};
-            },
-        peg$c7 = "@horizontal",
-        peg$c8 = { type: "literal", value: "@horizontal", description: "\"@horizontal\"" },
-        peg$c9 = "@-gss-horizontal",
-        peg$c10 = { type: "literal", value: "@-gss-horizontal", description: "\"@-gss-horizontal\"" },
-        peg$c11 = "@-gss-h",
-        peg$c12 = { type: "literal", value: "@-gss-h", description: "\"@-gss-h\"" },
-        peg$c13 = "@h",
-        peg$c14 = { type: "literal", value: "@h", description: "\"@h\"" },
-        peg$c15 = function() {return 0;},
-        peg$c16 = "@vertical",
-        peg$c17 = { type: "literal", value: "@vertical", description: "\"@vertical\"" },
-        peg$c18 = "@-gss-vertical",
-        peg$c19 = { type: "literal", value: "@-gss-vertical", description: "\"@-gss-vertical\"" },
-        peg$c20 = "@-gss-v",
-        peg$c21 = { type: "literal", value: "@-gss-v", description: "\"@-gss-v\"" },
-        peg$c22 = "@v",
-        peg$c23 = { type: "literal", value: "@v", description: "\"@v\"" },
-        peg$c24 = function() {return 1;},
-        peg$c25 = function(os) {
-            var obj = {};
-            obj.chains = [];
-            for (var i = 0; i < os.length; i++) {
-              // proccess chains
-              if (!!os[i].chain) {
-                obj.chains.push(os[i].chain);
-              }
-              // or just add option
-              else {
-                obj[os[i].key] = os[i].value;
-              }
-            }
-            return obj;
-          },
-        peg$c26 = { type: "other", description: "Option" },
-        peg$c27 = function(chain) { return chain; },
-        peg$c28 = "in",
-        peg$c29 = { type: "literal", value: "in", description: "\"in\"" },
-        peg$c30 = "(",
-        peg$c31 = { type: "literal", value: "(", description: "\"(\"" },
-        peg$c32 = /^[^) ]/,
-        peg$c33 = { type: "class", value: "[^) ]", description: "[^) ]" },
-        peg$c34 = ")",
-        peg$c35 = { type: "literal", value: ")", description: "\")\"" },
-        peg$c36 = function(simple) {
-              return {key:"in", value:simple.join('')};
-            },
-        peg$c37 = /^[^)]/,
-        peg$c38 = { type: "class", value: "[^)]", description: "[^)]" },
-        peg$c39 = function(complex) {
-              return {key:"in", value:"(" + complex.join('') + ")"};
-            },
-        peg$c40 = function(key, value) {
-              return {key:key.join(''), value:value.join('')};
-            },
-        peg$c41 = function(sw) {return {key:"sw",value:sw}; },
-        peg$c42 = /^[^>=<!)]/,
-        peg$c43 = { type: "class", value: "[^>=<!)]", description: "[^>=<!)]" },
-        peg$c44 = /^[>=<!]/,
-        peg$c45 = { type: "class", value: "[>=<!]", description: "[>=<!]" },
-        peg$c46 = function() {
-              throw new SyntaxError('invalid character in option', null, null, null, line(), column());
-            },
-        peg$c47 = { type: "other", description: "Chain" },
-        peg$c48 = "chain-",
-        peg$c49 = { type: "literal", value: "chain-", description: "\"chain-\"" },
-        peg$c50 = function(prop, preds) { return {'chain':[prop.join(""),preds]};},
-        peg$c51 = { type: "other", description: "ChainPredicate" },
-        peg$c52 = function(items) {
-            items.raw = "";
-            items.forEach( function (item){
-              items.raw += item.raw;
-            });
-            return items;
-          },
-        peg$c53 = "()",
-        peg$c54 = { type: "literal", value: "()", description: "\"()\"" },
-        peg$c55 = function() {return {raw:""};},
-        peg$c56 = ",",
-        peg$c57 = { type: "literal", value: ",", description: "\",\"" },
-        peg$c58 = function(item) {
-            item.raw = item.headEq + item.value + item.tailEq + item.s;
-            return item;
-          },
-        peg$c59 = function(headEq, value, tailEq, s) {
-              return {headEq:p.join(headEq),value:p.join(value),tailEq:p.join(tailEq),s:p.join(s)};},
-        peg$c60 = /^[^>=<!) ]/,
-        peg$c61 = { type: "class", value: "[^>=<!) ]", description: "[^>=<!) ]" },
-        peg$c62 = { type: "other", description: "VFL Element" },
-        peg$c63 = function(point) {return {view:"|", isPoint:true, pos:point};},
-        peg$c64 = "|",
-        peg$c65 = { type: "literal", value: "|", description: "\"|\"" },
-        peg$c66 = function() {return {view:"|"};},
-        peg$c67 = function(view, pred) {
-              view = p.stringify(view); 
-              p.addSelector(view); 
-              return {view:view,preds:pred};
-            },
-        peg$c68 = /^[^()]/,
-        peg$c69 = { type: "class", value: "[^()]", description: "[^()]" },
-        peg$c70 = function(view, pred) {
-              view = "(" + p.stringify(view) + ")"; 
-              p.addSelector(view); 
-              return {view:view,preds:pred};
-            },
-        peg$c71 = "...",
-        peg$c72 = { type: "literal", value: "...", description: "\"...\"" },
-        peg$c73 = function(o, connection) {o.isSplat = true; o.connection = connection; return o;},
-        peg$c74 = { type: "other", description: "Point" },
-        peg$c75 = "<",
-        peg$c76 = { type: "literal", value: "<", description: "\"<\"" },
-        peg$c77 = /^[^>]/,
-        peg$c78 = { type: "class", value: "[^>]", description: "[^>]" },
-        peg$c79 = ">",
-        peg$c80 = { type: "literal", value: ">", description: "\">\"" },
-        peg$c81 = function(position) {
-            return p.stringify(position);
-          },
-        peg$c82 = { type: "other", description: "Predicate" },
-        peg$c83 = function(preds) {return preds;},
-        peg$c84 = { type: "other", description: "Predicate Expression" },
-        peg$c85 = "==",
-        peg$c86 = { type: "literal", value: "==", description: "\"==\"" },
-        peg$c87 = "<=",
-        peg$c88 = { type: "literal", value: "<=", description: "\"<=\"" },
-        peg$c89 = ">=",
-        peg$c90 = { type: "literal", value: ">=", description: "\">=\"" },
-        peg$c91 = "=<",
-        peg$c92 = { type: "literal", value: "=<", description: "\"=<\"" },
-        peg$c93 = function() {return "<=";},
-        peg$c94 = "=>",
-        peg$c95 = { type: "literal", value: "=>", description: "\"=>\"" },
-        peg$c96 = function() {return ">=";},
-        peg$c97 = function(eq) {return eq;},
-        peg$c98 = /^[+\-\/*]/,
-        peg$c99 = { type: "class", value: "[+\\-\\/*]", description: "[+\\-\\/*]" },
-        peg$c100 = function(op) {return op;},
-        peg$c101 = function(name) {return ["view",name.join("")];},
-        peg$c102 = function(n) {return n.join("");},
-        peg$c103 = "[",
-        peg$c104 = { type: "literal", value: "[", description: "\"[\"" },
-        peg$c105 = "]",
-        peg$c106 = { type: "literal", value: "]", description: "\"]\"" },
-        peg$c107 = function(name) {return "[" + name.join("") + "]";},
-        peg$c108 = function(view, prop) {return view.join("") + "[" + prop.join("") + "]";},
-        peg$c109 = function() {return "";},
-        peg$c110 = { type: "other", description: "VFL Connection" },
-        peg$c111 = "-",
-        peg$c112 = { type: "literal", value: "-", description: "\"-\"" },
-        peg$c113 = function(gap) {return {op:"==",gap:gap};},
-        peg$c114 = function() {return {op:"==",gap:"__STANDARD__"};},
-        peg$c115 = "~",
-        peg$c116 = { type: "literal", value: "~", description: "\"~\"" },
-        peg$c117 = function(gap) {return {op:"<=",gap:gap};},
-        peg$c118 = function() {return {op:"<=",gap:"__STANDARD__"};},
-        peg$c119 = function() {return {op:"<="};},
-        peg$c120 = "",
-        peg$c121 = function() {return {op:"=="};},
-        peg$c122 = "&",
-        peg$c123 = { type: "literal", value: "&", description: "\"&\"" },
-        peg$c124 = function(local) {
-            if (local.length > 1) {
-              throw new SyntaxError('Invalid local variable scope', null, null, null, line(), column());
-            }
-            return local.join("");
-          },
-        peg$c125 = "^",
-        peg$c126 = { type: "literal", value: "^", description: "\"^\"" },
-        peg$c127 = function(parent) {return parent.join("");},
-        peg$c128 = "$",
-        peg$c129 = { type: "literal", value: "$", description: "\"$\"" },
-        peg$c130 = function(global) {
-            if (global.length > 1) {
-              throw new SyntaxError('Invalid global variable scope', null, null, null, line(), column());
-            }
-            return global.join("");
-          },
-        peg$c131 = { type: "other", description: "VFL Connection Gap" },
-        peg$c132 = /^[a-zA-Z0-9_]/,
-        peg$c133 = { type: "class", value: "[a-zA-Z0-9_]", description: "[a-zA-Z0-9_]" },
-        peg$c134 = function(scope, gap) {return scope + gap.join("");},
-        peg$c135 = function(gap) {return gap.join("");},
-        peg$c136 = /^[^[]/,
-        peg$c137 = { type: "class", value: "[^[]", description: "[^[]" },
-        peg$c138 = /^[^\]]/,
-        peg$c139 = { type: "class", value: "[^\\]]", description: "[^\\]]" },
-        peg$c140 = function(gap, varr) {return gap.join("") + "[" + varr.join("") + "]";},
-        peg$c141 = { type: "other", description: "Strength / Weight" },
-        peg$c142 = "!",
-        peg$c143 = { type: "literal", value: "!", description: "\"!\"" },
-        peg$c144 = /^[a-zA-Z]/,
-        peg$c145 = { type: "class", value: "[a-zA-Z]", description: "[a-zA-Z]" },
-        peg$c146 = /^[0-9]/,
-        peg$c147 = { type: "class", value: "[0-9]", description: "[0-9]" },
-        peg$c148 = function(s, w) {
-            var val;
-            val = "!" + p.join(s) + p.join(w);
-            return val.trim();
-          },
-        peg$c149 = { type: "any", description: "any character" },
-        peg$c150 = function() {
-            throw new SyntaxError('Invalid Strength or Weight', null, null, null, line(), column());
-          },
-        peg$c151 = /^[a-zA-Z0-9#.\-_$:""&]/,
-        peg$c152 = { type: "class", value: "[a-zA-Z0-9#.\\-_$:\"\"&]", description: "[a-zA-Z0-9#.\\-_$:\"\"&]" },
-        peg$c153 = " ",
-        peg$c154 = { type: "literal", value: " ", description: "\" \"" },
-        peg$c155 = function(val) {
-            return [ "number",
-              val
-            ];
-          },
-        peg$c156 = function(digits) {
-            return parseInt(digits.join(""), 10);
-          },
-        peg$c157 = ".",
-        peg$c158 = { type: "literal", value: ".", description: "\".\"" },
-        peg$c159 = function(digits) {
-            return parseFloat(digits.join(""));
-          },
-        peg$c160 = /^[\-+]/,
-        peg$c161 = { type: "class", value: "[\\-+]", description: "[\\-+]" },
-        peg$c162 = { type: "other", description: "whitespace" },
-        peg$c163 = /^[\t\x0B\f \xA0\uFEFF]/,
-        peg$c164 = { type: "class", value: "[\\t\\x0B\\f \\xA0\\uFEFF]", description: "[\\t\\x0B\\f \\xA0\\uFEFF]" },
-        peg$c165 = /^[\n\r\u2028\u2029]/,
-        peg$c166 = { type: "class", value: "[\\n\\r\\u2028\\u2029]", description: "[\\n\\r\\u2028\\u2029]" },
-        peg$c167 = { type: "other", description: "end of line" },
-        peg$c168 = "\n",
-        peg$c169 = { type: "literal", value: "\n", description: "\"\\n\"" },
-        peg$c170 = "\r\n",
-        peg$c171 = { type: "literal", value: "\r\n", description: "\"\\r\\n\"" },
-        peg$c172 = "\r",
-        peg$c173 = { type: "literal", value: "\r", description: "\"\\r\"" },
-        peg$c174 = "\u2028",
-        peg$c175 = { type: "literal", value: "\u2028", description: "\"\\u2028\"" },
-        peg$c176 = "\u2029",
-        peg$c177 = { type: "literal", value: "\u2029", description: "\"\\u2029\"" },
-        peg$c178 = ";",
-        peg$c179 = { type: "literal", value: ";", description: "\";\"" },
-        peg$c180 = void 0,
-        peg$c181 = { type: "other", description: "comment" },
-        peg$c182 = "/*",
-        peg$c183 = { type: "literal", value: "/*", description: "\"/*\"" },
-        peg$c184 = "*/",
-        peg$c185 = { type: "literal", value: "*/", description: "\"*/\"" },
-        peg$c186 = "//",
-        peg$c187 = { type: "literal", value: "//", description: "\"//\"" },
-
-        peg$currPos          = 0,
-        peg$reportedPos      = 0,
-        peg$cachedPos        = 0,
-        peg$cachedPosDetails = { line: 1, column: 1, seenCR: false },
-        peg$maxFailPos       = 0,
-        peg$maxFailExpected  = [],
-        peg$silentFails      = 0,
-
-        peg$result;
-
-    if ("startRule" in options) {
-      if (!(options.startRule in peg$startRuleFunctions)) {
-        throw new Error("Can't start parsing from rule \"" + options.startRule + "\".");
-      }
-
-      peg$startRuleFunction = peg$startRuleFunctions[options.startRule];
-    }
-
-    function text() {
-      return input.substring(peg$reportedPos, peg$currPos);
-    }
-
-    function offset() {
-      return peg$reportedPos;
-    }
-
-    function line() {
-      return peg$computePosDetails(peg$reportedPos).line;
-    }
-
-    function column() {
-      return peg$computePosDetails(peg$reportedPos).column;
-    }
-
-    function expected(description) {
-      throw peg$buildException(
-        null,
-        [{ type: "other", description: description }],
-        peg$reportedPos
-      );
-    }
-
-    function error(message) {
-      throw peg$buildException(message, null, peg$reportedPos);
-    }
-
-    function peg$computePosDetails(pos) {
-      function advance(details, startPos, endPos) {
-        var p, ch;
-
-        for (p = startPos; p < endPos; p++) {
-          ch = input.charAt(p);
-          if (ch === "\n") {
-            if (!details.seenCR) { details.line++; }
-            details.column = 1;
-            details.seenCR = false;
-          } else if (ch === "\r" || ch === "\u2028" || ch === "\u2029") {
-            details.line++;
-            details.column = 1;
-            details.seenCR = true;
-          } else {
-            details.column++;
-            details.seenCR = false;
-          }
-        }
-      }
-
-      if (peg$cachedPos !== pos) {
-        if (peg$cachedPos > pos) {
-          peg$cachedPos = 0;
-          peg$cachedPosDetails = { line: 1, column: 1, seenCR: false };
-        }
-        advance(peg$cachedPosDetails, peg$cachedPos, pos);
-        peg$cachedPos = pos;
-      }
-
-      return peg$cachedPosDetails;
-    }
-
-    function peg$fail(expected) {
-      if (peg$currPos < peg$maxFailPos) { return; }
-
-      if (peg$currPos > peg$maxFailPos) {
-        peg$maxFailPos = peg$currPos;
-        peg$maxFailExpected = [];
-      }
-
-      peg$maxFailExpected.push(expected);
-    }
-
-    function peg$buildException(message, expected, pos) {
-      function cleanupExpected(expected) {
-        var i = 1;
-
-        expected.sort(function(a, b) {
-          if (a.description < b.description) {
-            return -1;
-          } else if (a.description > b.description) {
-            return 1;
-          } else {
-            return 0;
-          }
-        });
-
-        while (i < expected.length) {
-          if (expected[i - 1] === expected[i]) {
-            expected.splice(i, 1);
-          } else {
-            i++;
-          }
-        }
-      }
-
-      function buildMessage(expected, found) {
-        function stringEscape(s) {
-          function hex(ch) { return ch.charCodeAt(0).toString(16).toUpperCase(); }
-
-          return s
-            .replace(/\\/g,   '\\\\')
-            .replace(/"/g,    '\\"')
-            .replace(/\x08/g, '\\b')
-            .replace(/\t/g,   '\\t')
-            .replace(/\n/g,   '\\n')
-            .replace(/\f/g,   '\\f')
-            .replace(/\r/g,   '\\r')
-            .replace(/[\x00-\x07\x0B\x0E\x0F]/g, function(ch) { return '\\x0' + hex(ch); })
-            .replace(/[\x10-\x1F\x80-\xFF]/g,    function(ch) { return '\\x'  + hex(ch); })
-            .replace(/[\u0180-\u0FFF]/g,         function(ch) { return '\\u0' + hex(ch); })
-            .replace(/[\u1080-\uFFFF]/g,         function(ch) { return '\\u'  + hex(ch); });
-        }
-
-        var expectedDescs = new Array(expected.length),
-            expectedDesc, foundDesc, i;
-
-        for (i = 0; i < expected.length; i++) {
-          expectedDescs[i] = expected[i].description;
-        }
-
-        expectedDesc = expected.length > 1
-          ? expectedDescs.slice(0, -1).join(", ")
-              + " or "
-              + expectedDescs[expected.length - 1]
-          : expectedDescs[0];
-
-        foundDesc = found ? "\"" + stringEscape(found) + "\"" : "end of input";
-
-        return "Expected " + expectedDesc + " but " + foundDesc + " found.";
-      }
-
-      var posDetails = peg$computePosDetails(pos),
-          found      = pos < input.length ? input.charAt(pos) : null;
-
-      if (expected !== null) {
-        cleanupExpected(expected);
-      }
-
-      return new SyntaxError(
-        message !== null ? message : buildMessage(expected, found),
-        expected,
-        found,
-        pos,
-        posDetails.line,
-        posDetails.column
-      );
-    }
-
-    function peg$parsestart() {
-      var s0, s1, s2, s3;
-
-      s0 = peg$currPos;
-      s1 = peg$parse__();
-      if (s1 !== peg$FAILED) {
-        s2 = [];
-        s3 = peg$parseStatement();
-        while (s3 !== peg$FAILED) {
-          s2.push(s3);
-          s3 = peg$parseStatement();
-        }
-        if (s2 !== peg$FAILED) {
-          s3 = peg$parse__();
-          if (s3 !== peg$FAILED) {
-            peg$reportedPos = s0;
-            s1 = peg$c2();
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parsedebug() {
-      var s0, s1, s2, s3;
-
-      s0 = peg$currPos;
-      s1 = peg$parse__();
-      if (s1 !== peg$FAILED) {
-        s2 = [];
-        s3 = peg$parseStatement();
-        while (s3 !== peg$FAILED) {
-          s2.push(s3);
-          s3 = peg$parseStatement();
-        }
-        if (s2 !== peg$FAILED) {
-          s3 = peg$parse__();
-          if (s3 !== peg$FAILED) {
-            peg$reportedPos = s0;
-            s1 = peg$c3(s2);
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parseStatement() {
-      var s0, s1, s2, s3;
-
-      s0 = peg$currPos;
-      s1 = peg$parseVFLStatement();
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parseEOS();
-        if (s2 !== peg$FAILED) {
-          s3 = peg$parse__();
-          if (s3 !== peg$FAILED) {
-            peg$reportedPos = s0;
-            s1 = peg$c4(s1);
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parseVFLStatement() {
-      var s0, s1, s2, s3, s4, s5, s6, s7, s8, s9;
-
-      s0 = peg$currPos;
-      s1 = peg$parseDimension();
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parse__();
-        if (s2 !== peg$FAILED) {
-          s3 = peg$parseView();
-          if (s3 !== peg$FAILED) {
-            s4 = [];
-            s5 = peg$currPos;
-            s6 = peg$parse__();
-            if (s6 !== peg$FAILED) {
-              s7 = peg$parseConnection();
-              if (s7 === peg$FAILED) {
-                s7 = peg$c5;
-              }
-              if (s7 !== peg$FAILED) {
-                s8 = peg$parse__();
-                if (s8 !== peg$FAILED) {
-                  s9 = peg$parseView();
-                  if (s9 !== peg$FAILED) {
-                    s6 = [s6, s7, s8, s9];
-                    s5 = s6;
-                  } else {
-                    peg$currPos = s5;
-                    s5 = peg$c0;
-                  }
-                } else {
-                  peg$currPos = s5;
-                  s5 = peg$c0;
-                }
-              } else {
-                peg$currPos = s5;
-                s5 = peg$c0;
-              }
-            } else {
-              peg$currPos = s5;
-              s5 = peg$c0;
-            }
-            while (s5 !== peg$FAILED) {
-              s4.push(s5);
-              s5 = peg$currPos;
-              s6 = peg$parse__();
-              if (s6 !== peg$FAILED) {
-                s7 = peg$parseConnection();
-                if (s7 === peg$FAILED) {
-                  s7 = peg$c5;
-                }
-                if (s7 !== peg$FAILED) {
-                  s8 = peg$parse__();
-                  if (s8 !== peg$FAILED) {
-                    s9 = peg$parseView();
-                    if (s9 !== peg$FAILED) {
-                      s6 = [s6, s7, s8, s9];
-                      s5 = s6;
-                    } else {
-                      peg$currPos = s5;
-                      s5 = peg$c0;
-                    }
-                  } else {
-                    peg$currPos = s5;
-                    s5 = peg$c0;
-                  }
-                } else {
-                  peg$currPos = s5;
-                  s5 = peg$c0;
-                }
-              } else {
-                peg$currPos = s5;
-                s5 = peg$c0;
-              }
-            }
-            if (s4 !== peg$FAILED) {
-              s5 = peg$parse__();
-              if (s5 !== peg$FAILED) {
-                s6 = peg$parseOptions();
-                if (s6 !== peg$FAILED) {
-                  peg$reportedPos = s0;
-                  s1 = peg$c6(s1, s3, s4, s6);
-                  s0 = s1;
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parseDimension() {
-      var s0, s1;
-
-      s0 = peg$currPos;
-      if (input.substr(peg$currPos, 11) === peg$c7) {
-        s1 = peg$c7;
-        peg$currPos += 11;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c8); }
-      }
-      if (s1 === peg$FAILED) {
-        if (input.substr(peg$currPos, 16) === peg$c9) {
-          s1 = peg$c9;
-          peg$currPos += 16;
-        } else {
-          s1 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c10); }
-        }
-        if (s1 === peg$FAILED) {
-          if (input.substr(peg$currPos, 7) === peg$c11) {
-            s1 = peg$c11;
-            peg$currPos += 7;
-          } else {
-            s1 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c12); }
-          }
-          if (s1 === peg$FAILED) {
-            if (input.substr(peg$currPos, 2) === peg$c13) {
-              s1 = peg$c13;
-              peg$currPos += 2;
-            } else {
-              s1 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c14); }
-            }
-          }
-        }
-      }
-      if (s1 !== peg$FAILED) {
-        peg$reportedPos = s0;
-        s1 = peg$c15();
-      }
-      s0 = s1;
-      if (s0 === peg$FAILED) {
-        s0 = peg$currPos;
-        if (input.substr(peg$currPos, 9) === peg$c16) {
-          s1 = peg$c16;
-          peg$currPos += 9;
-        } else {
-          s1 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c17); }
-        }
-        if (s1 === peg$FAILED) {
-          if (input.substr(peg$currPos, 14) === peg$c18) {
-            s1 = peg$c18;
-            peg$currPos += 14;
-          } else {
-            s1 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c19); }
-          }
-          if (s1 === peg$FAILED) {
-            if (input.substr(peg$currPos, 7) === peg$c20) {
-              s1 = peg$c20;
-              peg$currPos += 7;
-            } else {
-              s1 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c21); }
-            }
-            if (s1 === peg$FAILED) {
-              if (input.substr(peg$currPos, 2) === peg$c22) {
-                s1 = peg$c22;
-                peg$currPos += 2;
-              } else {
-                s1 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c23); }
-              }
-            }
-          }
-        }
-        if (s1 !== peg$FAILED) {
-          peg$reportedPos = s0;
-          s1 = peg$c24();
-        }
-        s0 = s1;
-      }
-
-      return s0;
-    }
-
-    function peg$parseOptions() {
-      var s0, s1, s2;
-
-      s0 = peg$currPos;
-      s1 = [];
-      s2 = peg$parseOption();
-      while (s2 !== peg$FAILED) {
-        s1.push(s2);
-        s2 = peg$parseOption();
-      }
-      if (s1 !== peg$FAILED) {
-        peg$reportedPos = s0;
-        s1 = peg$c25(s1);
-      }
-      s0 = s1;
-
-      return s0;
-    }
-
-    function peg$parseOption() {
-      var s0, s1, s2, s3, s4, s5;
-
-      peg$silentFails++;
-      s0 = peg$currPos;
-      s1 = peg$parse__();
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parseChain();
-        if (s2 !== peg$FAILED) {
-          peg$reportedPos = s0;
-          s1 = peg$c27(s2);
-          s0 = s1;
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-      if (s0 === peg$FAILED) {
-        s0 = peg$currPos;
-        s1 = peg$parse__();
-        if (s1 !== peg$FAILED) {
-          if (input.substr(peg$currPos, 2) === peg$c28) {
-            s2 = peg$c28;
-            peg$currPos += 2;
-          } else {
-            s2 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c29); }
-          }
-          if (s2 !== peg$FAILED) {
-            if (input.charCodeAt(peg$currPos) === 40) {
-              s3 = peg$c30;
-              peg$currPos++;
-            } else {
-              s3 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c31); }
-            }
-            if (s3 !== peg$FAILED) {
-              s4 = [];
-              if (peg$c32.test(input.charAt(peg$currPos))) {
-                s5 = input.charAt(peg$currPos);
-                peg$currPos++;
-              } else {
-                s5 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c33); }
-              }
-              if (s5 !== peg$FAILED) {
-                while (s5 !== peg$FAILED) {
-                  s4.push(s5);
-                  if (peg$c32.test(input.charAt(peg$currPos))) {
-                    s5 = input.charAt(peg$currPos);
-                    peg$currPos++;
-                  } else {
-                    s5 = peg$FAILED;
-                    if (peg$silentFails === 0) { peg$fail(peg$c33); }
-                  }
-                }
-              } else {
-                s4 = peg$c0;
-              }
-              if (s4 !== peg$FAILED) {
-                if (input.charCodeAt(peg$currPos) === 41) {
-                  s5 = peg$c34;
-                  peg$currPos++;
-                } else {
-                  s5 = peg$FAILED;
-                  if (peg$silentFails === 0) { peg$fail(peg$c35); }
-                }
-                if (s5 !== peg$FAILED) {
-                  peg$reportedPos = s0;
-                  s1 = peg$c36(s4);
-                  s0 = s1;
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-        if (s0 === peg$FAILED) {
-          s0 = peg$currPos;
-          s1 = peg$parse__();
-          if (s1 !== peg$FAILED) {
-            if (input.substr(peg$currPos, 2) === peg$c28) {
-              s2 = peg$c28;
-              peg$currPos += 2;
-            } else {
-              s2 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c29); }
-            }
-            if (s2 !== peg$FAILED) {
-              if (input.charCodeAt(peg$currPos) === 40) {
-                s3 = peg$c30;
-                peg$currPos++;
-              } else {
-                s3 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c31); }
-              }
-              if (s3 !== peg$FAILED) {
-                s4 = [];
-                if (peg$c37.test(input.charAt(peg$currPos))) {
-                  s5 = input.charAt(peg$currPos);
-                  peg$currPos++;
-                } else {
-                  s5 = peg$FAILED;
-                  if (peg$silentFails === 0) { peg$fail(peg$c38); }
-                }
-                if (s5 !== peg$FAILED) {
-                  while (s5 !== peg$FAILED) {
-                    s4.push(s5);
-                    if (peg$c37.test(input.charAt(peg$currPos))) {
-                      s5 = input.charAt(peg$currPos);
-                      peg$currPos++;
-                    } else {
-                      s5 = peg$FAILED;
-                      if (peg$silentFails === 0) { peg$fail(peg$c38); }
-                    }
-                  }
-                } else {
-                  s4 = peg$c0;
-                }
-                if (s4 !== peg$FAILED) {
-                  if (input.charCodeAt(peg$currPos) === 41) {
-                    s5 = peg$c34;
-                    peg$currPos++;
-                  } else {
-                    s5 = peg$FAILED;
-                    if (peg$silentFails === 0) { peg$fail(peg$c35); }
-                  }
-                  if (s5 !== peg$FAILED) {
-                    peg$reportedPos = s0;
-                    s1 = peg$c39(s4);
-                    s0 = s1;
-                  } else {
-                    peg$currPos = s0;
-                    s0 = peg$c0;
-                  }
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-          if (s0 === peg$FAILED) {
-            s0 = peg$currPos;
-            s1 = peg$parse__();
-            if (s1 !== peg$FAILED) {
-              s2 = [];
-              s3 = peg$parseNameChars();
-              if (s3 !== peg$FAILED) {
-                while (s3 !== peg$FAILED) {
-                  s2.push(s3);
-                  s3 = peg$parseNameChars();
-                }
-              } else {
-                s2 = peg$c0;
-              }
-              if (s2 !== peg$FAILED) {
-                if (input.charCodeAt(peg$currPos) === 40) {
-                  s3 = peg$c30;
-                  peg$currPos++;
-                } else {
-                  s3 = peg$FAILED;
-                  if (peg$silentFails === 0) { peg$fail(peg$c31); }
-                }
-                if (s3 !== peg$FAILED) {
-                  s4 = [];
-                  s5 = peg$parseOpionValueChars();
-                  if (s5 !== peg$FAILED) {
-                    while (s5 !== peg$FAILED) {
-                      s4.push(s5);
-                      s5 = peg$parseOpionValueChars();
-                    }
-                  } else {
-                    s4 = peg$c0;
-                  }
-                  if (s4 !== peg$FAILED) {
-                    if (input.charCodeAt(peg$currPos) === 41) {
-                      s5 = peg$c34;
-                      peg$currPos++;
-                    } else {
-                      s5 = peg$FAILED;
-                      if (peg$silentFails === 0) { peg$fail(peg$c35); }
-                    }
-                    if (s5 !== peg$FAILED) {
-                      peg$reportedPos = s0;
-                      s1 = peg$c40(s2, s4);
-                      s0 = s1;
-                    } else {
-                      peg$currPos = s0;
-                      s0 = peg$c0;
-                    }
-                  } else {
-                    peg$currPos = s0;
-                    s0 = peg$c0;
-                  }
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-            if (s0 === peg$FAILED) {
-              s0 = peg$currPos;
-              s1 = peg$parse__();
-              if (s1 !== peg$FAILED) {
-                s2 = peg$parseStrengthAndWeight();
-                if (s2 !== peg$FAILED) {
-                  peg$reportedPos = s0;
-                  s1 = peg$c41(s2);
-                  s0 = s1;
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            }
-          }
-        }
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c26); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseOpionValueChars() {
-      var s0, s1;
-
-      if (peg$c42.test(input.charAt(peg$currPos))) {
-        s0 = input.charAt(peg$currPos);
-        peg$currPos++;
-      } else {
-        s0 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c43); }
-      }
-      if (s0 === peg$FAILED) {
-        s0 = peg$currPos;
-        if (peg$c44.test(input.charAt(peg$currPos))) {
-          s1 = input.charAt(peg$currPos);
-          peg$currPos++;
-        } else {
-          s1 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c45); }
-        }
-        if (s1 !== peg$FAILED) {
-          peg$reportedPos = s0;
-          s1 = peg$c46();
-        }
-        s0 = s1;
-      }
-
-      return s0;
-    }
-
-    function peg$parseChain() {
-      var s0, s1, s2, s3;
-
-      peg$silentFails++;
-      s0 = peg$currPos;
-      if (input.substr(peg$currPos, 6) === peg$c48) {
-        s1 = peg$c48;
-        peg$currPos += 6;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c49); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = [];
-        s3 = peg$parseNameChars();
-        if (s3 !== peg$FAILED) {
-          while (s3 !== peg$FAILED) {
-            s2.push(s3);
-            s3 = peg$parseNameChars();
-          }
-        } else {
-          s2 = peg$c0;
-        }
-        if (s2 !== peg$FAILED) {
-          s3 = peg$parseChainPredicate();
-          if (s3 === peg$FAILED) {
-            s3 = peg$c5;
-          }
-          if (s3 !== peg$FAILED) {
-            peg$reportedPos = s0;
-            s1 = peg$c50(s2, s3);
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c47); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseChainPredicate() {
-      var s0, s1, s2, s3;
-
-      peg$silentFails++;
-      s0 = peg$currPos;
-      if (input.charCodeAt(peg$currPos) === 40) {
-        s1 = peg$c30;
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c31); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = [];
-        s3 = peg$parseChainPredicateItems();
-        if (s3 !== peg$FAILED) {
-          while (s3 !== peg$FAILED) {
-            s2.push(s3);
-            s3 = peg$parseChainPredicateItems();
-          }
-        } else {
-          s2 = peg$c0;
-        }
-        if (s2 !== peg$FAILED) {
-          if (input.charCodeAt(peg$currPos) === 41) {
-            s3 = peg$c34;
-            peg$currPos++;
-          } else {
-            s3 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c35); }
-          }
-          if (s3 !== peg$FAILED) {
-            peg$reportedPos = s0;
-            s1 = peg$c52(s2);
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-      if (s0 === peg$FAILED) {
-        s0 = peg$currPos;
-        if (input.substr(peg$currPos, 2) === peg$c53) {
-          s1 = peg$c53;
-          peg$currPos += 2;
-        } else {
-          s1 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c54); }
-        }
-        if (s1 !== peg$FAILED) {
-          peg$reportedPos = s0;
-          s1 = peg$c55();
-        }
-        s0 = s1;
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c51); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseChainPredicateItems() {
-      var s0, s1, s2, s3;
-
-      s0 = peg$currPos;
-      s1 = peg$parseChainPredicateItem();
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parse_();
-        if (s2 === peg$FAILED) {
-          s2 = peg$c5;
-        }
-        if (s2 !== peg$FAILED) {
-          if (input.charCodeAt(peg$currPos) === 44) {
-            s3 = peg$c56;
-            peg$currPos++;
-          } else {
-            s3 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c57); }
-          }
-          if (s3 === peg$FAILED) {
-            s3 = peg$c5;
-          }
-          if (s3 !== peg$FAILED) {
-            peg$reportedPos = s0;
-            s1 = peg$c58(s1);
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parseChainPredicateItem() {
-      var s0, s1, s2, s3, s4, s5, s6, s7;
-
-      s0 = peg$currPos;
-      s1 = peg$parsePredEq();
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parse_();
-        if (s2 !== peg$FAILED) {
-          s3 = peg$parseChainPredVal();
-          if (s3 === peg$FAILED) {
-            s3 = peg$c5;
-          }
-          if (s3 !== peg$FAILED) {
-            s4 = peg$parse_();
-            if (s4 === peg$FAILED) {
-              s4 = peg$c5;
-            }
-            if (s4 !== peg$FAILED) {
-              s5 = peg$parsePredEq();
-              if (s5 === peg$FAILED) {
-                s5 = peg$c5;
-              }
-              if (s5 !== peg$FAILED) {
-                s6 = peg$parse_();
-                if (s6 === peg$FAILED) {
-                  s6 = peg$c5;
-                }
-                if (s6 !== peg$FAILED) {
-                  s7 = peg$parseStrengthAndWeight();
-                  if (s7 === peg$FAILED) {
-                    s7 = peg$c5;
-                  }
-                  if (s7 !== peg$FAILED) {
-                    peg$reportedPos = s0;
-                    s1 = peg$c59(s1, s3, s5, s7);
-                    s0 = s1;
-                  } else {
-                    peg$currPos = s0;
-                    s0 = peg$c0;
-                  }
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-      if (s0 === peg$FAILED) {
-        s0 = peg$currPos;
-        s1 = peg$parsePredEq();
-        if (s1 === peg$FAILED) {
-          s1 = peg$c5;
-        }
-        if (s1 !== peg$FAILED) {
-          s2 = peg$parse_();
-          if (s2 === peg$FAILED) {
-            s2 = peg$c5;
-          }
-          if (s2 !== peg$FAILED) {
-            s3 = peg$parseChainPredVal();
-            if (s3 !== peg$FAILED) {
-              s4 = peg$parse_();
-              if (s4 === peg$FAILED) {
-                s4 = peg$c5;
-              }
-              if (s4 !== peg$FAILED) {
-                s5 = peg$parsePredEq();
-                if (s5 === peg$FAILED) {
-                  s5 = peg$c5;
-                }
-                if (s5 !== peg$FAILED) {
-                  s6 = peg$parse_();
-                  if (s6 === peg$FAILED) {
-                    s6 = peg$c5;
-                  }
-                  if (s6 !== peg$FAILED) {
-                    s7 = peg$parseStrengthAndWeight();
-                    if (s7 === peg$FAILED) {
-                      s7 = peg$c5;
-                    }
-                    if (s7 !== peg$FAILED) {
-                      peg$reportedPos = s0;
-                      s1 = peg$c59(s1, s3, s5, s7);
-                      s0 = s1;
-                    } else {
-                      peg$currPos = s0;
-                      s0 = peg$c0;
-                    }
-                  } else {
-                    peg$currPos = s0;
-                    s0 = peg$c0;
-                  }
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-        if (s0 === peg$FAILED) {
-          s0 = peg$currPos;
-          s1 = peg$parsePredEq();
-          if (s1 === peg$FAILED) {
-            s1 = peg$c5;
-          }
-          if (s1 !== peg$FAILED) {
-            s2 = peg$parse_();
-            if (s2 === peg$FAILED) {
-              s2 = peg$c5;
-            }
-            if (s2 !== peg$FAILED) {
-              s3 = peg$parseChainPredVal();
-              if (s3 === peg$FAILED) {
-                s3 = peg$c5;
-              }
-              if (s3 !== peg$FAILED) {
-                s4 = peg$parse_();
-                if (s4 === peg$FAILED) {
-                  s4 = peg$c5;
-                }
-                if (s4 !== peg$FAILED) {
-                  s5 = peg$parsePredEq();
-                  if (s5 === peg$FAILED) {
-                    s5 = peg$c5;
-                  }
-                  if (s5 !== peg$FAILED) {
-                    s6 = peg$parse_();
-                    if (s6 === peg$FAILED) {
-                      s6 = peg$c5;
-                    }
-                    if (s6 !== peg$FAILED) {
-                      s7 = peg$parseStrengthAndWeight();
-                      if (s7 !== peg$FAILED) {
-                        peg$reportedPos = s0;
-                        s1 = peg$c59(s1, s3, s5, s7);
-                        s0 = s1;
-                      } else {
-                        peg$currPos = s0;
-                        s0 = peg$c0;
-                      }
-                    } else {
-                      peg$currPos = s0;
-                      s0 = peg$c0;
-                    }
-                  } else {
-                    peg$currPos = s0;
-                    s0 = peg$c0;
-                  }
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        }
-      }
-
-      return s0;
-    }
-
-    function peg$parseChainPredVal() {
-      var s0, s1;
-
-      s0 = [];
-      if (peg$c60.test(input.charAt(peg$currPos))) {
-        s1 = input.charAt(peg$currPos);
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c61); }
-      }
-      if (s1 !== peg$FAILED) {
-        while (s1 !== peg$FAILED) {
-          s0.push(s1);
-          if (peg$c60.test(input.charAt(peg$currPos))) {
-            s1 = input.charAt(peg$currPos);
-            peg$currPos++;
-          } else {
-            s1 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c61); }
-          }
-        }
-      } else {
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parseView() {
-      var s0, s1;
-
-      peg$silentFails++;
-      s0 = peg$parseSplat();
-      if (s0 === peg$FAILED) {
-        s0 = peg$parseViewSelector();
-        if (s0 === peg$FAILED) {
-          s0 = peg$currPos;
-          s1 = peg$parsePoint();
-          if (s1 !== peg$FAILED) {
-            peg$reportedPos = s0;
-            s1 = peg$c63(s1);
-          }
-          s0 = s1;
-          if (s0 === peg$FAILED) {
-            s0 = peg$currPos;
-            if (input.charCodeAt(peg$currPos) === 124) {
-              s1 = peg$c64;
-              peg$currPos++;
-            } else {
-              s1 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c65); }
-            }
-            if (s1 !== peg$FAILED) {
-              peg$reportedPos = s0;
-              s1 = peg$c66();
-            }
-            s0 = s1;
-          }
-        }
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c62); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseViewSelector() {
-      var s0, s1, s2, s3, s4, s5, s6, s7;
-
-      s0 = peg$currPos;
-      if (input.charCodeAt(peg$currPos) === 40) {
-        s1 = peg$c30;
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c31); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parse_();
-        if (s2 !== peg$FAILED) {
-          s3 = [];
-          s4 = peg$parseNameChars();
-          if (s4 !== peg$FAILED) {
-            while (s4 !== peg$FAILED) {
-              s3.push(s4);
-              s4 = peg$parseNameChars();
-            }
-          } else {
-            s3 = peg$c0;
-          }
-          if (s3 !== peg$FAILED) {
-            s4 = peg$parse_();
-            if (s4 !== peg$FAILED) {
-              s5 = peg$parsePredicate();
-              if (s5 === peg$FAILED) {
-                s5 = peg$c5;
-              }
-              if (s5 !== peg$FAILED) {
-                s6 = peg$parse_();
-                if (s6 !== peg$FAILED) {
-                  if (input.charCodeAt(peg$currPos) === 41) {
-                    s7 = peg$c34;
-                    peg$currPos++;
-                  } else {
-                    s7 = peg$FAILED;
-                    if (peg$silentFails === 0) { peg$fail(peg$c35); }
-                  }
-                  if (s7 !== peg$FAILED) {
-                    peg$reportedPos = s0;
-                    s1 = peg$c67(s3, s5);
-                    s0 = s1;
-                  } else {
-                    peg$currPos = s0;
-                    s0 = peg$c0;
-                  }
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-      if (s0 === peg$FAILED) {
-        s0 = peg$parseComplexViewSelector();
-      }
-
-      return s0;
-    }
-
-    function peg$parseComplexViewSelector() {
-      var s0, s1, s2, s3, s4, s5, s6, s7;
-
-      s0 = peg$currPos;
-      if (input.charCodeAt(peg$currPos) === 40) {
-        s1 = peg$c30;
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c31); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parse_();
-        if (s2 !== peg$FAILED) {
-          s3 = [];
-          if (peg$c68.test(input.charAt(peg$currPos))) {
-            s4 = input.charAt(peg$currPos);
-            peg$currPos++;
-          } else {
-            s4 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c69); }
-          }
-          while (s4 !== peg$FAILED) {
-            s3.push(s4);
-            if (peg$c68.test(input.charAt(peg$currPos))) {
-              s4 = input.charAt(peg$currPos);
-              peg$currPos++;
-            } else {
-              s4 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c69); }
-            }
-          }
-          if (s3 !== peg$FAILED) {
-            s4 = peg$parse_();
-            if (s4 !== peg$FAILED) {
-              s5 = peg$parsePredicate();
-              if (s5 === peg$FAILED) {
-                s5 = peg$c5;
-              }
-              if (s5 !== peg$FAILED) {
-                s6 = peg$parse_();
-                if (s6 !== peg$FAILED) {
-                  if (input.charCodeAt(peg$currPos) === 41) {
-                    s7 = peg$c34;
-                    peg$currPos++;
-                  } else {
-                    s7 = peg$FAILED;
-                    if (peg$silentFails === 0) { peg$fail(peg$c35); }
-                  }
-                  if (s7 !== peg$FAILED) {
-                    peg$reportedPos = s0;
-                    s1 = peg$c70(s3, s5);
-                    s0 = s1;
-                  } else {
-                    peg$currPos = s0;
-                    s0 = peg$c0;
-                  }
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parseSplat() {
-      var s0, s1, s2, s3, s4, s5;
-
-      s0 = peg$currPos;
-      s1 = peg$parseViewSelector();
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parse__();
-        if (s2 !== peg$FAILED) {
-          s3 = peg$parseConnection();
-          if (s3 === peg$FAILED) {
-            s3 = peg$c5;
-          }
-          if (s3 !== peg$FAILED) {
-            s4 = peg$parse__();
-            if (s4 !== peg$FAILED) {
-              if (input.substr(peg$currPos, 3) === peg$c71) {
-                s5 = peg$c71;
-                peg$currPos += 3;
-              } else {
-                s5 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c72); }
-              }
-              if (s5 !== peg$FAILED) {
-                peg$reportedPos = s0;
-                s1 = peg$c73(s1, s3);
-                s0 = s1;
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parsePoint() {
-      var s0, s1, s2, s3, s4, s5;
-
-      peg$silentFails++;
-      s0 = peg$currPos;
-      if (input.charCodeAt(peg$currPos) === 60) {
-        s1 = peg$c75;
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c76); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parse_();
-        if (s2 === peg$FAILED) {
-          s2 = peg$c5;
-        }
-        if (s2 !== peg$FAILED) {
-          s3 = [];
-          if (peg$c77.test(input.charAt(peg$currPos))) {
-            s4 = input.charAt(peg$currPos);
-            peg$currPos++;
-          } else {
-            s4 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c78); }
-          }
-          if (s4 !== peg$FAILED) {
-            while (s4 !== peg$FAILED) {
-              s3.push(s4);
-              if (peg$c77.test(input.charAt(peg$currPos))) {
-                s4 = input.charAt(peg$currPos);
-                peg$currPos++;
-              } else {
-                s4 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c78); }
-              }
-            }
-          } else {
-            s3 = peg$c0;
-          }
-          if (s3 !== peg$FAILED) {
-            s4 = peg$parse_();
-            if (s4 === peg$FAILED) {
-              s4 = peg$c5;
-            }
-            if (s4 !== peg$FAILED) {
-              if (input.charCodeAt(peg$currPos) === 62) {
-                s5 = peg$c79;
-                peg$currPos++;
-              } else {
-                s5 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c80); }
-              }
-              if (s5 !== peg$FAILED) {
-                peg$reportedPos = s0;
-                s1 = peg$c81(s3);
-                s0 = s1;
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c74); }
-      }
-
-      return s0;
-    }
-
-    function peg$parsePredicate() {
-      var s0, s1, s2, s3, s4, s5, s6, s7, s8, s9;
-
-      peg$silentFails++;
-      s0 = peg$currPos;
-      if (input.charCodeAt(peg$currPos) === 40) {
-        s1 = peg$c30;
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c31); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = [];
-        s3 = peg$currPos;
-        s4 = peg$parsePredEq();
-        if (s4 !== peg$FAILED) {
-          s5 = peg$parsePredExpression();
-          if (s5 !== peg$FAILED) {
-            s6 = peg$parseStrengthAndWeight();
-            if (s6 === peg$FAILED) {
-              s6 = peg$c5;
-            }
-            if (s6 !== peg$FAILED) {
-              s7 = peg$parse_();
-              if (s7 === peg$FAILED) {
-                s7 = peg$c5;
-              }
-              if (s7 !== peg$FAILED) {
-                s8 = peg$parsePredSeperator();
-                if (s8 !== peg$FAILED) {
-                  s9 = peg$parse_();
-                  if (s9 === peg$FAILED) {
-                    s9 = peg$c5;
-                  }
-                  if (s9 !== peg$FAILED) {
-                    s4 = [s4, s5, s6, s7, s8, s9];
-                    s3 = s4;
-                  } else {
-                    peg$currPos = s3;
-                    s3 = peg$c0;
-                  }
-                } else {
-                  peg$currPos = s3;
-                  s3 = peg$c0;
-                }
-              } else {
-                peg$currPos = s3;
-                s3 = peg$c0;
-              }
-            } else {
-              peg$currPos = s3;
-              s3 = peg$c0;
-            }
-          } else {
-            peg$currPos = s3;
-            s3 = peg$c0;
-          }
-        } else {
-          peg$currPos = s3;
-          s3 = peg$c0;
-        }
-        if (s3 !== peg$FAILED) {
-          while (s3 !== peg$FAILED) {
-            s2.push(s3);
-            s3 = peg$currPos;
-            s4 = peg$parsePredEq();
-            if (s4 !== peg$FAILED) {
-              s5 = peg$parsePredExpression();
-              if (s5 !== peg$FAILED) {
-                s6 = peg$parseStrengthAndWeight();
-                if (s6 === peg$FAILED) {
-                  s6 = peg$c5;
-                }
-                if (s6 !== peg$FAILED) {
-                  s7 = peg$parse_();
-                  if (s7 === peg$FAILED) {
-                    s7 = peg$c5;
-                  }
-                  if (s7 !== peg$FAILED) {
-                    s8 = peg$parsePredSeperator();
-                    if (s8 !== peg$FAILED) {
-                      s9 = peg$parse_();
-                      if (s9 === peg$FAILED) {
-                        s9 = peg$c5;
-                      }
-                      if (s9 !== peg$FAILED) {
-                        s4 = [s4, s5, s6, s7, s8, s9];
-                        s3 = s4;
-                      } else {
-                        peg$currPos = s3;
-                        s3 = peg$c0;
-                      }
-                    } else {
-                      peg$currPos = s3;
-                      s3 = peg$c0;
-                    }
-                  } else {
-                    peg$currPos = s3;
-                    s3 = peg$c0;
-                  }
-                } else {
-                  peg$currPos = s3;
-                  s3 = peg$c0;
-                }
-              } else {
-                peg$currPos = s3;
-                s3 = peg$c0;
-              }
-            } else {
-              peg$currPos = s3;
-              s3 = peg$c0;
-            }
-          }
-        } else {
-          s2 = peg$c0;
-        }
-        if (s2 !== peg$FAILED) {
-          if (input.charCodeAt(peg$currPos) === 41) {
-            s3 = peg$c34;
-            peg$currPos++;
-          } else {
-            s3 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c35); }
-          }
-          if (s3 !== peg$FAILED) {
-            peg$reportedPos = s0;
-            s1 = peg$c83(s2);
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c82); }
-      }
-
-      return s0;
-    }
-
-    function peg$parsePredExpression() {
-      var s0, s1;
-
-      peg$silentFails++;
-      s0 = [];
-      s1 = peg$parsePredOp();
-      if (s1 === peg$FAILED) {
-        s1 = peg$parsePredLiteral();
-        if (s1 === peg$FAILED) {
-          s1 = peg$parsePredVariable();
-          if (s1 === peg$FAILED) {
-            s1 = peg$parsePredViewVariable();
-            if (s1 === peg$FAILED) {
-              s1 = peg$parsePredView();
-            }
-          }
-        }
-      }
-      if (s1 !== peg$FAILED) {
-        while (s1 !== peg$FAILED) {
-          s0.push(s1);
-          s1 = peg$parsePredOp();
-          if (s1 === peg$FAILED) {
-            s1 = peg$parsePredLiteral();
-            if (s1 === peg$FAILED) {
-              s1 = peg$parsePredVariable();
-              if (s1 === peg$FAILED) {
-                s1 = peg$parsePredViewVariable();
-                if (s1 === peg$FAILED) {
-                  s1 = peg$parsePredView();
-                }
-              }
-            }
-          }
-        }
-      } else {
-        s0 = peg$c0;
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c84); }
-      }
-
-      return s0;
-    }
-
-    function peg$parsePredEq() {
-      var s0, s1, s2, s3;
-
-      s0 = peg$currPos;
-      s1 = peg$parse_();
-      if (s1 === peg$FAILED) {
-        s1 = peg$c5;
-      }
-      if (s1 !== peg$FAILED) {
-        if (input.substr(peg$currPos, 2) === peg$c85) {
-          s2 = peg$c85;
-          peg$currPos += 2;
-        } else {
-          s2 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c86); }
-        }
-        if (s2 === peg$FAILED) {
-          if (input.substr(peg$currPos, 2) === peg$c87) {
-            s2 = peg$c87;
-            peg$currPos += 2;
-          } else {
-            s2 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c88); }
-          }
-          if (s2 === peg$FAILED) {
-            if (input.charCodeAt(peg$currPos) === 60) {
-              s2 = peg$c75;
-              peg$currPos++;
-            } else {
-              s2 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c76); }
-            }
-            if (s2 === peg$FAILED) {
-              if (input.substr(peg$currPos, 2) === peg$c89) {
-                s2 = peg$c89;
-                peg$currPos += 2;
-              } else {
-                s2 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c90); }
-              }
-              if (s2 === peg$FAILED) {
-                if (input.charCodeAt(peg$currPos) === 62) {
-                  s2 = peg$c79;
-                  peg$currPos++;
-                } else {
-                  s2 = peg$FAILED;
-                  if (peg$silentFails === 0) { peg$fail(peg$c80); }
-                }
-                if (s2 === peg$FAILED) {
-                  s2 = peg$currPos;
-                  if (input.substr(peg$currPos, 2) === peg$c91) {
-                    s3 = peg$c91;
-                    peg$currPos += 2;
-                  } else {
-                    s3 = peg$FAILED;
-                    if (peg$silentFails === 0) { peg$fail(peg$c92); }
-                  }
-                  if (s3 !== peg$FAILED) {
-                    peg$reportedPos = s2;
-                    s3 = peg$c93();
-                  }
-                  s2 = s3;
-                  if (s2 === peg$FAILED) {
-                    s2 = peg$currPos;
-                    if (input.substr(peg$currPos, 2) === peg$c94) {
-                      s3 = peg$c94;
-                      peg$currPos += 2;
-                    } else {
-                      s3 = peg$FAILED;
-                      if (peg$silentFails === 0) { peg$fail(peg$c95); }
-                    }
-                    if (s3 !== peg$FAILED) {
-                      peg$reportedPos = s2;
-                      s3 = peg$c96();
-                    }
-                    s2 = s3;
-                  }
-                }
-              }
-            }
-          }
-        }
-        if (s2 !== peg$FAILED) {
-          s3 = peg$parse_();
-          if (s3 === peg$FAILED) {
-            s3 = peg$c5;
-          }
-          if (s3 !== peg$FAILED) {
-            peg$reportedPos = s0;
-            s1 = peg$c97(s2);
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parsePredOp() {
-      var s0, s1, s2;
-
-      s0 = peg$currPos;
-      if (peg$c98.test(input.charAt(peg$currPos))) {
-        s1 = input.charAt(peg$currPos);
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c99); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parse_();
-        if (s2 === peg$FAILED) {
-          s2 = peg$c5;
-        }
-        if (s2 !== peg$FAILED) {
-          peg$reportedPos = s0;
-          s1 = peg$c100(s1);
-          s0 = s1;
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parsePredView() {
-      var s0, s1, s2;
-
-      s0 = peg$currPos;
-      s1 = [];
-      s2 = peg$parseNameChars();
-      if (s2 !== peg$FAILED) {
-        while (s2 !== peg$FAILED) {
-          s1.push(s2);
-          s2 = peg$parseNameChars();
-        }
-      } else {
-        s1 = peg$c0;
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parse_();
-        if (s2 === peg$FAILED) {
-          s2 = peg$c5;
-        }
-        if (s2 !== peg$FAILED) {
-          peg$reportedPos = s0;
-          s1 = peg$c101(s1);
-          s0 = s1;
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parsePredLiteral() {
-      var s0, s1, s2;
-
-      s0 = peg$currPos;
-      s1 = [];
-      s2 = peg$parseNumber();
-      if (s2 !== peg$FAILED) {
-        while (s2 !== peg$FAILED) {
-          s1.push(s2);
-          s2 = peg$parseNumber();
-        }
-      } else {
-        s1 = peg$c0;
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parse_();
-        if (s2 === peg$FAILED) {
-          s2 = peg$c5;
-        }
-        if (s2 !== peg$FAILED) {
-          peg$reportedPos = s0;
-          s1 = peg$c102(s1);
-          s0 = s1;
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parsePredVariable() {
-      var s0, s1, s2, s3, s4;
-
-      s0 = peg$currPos;
-      if (input.charCodeAt(peg$currPos) === 91) {
-        s1 = peg$c103;
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c104); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = [];
-        s3 = peg$parseNameChars();
-        if (s3 !== peg$FAILED) {
-          while (s3 !== peg$FAILED) {
-            s2.push(s3);
-            s3 = peg$parseNameChars();
-          }
-        } else {
-          s2 = peg$c0;
-        }
-        if (s2 !== peg$FAILED) {
-          if (input.charCodeAt(peg$currPos) === 93) {
-            s3 = peg$c105;
-            peg$currPos++;
-          } else {
-            s3 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c106); }
-          }
-          if (s3 !== peg$FAILED) {
-            s4 = peg$parse_();
-            if (s4 === peg$FAILED) {
-              s4 = peg$c5;
-            }
-            if (s4 !== peg$FAILED) {
-              peg$reportedPos = s0;
-              s1 = peg$c107(s2);
-              s0 = s1;
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parsePredViewVariable() {
-      var s0, s1, s2, s3, s4, s5;
-
-      s0 = peg$currPos;
-      s1 = [];
-      s2 = peg$parseNameChars();
-      if (s2 !== peg$FAILED) {
-        while (s2 !== peg$FAILED) {
-          s1.push(s2);
-          s2 = peg$parseNameChars();
-        }
-      } else {
-        s1 = peg$c0;
-      }
-      if (s1 !== peg$FAILED) {
-        if (input.charCodeAt(peg$currPos) === 91) {
-          s2 = peg$c103;
-          peg$currPos++;
-        } else {
-          s2 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c104); }
-        }
-        if (s2 !== peg$FAILED) {
-          s3 = [];
-          s4 = peg$parseNameChars();
-          if (s4 !== peg$FAILED) {
-            while (s4 !== peg$FAILED) {
-              s3.push(s4);
-              s4 = peg$parseNameChars();
-            }
-          } else {
-            s3 = peg$c0;
-          }
-          if (s3 !== peg$FAILED) {
-            if (input.charCodeAt(peg$currPos) === 93) {
-              s4 = peg$c105;
-              peg$currPos++;
-            } else {
-              s4 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c106); }
-            }
-            if (s4 !== peg$FAILED) {
-              s5 = peg$parse_();
-              if (s5 === peg$FAILED) {
-                s5 = peg$c5;
-              }
-              if (s5 !== peg$FAILED) {
-                peg$reportedPos = s0;
-                s1 = peg$c108(s1, s3);
-                s0 = s1;
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parsePredSeperator() {
-      var s0, s1;
-
-      s0 = peg$currPos;
-      if (input.charCodeAt(peg$currPos) === 44) {
-        s1 = peg$c56;
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c57); }
-      }
-      if (s1 === peg$FAILED) {
-        s1 = peg$c5;
-      }
-      if (s1 !== peg$FAILED) {
-        peg$reportedPos = s0;
-        s1 = peg$c109();
-      }
-      s0 = s1;
-
-      return s0;
-    }
-
-    function peg$parseConnection() {
-      var s0, s1, s2, s3, s4, s5;
-
-      peg$silentFails++;
-      s0 = peg$currPos;
-      if (input.charCodeAt(peg$currPos) === 45) {
-        s1 = peg$c111;
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c112); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = peg$parse_();
-        if (s2 !== peg$FAILED) {
-          s3 = peg$parseExplicitGap();
-          if (s3 !== peg$FAILED) {
-            s4 = peg$parse_();
-            if (s4 !== peg$FAILED) {
-              if (input.charCodeAt(peg$currPos) === 45) {
-                s5 = peg$c111;
-                peg$currPos++;
-              } else {
-                s5 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c112); }
-              }
-              if (s5 !== peg$FAILED) {
-                peg$reportedPos = s0;
-                s1 = peg$c113(s3);
-                s0 = s1;
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-      if (s0 === peg$FAILED) {
-        s0 = peg$currPos;
-        if (input.charCodeAt(peg$currPos) === 45) {
-          s1 = peg$c111;
-          peg$currPos++;
-        } else {
-          s1 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c112); }
-        }
-        if (s1 !== peg$FAILED) {
-          peg$reportedPos = s0;
-          s1 = peg$c114();
-        }
-        s0 = s1;
-        if (s0 === peg$FAILED) {
-          s0 = peg$currPos;
-          if (input.charCodeAt(peg$currPos) === 126) {
-            s1 = peg$c115;
-            peg$currPos++;
-          } else {
-            s1 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c116); }
-          }
-          if (s1 !== peg$FAILED) {
-            s2 = peg$parse_();
-            if (s2 !== peg$FAILED) {
-              s3 = peg$parseExplicitGap();
-              if (s3 !== peg$FAILED) {
-                s4 = peg$parse_();
-                if (s4 !== peg$FAILED) {
-                  if (input.charCodeAt(peg$currPos) === 126) {
-                    s5 = peg$c115;
-                    peg$currPos++;
-                  } else {
-                    s5 = peg$FAILED;
-                    if (peg$silentFails === 0) { peg$fail(peg$c116); }
-                  }
-                  if (s5 !== peg$FAILED) {
-                    peg$reportedPos = s0;
-                    s1 = peg$c117(s3);
-                    s0 = s1;
-                  } else {
-                    peg$currPos = s0;
-                    s0 = peg$c0;
-                  }
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-          if (s0 === peg$FAILED) {
-            s0 = peg$currPos;
-            if (input.charCodeAt(peg$currPos) === 126) {
-              s1 = peg$c115;
-              peg$currPos++;
-            } else {
-              s1 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c116); }
-            }
-            if (s1 !== peg$FAILED) {
-              if (input.charCodeAt(peg$currPos) === 45) {
-                s2 = peg$c111;
-                peg$currPos++;
-              } else {
-                s2 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c112); }
-              }
-              if (s2 !== peg$FAILED) {
-                if (input.charCodeAt(peg$currPos) === 126) {
-                  s3 = peg$c115;
-                  peg$currPos++;
-                } else {
-                  s3 = peg$FAILED;
-                  if (peg$silentFails === 0) { peg$fail(peg$c116); }
-                }
-                if (s3 !== peg$FAILED) {
-                  peg$reportedPos = s0;
-                  s1 = peg$c118();
-                  s0 = s1;
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-            if (s0 === peg$FAILED) {
-              s0 = peg$currPos;
-              if (input.charCodeAt(peg$currPos) === 126) {
-                s1 = peg$c115;
-                peg$currPos++;
-              } else {
-                s1 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c116); }
-              }
-              if (s1 !== peg$FAILED) {
-                peg$reportedPos = s0;
-                s1 = peg$c119();
-              }
-              s0 = s1;
-              if (s0 === peg$FAILED) {
-                s0 = peg$currPos;
-                s1 = peg$c120;
-                if (s1 !== peg$FAILED) {
-                  peg$reportedPos = s0;
-                  s1 = peg$c121();
-                }
-                s0 = s1;
-              }
-            }
-          }
-        }
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c110); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseScope() {
-      var s0, s1, s2;
-
-      s0 = peg$currPos;
-      s1 = [];
-      if (input.charCodeAt(peg$currPos) === 38) {
-        s2 = peg$c122;
-        peg$currPos++;
-      } else {
-        s2 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c123); }
-      }
-      if (s2 !== peg$FAILED) {
-        while (s2 !== peg$FAILED) {
-          s1.push(s2);
-          if (input.charCodeAt(peg$currPos) === 38) {
-            s2 = peg$c122;
-            peg$currPos++;
-          } else {
-            s2 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c123); }
-          }
-        }
-      } else {
-        s1 = peg$c0;
-      }
-      if (s1 !== peg$FAILED) {
-        peg$reportedPos = s0;
-        s1 = peg$c124(s1);
-      }
-      s0 = s1;
-      if (s0 === peg$FAILED) {
-        s0 = peg$currPos;
-        s1 = [];
-        if (input.charCodeAt(peg$currPos) === 94) {
-          s2 = peg$c125;
-          peg$currPos++;
-        } else {
-          s2 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c126); }
-        }
-        if (s2 !== peg$FAILED) {
-          while (s2 !== peg$FAILED) {
-            s1.push(s2);
-            if (input.charCodeAt(peg$currPos) === 94) {
-              s2 = peg$c125;
-              peg$currPos++;
-            } else {
-              s2 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c126); }
-            }
-          }
-        } else {
-          s1 = peg$c0;
-        }
-        if (s1 !== peg$FAILED) {
-          peg$reportedPos = s0;
-          s1 = peg$c127(s1);
-        }
-        s0 = s1;
-        if (s0 === peg$FAILED) {
-          s0 = peg$currPos;
-          s1 = [];
-          if (input.charCodeAt(peg$currPos) === 36) {
-            s2 = peg$c128;
-            peg$currPos++;
-          } else {
-            s2 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c129); }
-          }
-          if (s2 !== peg$FAILED) {
-            while (s2 !== peg$FAILED) {
-              s1.push(s2);
-              if (input.charCodeAt(peg$currPos) === 36) {
-                s2 = peg$c128;
-                peg$currPos++;
-              } else {
-                s2 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c129); }
-              }
-            }
-          } else {
-            s1 = peg$c0;
-          }
-          if (s1 !== peg$FAILED) {
-            peg$reportedPos = s0;
-            s1 = peg$c130(s1);
-          }
-          s0 = s1;
-        }
-      }
-
-      return s0;
-    }
-
-    function peg$parseExplicitGap() {
-      var s0, s1, s2, s3, s4;
-
-      peg$silentFails++;
-      s0 = peg$currPos;
-      s1 = peg$parseScope();
-      if (s1 !== peg$FAILED) {
-        s2 = [];
-        if (peg$c132.test(input.charAt(peg$currPos))) {
-          s3 = input.charAt(peg$currPos);
-          peg$currPos++;
-        } else {
-          s3 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c133); }
-        }
-        if (s3 !== peg$FAILED) {
-          while (s3 !== peg$FAILED) {
-            s2.push(s3);
-            if (peg$c132.test(input.charAt(peg$currPos))) {
-              s3 = input.charAt(peg$currPos);
-              peg$currPos++;
-            } else {
-              s3 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c133); }
-            }
-          }
-        } else {
-          s2 = peg$c0;
-        }
-        if (s2 !== peg$FAILED) {
-          peg$reportedPos = s0;
-          s1 = peg$c134(s1, s2);
-          s0 = s1;
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-      if (s0 === peg$FAILED) {
-        s0 = peg$currPos;
-        s1 = [];
-        if (peg$c132.test(input.charAt(peg$currPos))) {
-          s2 = input.charAt(peg$currPos);
-          peg$currPos++;
-        } else {
-          s2 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c133); }
-        }
-        if (s2 !== peg$FAILED) {
-          while (s2 !== peg$FAILED) {
-            s1.push(s2);
-            if (peg$c132.test(input.charAt(peg$currPos))) {
-              s2 = input.charAt(peg$currPos);
-              peg$currPos++;
-            } else {
-              s2 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c133); }
-            }
-          }
-        } else {
-          s1 = peg$c0;
-        }
-        if (s1 !== peg$FAILED) {
-          peg$reportedPos = s0;
-          s1 = peg$c135(s1);
-        }
-        s0 = s1;
-        if (s0 === peg$FAILED) {
-          s0 = peg$currPos;
-          s1 = [];
-          if (peg$c136.test(input.charAt(peg$currPos))) {
-            s2 = input.charAt(peg$currPos);
-            peg$currPos++;
-          } else {
-            s2 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c137); }
-          }
-          while (s2 !== peg$FAILED) {
-            s1.push(s2);
-            if (peg$c136.test(input.charAt(peg$currPos))) {
-              s2 = input.charAt(peg$currPos);
-              peg$currPos++;
-            } else {
-              s2 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c137); }
-            }
-          }
-          if (s1 !== peg$FAILED) {
-            if (input.charCodeAt(peg$currPos) === 91) {
-              s2 = peg$c103;
-              peg$currPos++;
-            } else {
-              s2 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c104); }
-            }
-            if (s2 !== peg$FAILED) {
-              s3 = [];
-              if (peg$c138.test(input.charAt(peg$currPos))) {
-                s4 = input.charAt(peg$currPos);
-                peg$currPos++;
-              } else {
-                s4 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c139); }
-              }
-              if (s4 !== peg$FAILED) {
-                while (s4 !== peg$FAILED) {
-                  s3.push(s4);
-                  if (peg$c138.test(input.charAt(peg$currPos))) {
-                    s4 = input.charAt(peg$currPos);
-                    peg$currPos++;
-                  } else {
-                    s4 = peg$FAILED;
-                    if (peg$silentFails === 0) { peg$fail(peg$c139); }
-                  }
-                }
-              } else {
-                s3 = peg$c0;
-              }
-              if (s3 !== peg$FAILED) {
-                if (input.charCodeAt(peg$currPos) === 93) {
-                  s4 = peg$c105;
-                  peg$currPos++;
-                } else {
-                  s4 = peg$FAILED;
-                  if (peg$silentFails === 0) { peg$fail(peg$c106); }
-                }
-                if (s4 !== peg$FAILED) {
-                  peg$reportedPos = s0;
-                  s1 = peg$c140(s1, s3);
-                  s0 = s1;
-                } else {
-                  peg$currPos = s0;
-                  s0 = peg$c0;
-                }
-              } else {
-                peg$currPos = s0;
-                s0 = peg$c0;
-              }
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        }
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c131); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseStrengthAndWeight() {
-      var s0, s1, s2, s3, s4;
-
-      peg$silentFails++;
-      s0 = peg$currPos;
-      if (input.charCodeAt(peg$currPos) === 33) {
-        s1 = peg$c142;
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c143); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = [];
-        if (peg$c144.test(input.charAt(peg$currPos))) {
-          s3 = input.charAt(peg$currPos);
-          peg$currPos++;
-        } else {
-          s3 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c145); }
-        }
-        if (s3 !== peg$FAILED) {
-          while (s3 !== peg$FAILED) {
-            s2.push(s3);
-            if (peg$c144.test(input.charAt(peg$currPos))) {
-              s3 = input.charAt(peg$currPos);
-              peg$currPos++;
-            } else {
-              s3 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c145); }
-            }
-          }
-        } else {
-          s2 = peg$c0;
-        }
-        if (s2 === peg$FAILED) {
-          s2 = peg$c5;
-        }
-        if (s2 !== peg$FAILED) {
-          s3 = [];
-          if (peg$c146.test(input.charAt(peg$currPos))) {
-            s4 = input.charAt(peg$currPos);
-            peg$currPos++;
-          } else {
-            s4 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c147); }
-          }
-          if (s4 !== peg$FAILED) {
-            while (s4 !== peg$FAILED) {
-              s3.push(s4);
-              if (peg$c146.test(input.charAt(peg$currPos))) {
-                s4 = input.charAt(peg$currPos);
-                peg$currPos++;
-              } else {
-                s4 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c147); }
-              }
-            }
-          } else {
-            s3 = peg$c0;
-          }
-          if (s3 === peg$FAILED) {
-            s3 = peg$c5;
-          }
-          if (s3 !== peg$FAILED) {
-            peg$reportedPos = s0;
-            s1 = peg$c148(s2, s3);
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-      if (s0 === peg$FAILED) {
-        s0 = peg$currPos;
-        if (input.charCodeAt(peg$currPos) === 33) {
-          s1 = peg$c142;
-          peg$currPos++;
-        } else {
-          s1 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c143); }
-        }
-        if (s1 !== peg$FAILED) {
-          if (input.length > peg$currPos) {
-            s2 = input.charAt(peg$currPos);
-            peg$currPos++;
-          } else {
-            s2 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c149); }
-          }
-          if (s2 === peg$FAILED) {
-            s2 = peg$c5;
-          }
-          if (s2 !== peg$FAILED) {
-            peg$reportedPos = s0;
-            s1 = peg$c150();
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c141); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseNameChars() {
-      var s0;
-
-      if (peg$c151.test(input.charAt(peg$currPos))) {
-        s0 = input.charAt(peg$currPos);
-        peg$currPos++;
-      } else {
-        s0 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c152); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseNameCharsWithSpace() {
-      var s0;
-
-      s0 = peg$parseNameChars();
-      if (s0 === peg$FAILED) {
-        if (input.charCodeAt(peg$currPos) === 32) {
-          s0 = peg$c153;
-          peg$currPos++;
-        } else {
-          s0 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c154); }
-        }
-      }
-
-      return s0;
-    }
-
-    function peg$parseLiteral() {
-      var s0, s1;
-
-      s0 = peg$currPos;
-      s1 = peg$parseNumber();
-      if (s1 !== peg$FAILED) {
-        peg$reportedPos = s0;
-        s1 = peg$c155(s1);
-      }
-      s0 = s1;
-
-      return s0;
-    }
-
-    function peg$parseNumber() {
-      var s0;
-
-      s0 = peg$parseReal();
-      if (s0 === peg$FAILED) {
-        s0 = peg$parseInteger();
-      }
-
-      return s0;
-    }
-
-    function peg$parseInteger() {
-      var s0, s1, s2;
-
-      s0 = peg$currPos;
-      s1 = [];
-      if (peg$c146.test(input.charAt(peg$currPos))) {
-        s2 = input.charAt(peg$currPos);
-        peg$currPos++;
-      } else {
-        s2 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c147); }
-      }
-      if (s2 !== peg$FAILED) {
-        while (s2 !== peg$FAILED) {
-          s1.push(s2);
-          if (peg$c146.test(input.charAt(peg$currPos))) {
-            s2 = input.charAt(peg$currPos);
-            peg$currPos++;
-          } else {
-            s2 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c147); }
-          }
-        }
-      } else {
-        s1 = peg$c0;
-      }
-      if (s1 !== peg$FAILED) {
-        peg$reportedPos = s0;
-        s1 = peg$c156(s1);
-      }
-      s0 = s1;
-
-      return s0;
-    }
-
-    function peg$parseReal() {
-      var s0, s1, s2, s3, s4;
-
-      s0 = peg$currPos;
-      s1 = peg$currPos;
-      s2 = peg$parseInteger();
-      if (s2 !== peg$FAILED) {
-        if (input.charCodeAt(peg$currPos) === 46) {
-          s3 = peg$c157;
-          peg$currPos++;
-        } else {
-          s3 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c158); }
-        }
-        if (s3 !== peg$FAILED) {
-          s4 = peg$parseInteger();
-          if (s4 !== peg$FAILED) {
-            s2 = [s2, s3, s4];
-            s1 = s2;
-          } else {
-            peg$currPos = s1;
-            s1 = peg$c0;
-          }
-        } else {
-          peg$currPos = s1;
-          s1 = peg$c0;
-        }
-      } else {
-        peg$currPos = s1;
-        s1 = peg$c0;
-      }
-      if (s1 !== peg$FAILED) {
-        peg$reportedPos = s0;
-        s1 = peg$c159(s1);
-      }
-      s0 = s1;
-
-      return s0;
-    }
-
-    function peg$parseSignedInteger() {
-      var s0, s1, s2, s3;
-
-      s0 = peg$currPos;
-      if (peg$c160.test(input.charAt(peg$currPos))) {
-        s1 = input.charAt(peg$currPos);
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c161); }
-      }
-      if (s1 === peg$FAILED) {
-        s1 = peg$c5;
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = [];
-        if (peg$c146.test(input.charAt(peg$currPos))) {
-          s3 = input.charAt(peg$currPos);
-          peg$currPos++;
-        } else {
-          s3 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c147); }
-        }
-        if (s3 !== peg$FAILED) {
-          while (s3 !== peg$FAILED) {
-            s2.push(s3);
-            if (peg$c146.test(input.charAt(peg$currPos))) {
-              s3 = input.charAt(peg$currPos);
-              peg$currPos++;
-            } else {
-              s3 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c147); }
-            }
-          }
-        } else {
-          s2 = peg$c0;
-        }
-        if (s2 !== peg$FAILED) {
-          s1 = [s1, s2];
-          s0 = s1;
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parseSourceCharacter() {
-      var s0;
-
-      if (input.length > peg$currPos) {
-        s0 = input.charAt(peg$currPos);
-        peg$currPos++;
-      } else {
-        s0 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c149); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseWhiteSpace() {
-      var s0, s1;
-
-      peg$silentFails++;
-      if (peg$c163.test(input.charAt(peg$currPos))) {
-        s0 = input.charAt(peg$currPos);
-        peg$currPos++;
-      } else {
-        s0 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c164); }
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c162); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseLineTerminator() {
-      var s0;
-
-      if (peg$c165.test(input.charAt(peg$currPos))) {
-        s0 = input.charAt(peg$currPos);
-        peg$currPos++;
-      } else {
-        s0 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c166); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseLineTerminatorSequence() {
-      var s0, s1;
-
-      peg$silentFails++;
-      if (input.charCodeAt(peg$currPos) === 10) {
-        s0 = peg$c168;
-        peg$currPos++;
-      } else {
-        s0 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c169); }
-      }
-      if (s0 === peg$FAILED) {
-        if (input.substr(peg$currPos, 2) === peg$c170) {
-          s0 = peg$c170;
-          peg$currPos += 2;
-        } else {
-          s0 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c171); }
-        }
-        if (s0 === peg$FAILED) {
-          if (input.charCodeAt(peg$currPos) === 13) {
-            s0 = peg$c172;
-            peg$currPos++;
-          } else {
-            s0 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c173); }
-          }
-          if (s0 === peg$FAILED) {
-            if (input.charCodeAt(peg$currPos) === 8232) {
-              s0 = peg$c174;
-              peg$currPos++;
-            } else {
-              s0 = peg$FAILED;
-              if (peg$silentFails === 0) { peg$fail(peg$c175); }
-            }
-            if (s0 === peg$FAILED) {
-              if (input.charCodeAt(peg$currPos) === 8233) {
-                s0 = peg$c176;
-                peg$currPos++;
-              } else {
-                s0 = peg$FAILED;
-                if (peg$silentFails === 0) { peg$fail(peg$c177); }
-              }
-            }
-          }
-        }
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c167); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseEOS() {
-      var s0, s1, s2;
-
-      s0 = peg$currPos;
-      s1 = peg$parse__();
-      if (s1 !== peg$FAILED) {
-        if (input.charCodeAt(peg$currPos) === 59) {
-          s2 = peg$c178;
-          peg$currPos++;
-        } else {
-          s2 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c179); }
-        }
-        if (s2 !== peg$FAILED) {
-          s1 = [s1, s2];
-          s0 = s1;
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-      if (s0 === peg$FAILED) {
-        s0 = peg$currPos;
-        s1 = peg$parse_();
-        if (s1 !== peg$FAILED) {
-          s2 = peg$parseLineTerminatorSequence();
-          if (s2 !== peg$FAILED) {
-            s1 = [s1, s2];
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-        if (s0 === peg$FAILED) {
-          s0 = peg$currPos;
-          s1 = peg$parse__();
-          if (s1 !== peg$FAILED) {
-            s2 = peg$parseEOF();
-            if (s2 !== peg$FAILED) {
-              s1 = [s1, s2];
-              s0 = s1;
-            } else {
-              peg$currPos = s0;
-              s0 = peg$c0;
-            }
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        }
-      }
-
-      return s0;
-    }
-
-    function peg$parseEOF() {
-      var s0, s1;
-
-      s0 = peg$currPos;
-      peg$silentFails++;
-      if (input.length > peg$currPos) {
-        s1 = input.charAt(peg$currPos);
-        peg$currPos++;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c149); }
-      }
-      peg$silentFails--;
-      if (s1 === peg$FAILED) {
-        s0 = peg$c180;
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parseComment() {
-      var s0, s1;
-
-      peg$silentFails++;
-      s0 = peg$parseMultiLineComment();
-      if (s0 === peg$FAILED) {
-        s0 = peg$parseSingleLineComment();
-      }
-      peg$silentFails--;
-      if (s0 === peg$FAILED) {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c181); }
-      }
-
-      return s0;
-    }
-
-    function peg$parseMultiLineComment() {
-      var s0, s1, s2, s3, s4, s5;
-
-      s0 = peg$currPos;
-      if (input.substr(peg$currPos, 2) === peg$c182) {
-        s1 = peg$c182;
-        peg$currPos += 2;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c183); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = [];
-        s3 = peg$currPos;
-        s4 = peg$currPos;
-        peg$silentFails++;
-        if (input.substr(peg$currPos, 2) === peg$c184) {
-          s5 = peg$c184;
-          peg$currPos += 2;
-        } else {
-          s5 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c185); }
-        }
-        peg$silentFails--;
-        if (s5 === peg$FAILED) {
-          s4 = peg$c180;
-        } else {
-          peg$currPos = s4;
-          s4 = peg$c0;
-        }
-        if (s4 !== peg$FAILED) {
-          s5 = peg$parseSourceCharacter();
-          if (s5 !== peg$FAILED) {
-            s4 = [s4, s5];
-            s3 = s4;
-          } else {
-            peg$currPos = s3;
-            s3 = peg$c0;
-          }
-        } else {
-          peg$currPos = s3;
-          s3 = peg$c0;
-        }
-        while (s3 !== peg$FAILED) {
-          s2.push(s3);
-          s3 = peg$currPos;
-          s4 = peg$currPos;
-          peg$silentFails++;
-          if (input.substr(peg$currPos, 2) === peg$c184) {
-            s5 = peg$c184;
-            peg$currPos += 2;
-          } else {
-            s5 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c185); }
-          }
-          peg$silentFails--;
-          if (s5 === peg$FAILED) {
-            s4 = peg$c180;
-          } else {
-            peg$currPos = s4;
-            s4 = peg$c0;
-          }
-          if (s4 !== peg$FAILED) {
-            s5 = peg$parseSourceCharacter();
-            if (s5 !== peg$FAILED) {
-              s4 = [s4, s5];
-              s3 = s4;
-            } else {
-              peg$currPos = s3;
-              s3 = peg$c0;
-            }
-          } else {
-            peg$currPos = s3;
-            s3 = peg$c0;
-          }
-        }
-        if (s2 !== peg$FAILED) {
-          if (input.substr(peg$currPos, 2) === peg$c184) {
-            s3 = peg$c184;
-            peg$currPos += 2;
-          } else {
-            s3 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c185); }
-          }
-          if (s3 !== peg$FAILED) {
-            s1 = [s1, s2, s3];
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parseMultiLineCommentNoLineTerminator() {
-      var s0, s1, s2, s3, s4, s5;
-
-      s0 = peg$currPos;
-      if (input.substr(peg$currPos, 2) === peg$c182) {
-        s1 = peg$c182;
-        peg$currPos += 2;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c183); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = [];
-        s3 = peg$currPos;
-        s4 = peg$currPos;
-        peg$silentFails++;
-        if (input.substr(peg$currPos, 2) === peg$c184) {
-          s5 = peg$c184;
-          peg$currPos += 2;
-        } else {
-          s5 = peg$FAILED;
-          if (peg$silentFails === 0) { peg$fail(peg$c185); }
-        }
-        if (s5 === peg$FAILED) {
-          s5 = peg$parseLineTerminator();
-        }
-        peg$silentFails--;
-        if (s5 === peg$FAILED) {
-          s4 = peg$c180;
-        } else {
-          peg$currPos = s4;
-          s4 = peg$c0;
-        }
-        if (s4 !== peg$FAILED) {
-          s5 = peg$parseSourceCharacter();
-          if (s5 !== peg$FAILED) {
-            s4 = [s4, s5];
-            s3 = s4;
-          } else {
-            peg$currPos = s3;
-            s3 = peg$c0;
-          }
-        } else {
-          peg$currPos = s3;
-          s3 = peg$c0;
-        }
-        while (s3 !== peg$FAILED) {
-          s2.push(s3);
-          s3 = peg$currPos;
-          s4 = peg$currPos;
-          peg$silentFails++;
-          if (input.substr(peg$currPos, 2) === peg$c184) {
-            s5 = peg$c184;
-            peg$currPos += 2;
-          } else {
-            s5 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c185); }
-          }
-          if (s5 === peg$FAILED) {
-            s5 = peg$parseLineTerminator();
-          }
-          peg$silentFails--;
-          if (s5 === peg$FAILED) {
-            s4 = peg$c180;
-          } else {
-            peg$currPos = s4;
-            s4 = peg$c0;
-          }
-          if (s4 !== peg$FAILED) {
-            s5 = peg$parseSourceCharacter();
-            if (s5 !== peg$FAILED) {
-              s4 = [s4, s5];
-              s3 = s4;
-            } else {
-              peg$currPos = s3;
-              s3 = peg$c0;
-            }
-          } else {
-            peg$currPos = s3;
-            s3 = peg$c0;
-          }
-        }
-        if (s2 !== peg$FAILED) {
-          if (input.substr(peg$currPos, 2) === peg$c184) {
-            s3 = peg$c184;
-            peg$currPos += 2;
-          } else {
-            s3 = peg$FAILED;
-            if (peg$silentFails === 0) { peg$fail(peg$c185); }
-          }
-          if (s3 !== peg$FAILED) {
-            s1 = [s1, s2, s3];
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parseSingleLineComment() {
-      var s0, s1, s2, s3, s4, s5;
-
-      s0 = peg$currPos;
-      if (input.substr(peg$currPos, 2) === peg$c186) {
-        s1 = peg$c186;
-        peg$currPos += 2;
-      } else {
-        s1 = peg$FAILED;
-        if (peg$silentFails === 0) { peg$fail(peg$c187); }
-      }
-      if (s1 !== peg$FAILED) {
-        s2 = [];
-        s3 = peg$currPos;
-        s4 = peg$currPos;
-        peg$silentFails++;
-        s5 = peg$parseLineTerminator();
-        peg$silentFails--;
-        if (s5 === peg$FAILED) {
-          s4 = peg$c180;
-        } else {
-          peg$currPos = s4;
-          s4 = peg$c0;
-        }
-        if (s4 !== peg$FAILED) {
-          s5 = peg$parseSourceCharacter();
-          if (s5 !== peg$FAILED) {
-            s4 = [s4, s5];
-            s3 = s4;
-          } else {
-            peg$currPos = s3;
-            s3 = peg$c0;
-          }
-        } else {
-          peg$currPos = s3;
-          s3 = peg$c0;
-        }
-        while (s3 !== peg$FAILED) {
-          s2.push(s3);
-          s3 = peg$currPos;
-          s4 = peg$currPos;
-          peg$silentFails++;
-          s5 = peg$parseLineTerminator();
-          peg$silentFails--;
-          if (s5 === peg$FAILED) {
-            s4 = peg$c180;
-          } else {
-            peg$currPos = s4;
-            s4 = peg$c0;
-          }
-          if (s4 !== peg$FAILED) {
-            s5 = peg$parseSourceCharacter();
-            if (s5 !== peg$FAILED) {
-              s4 = [s4, s5];
-              s3 = s4;
-            } else {
-              peg$currPos = s3;
-              s3 = peg$c0;
-            }
-          } else {
-            peg$currPos = s3;
-            s3 = peg$c0;
-          }
-        }
-        if (s2 !== peg$FAILED) {
-          s3 = peg$parseLineTerminator();
-          if (s3 === peg$FAILED) {
-            s3 = peg$parseEOF();
-          }
-          if (s3 !== peg$FAILED) {
-            s1 = [s1, s2, s3];
-            s0 = s1;
-          } else {
-            peg$currPos = s0;
-            s0 = peg$c0;
-          }
-        } else {
-          peg$currPos = s0;
-          s0 = peg$c0;
-        }
-      } else {
-        peg$currPos = s0;
-        s0 = peg$c0;
-      }
-
-      return s0;
-    }
-
-    function peg$parse_() {
-      var s0, s1;
-
-      s0 = [];
-      s1 = peg$parseWhiteSpace();
-      if (s1 === peg$FAILED) {
-        s1 = peg$parseMultiLineCommentNoLineTerminator();
-        if (s1 === peg$FAILED) {
-          s1 = peg$parseSingleLineComment();
-        }
-      }
-      while (s1 !== peg$FAILED) {
-        s0.push(s1);
-        s1 = peg$parseWhiteSpace();
-        if (s1 === peg$FAILED) {
-          s1 = peg$parseMultiLineCommentNoLineTerminator();
-          if (s1 === peg$FAILED) {
-            s1 = peg$parseSingleLineComment();
-          }
-        }
-      }
-
-      return s0;
-    }
-
-    function peg$parse__() {
-      var s0, s1;
-
-      s0 = [];
-      s1 = peg$parseWhiteSpace();
-      if (s1 === peg$FAILED) {
-        s1 = peg$parseLineTerminatorSequence();
-        if (s1 === peg$FAILED) {
-          s1 = peg$parseComment();
-        }
-      }
-      while (s1 !== peg$FAILED) {
-        s0.push(s1);
-        s1 = peg$parseWhiteSpace();
-        if (s1 === peg$FAILED) {
-          s1 = peg$parseLineTerminatorSequence();
-          if (s1 === peg$FAILED) {
-            s1 = peg$parseComment();
-          }
-        }
-      }
-
-      return s0;
-    }
-
-
-      var p, parser, cs, leftVarNames, superLeftVarNames, rightVarNames, superRightVarNames, standardGapNames, getSuperViewName, getGapString, sizeVarNames;
-
-      p = parser = this;
-
-      p.trickleDownOptions = ["name"];
-      sizeVarNames = p.sizeVarNames = ["width", "height"];
-      leftVarNames = p.leftVarNames = ["right", "bottom"];
-      superLeftVarNames = p.superLeftVarNames = ["left", "top"];
-      rightVarNames = p.rightVarNames = ["left", "top"];
-      superRightVarNames = p.superRightVarNames = ["right", "bottom"];
-
-      cs = p.cs = [];
-
-      p.addC = function (c) {
-        cs.push(c);
-      };
-
-
-      p.selectors = [];
-      p.addSelector = function (sel) {
-        if (p.selectors.indexOf(sel) === -1) {
-          p.selectors.push(sel);
-        }
-      }
-
-      p.addSplatIfNeeded = function (v, d, o) { // viewObj, dimension, options
-        var statement, op, gap;
-        if (v.connection) {
-          op = v.connection.op;
-          gap = v.connection.gap;
-        }
-        else {
-          op = "==";
-          gap = 0;
-        }
-        if (v.isSplat) {
-          statement = v.view + " { " +
-            "&[" + leftVarNames[d] + "] ";
-          statement += p.getConnectionString(v.connection, d, o, false) + " ";
-          statement += "&:next[" + rightVarNames[d] + "];" +
-            " }";
-
-          p.addC(statement);
-        }
-      }
-      p.addPreds = function (view,preds,d) {
-        var pred, ccss, eq, exps, exp;
-        if (preds) {
-          for (var i = 0; i < preds.length; i++) {
-            pred = preds[i];
-            eq = pred[0];
-            ccss = view + "[" + sizeVarNames[d] + "] " + eq + " ";
-            exps = pred[1];
-            for (var j = 0; j < exps.length; j++) {
-              exp = exps[j];
-              if (exp[0] === "view") {
-                exp = exp[1] + "[" + sizeVarNames[d] + "]";
-              }
-              ccss += exp + " ";
-            }
-            if (pred[2]) {
-              ccss += pred[2];
-            } // strength & weight
-            cs.push(ccss.trim());
-          }
-        }
-      };
-
-      p.defaultChainObject = {
-        headEq: "==",
-        value: "",
-        tailEq: "",
-        s: ""
-      };
-
-      p.chainTailEqMap = {
-        "<=": ">=",
-        ">=": "<=",
-        "==": "==",
-        "<" : ">",
-        ">" : "<"
-      };
-
-      p.addChains = function (views,o) {
-        var chains, chain, prop, preds, connector, ccss, view, pred;
-        chains = o.chains;
-        if (chains) {
-          for (var i = 0; i < chains.length; i++) {
-            chain = chains[i];
-            prop = chain[0];
-            preds = chain[1];
-            if (preds === "" || !preds) {
-              // load default chain predicate
-              preds = [p.defaultChainObject];
-            }
-            for (var j = 0; j < preds.length; j++) {
-              pred = preds[j];
-              ccss = "";
-              for (var k = 0; k < views.length - 1; k++) {
-                view = views[k];
-                if (pred.headEq === "") {
-                  pred.headEq = p.defaultChainObject.headEq;
-                }
-                ccss += " " + view + "[" + prop + "] " + pred.headEq;
-                if (pred.value !== "") {
-                  ccss += " " + pred.value;
-                  if (views.length > 1) {
-                    if (pred.tailEq === "") {
-                      pred.tailEq = p.chainTailEqMap[pred.headEq];
-                    }
-                    ccss += " " + pred.tailEq;
-                  }
-                  else {
-                    ccss += " " + pred.s;
-                    cs.push(ccss.trim());
-                  }
-                }
-              }
-              if (views.length > 1) {
-                 ccss += " " + views[views.length-1] + "[" + prop + "]";
-                 ccss += p.getTrailingOptions(o);
-                 ccss += " " + pred.s;
-                 cs.push(ccss.trim());
-              }
-            }
-          }
-        }
-      };
-
-      getSuperViewName = function (o) {
-        if (o.in === undefined) {
-          return "::this";
-        }
-        return o.in;
-      };
-
-      p.getLeftVar = function (view, dimension, o, viewObj) {
-        var varName;
-        if (viewObj.isPoint) {
-          return viewObj.pos;
-        }
-        else if (view === "|") {
-          view = getSuperViewName(o);
-          varName = superLeftVarNames[dimension];
-        }
-        else {
-          if (viewObj.isSplat) {
-            view += ":last";
-            if (view[0] === "(") {
-              view = "(" + view + ")";
-            }
-          }
-          varName = leftVarNames[dimension];
-        }
-        return view + "[" + varName + "]";
-      };
-
-      p.getRightVar = function (view, dimension, o, viewObj) {
-        var varName;
-        if (viewObj.isPoint) {
-          return viewObj.pos;
-        }
-        else if (view === "|") {
-          view = getSuperViewName(o);
-          varName = superRightVarNames[dimension];
-        }
-        else {
-          if (viewObj.isSplat) {
-            view += ":first";
-            if (view[0] === "(") {
-              view = "(" + view + ")";
-            }
-          }
-          varName = rightVarNames[dimension];
-        }
-        return view + "[" + varName + "]";
-      };
-
-      standardGapNames = ["[hgap]", "[vgap]"];
-
-      getGapString = function (g,d,o,withContainer) {
-        if (g === undefined) {return "";}
-        if (g === "__STANDARD__") {
-          // use gap if given with `gap()` or `outer-gap`
-          if (withContainer && o['outer-gap']) {
-            g = o['outer-gap'];
-          } else if (o.gap) {
-            g = o.gap;
-          // else use standard var
-          } else {
-            g = standardGapNames[d];
-          }
-        }
-        return "+ " + g;
-      };
-
-      p.getConnectionString = function (c, d, o, withContainer) {
-
-        return (getGapString(c.gap,d,o,withContainer) + " " + c.op).trim();
-      };
-
-      p.getTrailingOptions = function (o) {
-        var string = "";
-        if (o) {
-          p.trickleDownOptions.forEach(function(key){
-            if (o[key] != null) {
-              string = string + " " + key + "(" + o[key] + ")";
-            }
-          });
-        }
-        return string;
-      };
-
-      p.getSW = function (o) {
-        if (o.sw) {
-          return " " + o.sw.trim();
-        }
-        return "";
-      };
-
-
-      p.getResults = function () {
-        return { statements:this.cs, selectors:p.selectors};
-      };
-
-      p.flatten = function (array, isShallow) {
-
-        if (typeof array === "string") {return array;}
-
-        var index = -1,
-          length = array ? array.length : 0,
-          result = [];
-
-        while (++index < length) {
-          var value = array[index];
-
-          if (value instanceof Array) {
-            Array.prototype.push.apply(result, isShallow ? value : p.flatten(value));
-          }
-          else {
-            result.push(value);
-          }
-        }
-        return result;
-      }
-
-      p.trim = function (x) {
-        if (typeof x === "string") {return x.trim();}
-        if (x instanceof Array) {return x.join("").trim();}
-        return ""
-      };
-
-      p.join = function (a) {
-        if (!a) {return "";}
-        if (a.join){return a.join("");}
-        return a;
-      };
-
-      p.stringify = function (array) {
-        if (!array) {return "";}
-        return p.trim(p.join(p.flatten(array)));
-      };
-
-
-
-    peg$result = peg$startRuleFunction();
-
-    if (peg$result !== peg$FAILED && peg$currPos === input.length) {
-      return peg$result;
-    } else {
-      if (peg$result !== peg$FAILED && peg$currPos < input.length) {
-        peg$fail({ type: "end", description: "end of input" });
-      }
-
-      throw peg$buildException(null, peg$maxFailExpected, peg$maxFailPos);
-    }
-  }
-
-  return {
-    SyntaxError: SyntaxError,
-    parse:       parse
-  };
-})();
-});
-require.register("slightlyoff-cassowary.js/index.js", function(exports, require, module){
-module.exports = require("./src/c.js");
-require("./src/HashTable.js");
-require("./src/HashSet.js");
-require("./src/Error.js");
-require("./src/SymbolicWeight.js");
-require("./src/Strength.js");
-require("./src/Variable.js");
-require("./src/Point.js");
-require("./src/Expression.js");
-require("./src/Constraint.js");
-require("./src/Constraint.js");
-require("./src/EditInfo.js");
-require("./src/Tableau.js");
-require("./src/SimplexSolver.js");
-require("./src/Timer.js");
-require("./src/parser/parser.js");
-require("./src/parser/api.js");
-
-});
-require.register("slightlyoff-cassowary.js/src/c.js", function(exports, require, module){
-// Copyright (C) 1998-2000 Greg J. Badros
-// Use of this source code is governed by
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
-
-(function(scope){
-"use strict";
-
-// For Safari 5.x. Go-go-gadget ridiculously long release cycle!
-try {
-  (function(){}).bind(scope);
-} catch (e) {
-  Object.defineProperty(Function.prototype, "bind", {
-    value: function(scope) {
-      var f = this;
-      return function() { return f.apply(scope, arguments); }
-    },
-    enumerable: false,
-    configurable: true,
-    writable: true,
-  });
-}
-
-var inBrowser = (typeof scope["HTMLElement"] != "undefined");
-
-var getTagName = function(proto) {
-  var tn = null;
-  while (proto && proto != Object.prototype) {
-      if (proto.tagName) {
-        tn = proto.tagName;
-        break;
-      }
-    proto = proto.prototype;
-  }
-  return tn || "div";
-};
-var epsilon = 1e-8;
-
-var  _t_map = {};
-var walkForMethod = function(ctor, name) {
-  if (!ctor || !name) return;
-
-  // Check the class-side first, the look at the prototype, then walk up
-  if (typeof ctor[name] == "function") {
-    return ctor[name];
-  }
-  var p = ctor.prototype;
-  if (p && typeof p[name] == "function") {
-    return p[name];
-  }
-  if (p === Object.prototype ||
-      p === Function.prototype) {
-    return;
-  }
-
-  if (typeof ctor.__super__ == "function") {
-    return walkForMethod(ctor.__super__, name);
-  }
-};
-
-// Global
-var c = scope.c = function() {
-  if(c._api) {
-    return c._api.apply(this, arguments);
-  }
-};
-
-//
-// Configuration
-//
-c.debug = false;
-c.trace = false;
-c.verbose = false;
-c.traceAdded = false;
-c.GC = false;
-
-//
-// Constants
-//
-c.GEQ = 1;
-c.LEQ = 2;
-
-
-//
-// Utility methods
-//
-c.inherit = function(props) {
-  var ctor = null;
-  var parent = null;
-
-  if (props["extends"]) {
-    parent = props["extends"];
-    delete props["extends"];
-  }
-
-  if (props["initialize"]) {
-    ctor = props["initialize"];
-    delete props["initialize"];
-  }
-
-  var realCtor = ctor || function() { };
-
-  Object.defineProperty(realCtor, "__super__", {
-    value: (parent) ? parent : Object,
-    enumerable: false,
-    configurable: true,
-    writable: false,
-  });
-
-  if (props["_t"]) {
-    _t_map[props["_t"]] = realCtor;
-  }
-
-  // FIXME(slightlyoff): would like to have class-side inheritance!
-  // It's easy enough to do when we have __proto__, but we don't in IE 9/10.
-  //   = (
-
-  /*
-  // NOTE: would happily do this except it's 2x slower. Boo!
-  props.__proto__ = parent ? parent.prototype : Object.prototype;
-  realCtor.prototype = props;
-  */
-
-  var rp = realCtor.prototype = Object.create(
-    ((parent) ? parent.prototype : Object.prototype)
-  );
-
-  c.extend(rp, props);
-
-  // If we're in a browser, we want to support "subclassing" HTML elements.
-  // This needs some magic and we rely on a wrapped constructor hack to make
-  // it happen.
-  if (inBrowser) {
-    if (parent && parent.prototype instanceof scope.HTMLElement) {
-      var intermediateCtor = realCtor;
-      var tn = getTagName(rp);
-      var upgrade = function(el) {
-        el.__proto__ = rp;
-        intermediateCtor.apply(el, arguments);
-        if (rp["created"]) { el.created(); }
-        if (rp["decorate"]) { el.decorate(); }
-        return el;
-      };
-      this.extend(rp, { upgrade: upgrade, });
-
-      realCtor = function() {
-        // We hack the constructor to always return an element with it's
-        // prototype wired to ours. Boo.
-        return upgrade(
-          scope.document.createElement(tn)
-        );
-      }
-      realCtor.prototype = rp;
-      this.extend(realCtor, { ctor: intermediateCtor, }); // HACK!!!
-    }
-  }
-
-  return realCtor;
-};
-
-c.own = function(obj, cb, context) {
-  Object.getOwnPropertyNames(obj).forEach(cb, context||scope);
-  return obj;
-};
-
-c.extend = function(obj, props) {
-  c.own(props, function(x) {
-    var pd = Object.getOwnPropertyDescriptor(props, x);
-    try {
-      if ( (typeof pd["get"] == "function") ||
-           (typeof pd["set"] == "function") ) {
-        Object.defineProperty(obj, x, pd);
-      } else if (typeof pd["value"] == "function" ||x.charAt(0) === "_") {
-        pd.writable = true;
-        pd.configurable = true;
-        pd.enumerable = false;
-        Object.defineProperty(obj, x, pd);
-      } else {
-          obj[x] = props[x];
-      }
-    } catch(e) {
-      // console.warn("c.extend assignment failed on property", x);
-    }
-  });
-  return obj;
-};
-
-// FIXME: legacy API to be removed
-c.traceprint = function(s /*String*/) { if (c.verbose) { console.log(s); } };
-c.fnenterprint = function(s /*String*/) { console.log("* " + s); };
-c.fnexitprint = function(s /*String*/) { console.log("- " + s); };
-
-c.assert = function(f /*boolean*/, description /*String*/) {
-  if (!f) {
-    throw new c.InternalError("Assertion failed: " + description);
-  }
-};
-
-var exprFromVarOrValue = function(v) {
-  if (typeof v == "number" ) {
-    return c.Expression.fromConstant(v);
-  } else if(v instanceof c.Variable) {
-    return c.Expression.fromVariable(v);
-  }
-  return v;
-};
-
-c.plus = function(e1, e2) {
-  e1 = exprFromVarOrValue(e1);
-  e2 = exprFromVarOrValue(e2);
-  return e1.plus(e2);
-};
-
-c.minus = function(e1, e2) {
-  e1 = exprFromVarOrValue(e1);
-  e2 = exprFromVarOrValue(e2);
-  return e1.minus(e2);
-};
-
-c.times = function(e1, e2) {
-  e1 = exprFromVarOrValue(e1);
-  e2 = exprFromVarOrValue(e2);
-  return e1.times(e2);
-};
-
-c.divide = function(e1, e2) {
-  e1 = exprFromVarOrValue(e1);
-  e2 = exprFromVarOrValue(e2);
-  return e1.divide(e2);
-};
-
-c.approx = function(a, b) {
-  if (a === b) { return true; }
-  a = +(a);
-  b = +(b);
-  if (a == 0) {
-    return (Math.abs(b) < epsilon);
-  }
-  if (b == 0) {
-    return (Math.abs(a) < epsilon);
-  }
-  return (Math.abs(a - b) < Math.abs(a) * epsilon);
-};
-
-var count = 1;
-c._inc = function() { return count++; };
-
-c.parseJSON = function(str) {
-  return JSON.parse(str, function(k, v) {
-    if (typeof v != "object" || typeof v["_t"] != "string") {
-      return v;
-    }
-    var type = v["_t"];
-    var ctor = _t_map[type];
-    if (type && ctor) {
-      var fromJSON = walkForMethod(ctor, "fromJSON");
-      if (fromJSON) {
-        return fromJSON(v, ctor);
-      }
-    }
-    return v;
-  });
-};
-
-if (typeof define === 'function' && define.amd) {
-  // Require.js
-  define(c);
-} else if (typeof module === 'object' && module.exports) {
-  // CommonJS
-  module.exports = c;
-} else {
-  // Browser without module container
-  scope.c = c;
-}
-
-})(this);
-
-});
-require.register("slightlyoff-cassowary.js/src/HashTable.js", function(exports, require, module){
-/**
- * Copyright 2012 Alex Russell <slightlyoff@google.com>.
- *
- * Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
- *
- * This is an API compatible re-implementation of the subset of jshashtable
- * which Cassowary actually uses.
- *
- * Features removed:
- *
- *     - multiple values per key
- *     - error tollerent hashing of any variety
- *     - overly careful (or lazy) size counting, etc.
- *     - Crockford's "class" pattern. We use the system from c.js.
- *     - any attempt at back-compat with broken runtimes.
- *
- * APIs removed, mostly for lack of use in Cassowary:
- *
- *     - support for custom hashing and equality functions as keys to ctor
- *     - isEmpty() -> check for !ht.size()
- *     - putAll()
- *     - entries()
- *     - containsKey()
- *     - containsValue()
- *     - keys()
- *     - values()
- *
- * Additions:
- *
- *     - new "scope" parameter to each() and escapingEach()
- */
-
-(function(c) {
-"use strict";
-
-var copyOwn = function(src, dest) {
-  Object.keys(src).forEach(function(x) {
-    dest[x] = src[x];
-  });
-};
-
-if (false && typeof Map != "undefined") {
-
-  c.HashTable = c.inherit({
-
-    initialize: function() {
-      this.size = 0;
-      this._store = new Map();
-      this._keys = [];
-      // this.get = this._store.get.bind(this._store);
-    },
-
-    set: function(key, value) {
-      this._store.set(key, value);
-      if (this._keys.indexOf(key) == -1) {
-        this.size++;
-        // delete this._keys[this._keys.indexOf(key)];
-        this._keys.push(key);
-      } /* else {
-        delete this._keys[this._keys.indexOf(key)];
-        this._keys.push(key);
-      }
-      */
-    },
-
-    get: function(key) {
-      return this._store.get(key);
-    },
-
-    clear: function() {
-      this.size = 0;
-      this._store = new Map();
-      this._keys = [];
-    },
-
-    delete: function(key) {
-      if (this._store.delete(key) && this.size > 0) {
-        delete this._keys[this._keys.indexOf(key)];
-        this.size--;
-      }
-    },
-
-    each: function(callback, scope) {
-      if (!this.size) { return; }
-      this._keys.forEach(function(k){
-        if (typeof k == "undefined") { return; }
-        var v = this._store.get(k);
-        if (typeof v != "undefined") {
-          callback.call(scope||null, k, v);
-        }
-      }, this);
-    },
-
-    escapingEach: function(callback, scope) {
-      if (!this.size) { return; }
-
-      var that = this;
-      var kl = this._keys.length;
-      var context;
-      for (var x = 0; x < kl; x++) {
-        if (typeof this._keys[x] != "undefined") {
-          (function(k) {
-            var v = that._store.get(k);
-            if (typeof v != "undefined") {
-              context = callback.call(scope||null, k, v);
-            }
-          })(this._keys[x]);
-
-          if (context) {
-            if (context.retval !== undefined) {
-              return context;
-            }
-            if (context.brk) {
-              break;
-            }
-          }
-        }
-      }
-    },
-
-    clone: function() {
-      var n = new c.HashTable();
-      if (this.size) {
-        this.each(function(k, v) {
-          n.set(k, v);
-        });
-      }
-      return n;
-    }
-  });
-} else {
-  // For escapingEach
-  var defaultContext = {};
-
-  c.HashTable = c.inherit({
-
-    initialize: function() {
-      this.size = 0;
-      this._store = {};
-      this._keyStrMap = {};
-      this._deleted = 0;
-    },
-
-    set: function(key, value) {
-      var hash = key.hashCode;
-
-      if (typeof this._store[hash] == "undefined") {
-        // FIXME(slightlyoff): if size gooes above the V8 property limit,
-        // compact or go to a tree.
-        this.size++;
-      }
-      this._store[hash] = value;
-      this._keyStrMap[hash] = key;
-    },
-
-    get: function(key) {
-      if(!this.size) { return null; }
-
-      key = key.hashCode;
-
-      var v = this._store[key];
-      if (typeof v != "undefined") {
-        return this._store[key];
-      }
-      return null;
-    },
-
-    clear: function() {
-      this.size = 0;
-      this._store = {};
-      this._keyStrMap = {};
-    },
-
-    _compact: function() {
-      // console.time("HashTable::_compact()");
-      var ns = {};
-      copyOwn(this._store, ns);
-      this._store = ns;
-      // console.timeEnd("HashTable::_compact()");
-    },
-
-    _compactThreshold: 100,
-    _perhapsCompact: function() {
-      // If we have more properties than V8's fast property lookup limit, don't
-      // bother
-      if (this._size > 30) return;
-      if (this._deleted > this._compactThreshold) {
-        this._compact();
-        this._deleted = 0;
-      }
-    },
-
-    delete: function(key) {
-      key = key.hashCode;
-      if (!this._store.hasOwnProperty(key)) {
-        return;
-      }
-      this._deleted++;
-
-      // FIXME(slightlyoff):
-      //    I hate this because it causes these objects to go megamorphic = (
-      //    Sadly, Cassowary is hugely sensitive to iteration order changes, and
-      //    "delete" preserves order when Object.keys() is called later.
-      delete this._store[key];
-      // Note: we don't delete from _keyStrMap because we only get the
-      // Object.keys() from _store, so it's the only one we need to keep up-to-
-      // date.
-
-      if (this.size > 0) {
-        this.size--;
-      }
-    },
-
-    each: function(callback, scope) {
-      if (!this.size) { return; }
-
-      this._perhapsCompact();
-
-      var store = this._store;
-      var keyMap = this._keyStrMap;
-      for (var x in this._store) {
-        if (this._store.hasOwnProperty(x)) {
-          callback.call(scope||null, keyMap[x], store[x]);
-        }
-      }
-    },
-
-    escapingEach: function(callback, scope) {
-      if (!this.size) { return; }
-
-      this._perhapsCompact();
-
-      var that = this;
-      var store = this._store;
-      var keyMap = this._keyStrMap;
-      var context = defaultContext;
-      var kl = Object.keys(store);
-      for (var x = 0; x < kl.length; x++) {
-        (function(v) {
-          if (that._store.hasOwnProperty(v)) {
-            context = callback.call(scope||null, keyMap[v], store[v]);
-          }
-        })(kl[x]);
-
-        if (context) {
-          if (context.retval !== undefined) {
-            return context;
-          }
-          if (context.brk) {
-            break;
-          }
-        }
-      }
-    },
-
-    clone: function() {
-      var n = new c.HashTable();
-      if (this.size) {
-        n.size = this.size;
-        copyOwn(this._store, n._store);
-        copyOwn(this._keyStrMap, n._keyStrMap);
-      }
-      return n;
-    },
-
-    equals: function(other) {
-      if (other === this) {
-        return true;
-      }
-
-      if (!(other instanceof c.HashTable) || other._size !== this._size) {
-        return false;
-      }
-
-      var codes = Object.keys(this._store);
-      for (var i = 0; i < codes.length; i++) {
-        var code = codes[i];
-        if (this._keyStrMap[code] !== other._keyStrMap[code] ||
-            this._store[code] !== other._store[code]) {
-          return false;
-        }
-      }
-
-      return true;
-    },
-
-    toString: function(h) {
-      var answer = "";
-      this.each(function(k, v) { answer += k + " => " + v + "\n"; });
-      return answer;
-    },
-  });
-}
-
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("slightlyoff-cassowary.js/src/HashSet.js", function(exports, require, module){
-/**
- * Copyright 2011, Alex Russell <slightlyoff@google.com>
- *
- * Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
- *
- * API compatible re-implementation of jshashset.js, including only what
- * Cassowary needs. Built for speed, not comfort.
- */
-(function(c) {
-"use strict";
-
-c.HashSet = c.inherit({
-  _t: "c.HashSet",
-
-  initialize: function() {
-    this.storage = [];
-    this.size = 0;
-    this.hashCode = c._inc();
+require.define("gss~ccss-compiler@550e442f2c64992f3a8c7babdaf90b5c643c4465/component.json", {
+  "name": "ccss-compiler",
+  "description": "Constraint Cascading Style Sheets compiler",
+  "author": "Dan Tocchini <d4@thegrid.io>",
+  "version": "1.1.2-beta",
+  "json": [
+    "component.json"
+  ],
+  "scripts": [
+    "lib/compiler.js",
+    "lib/grammar.js",
+    "lib/parser.js",
+    "lib/scoper.js"
+  ],
+  "dependencies": {
+    "gss/error-reporter": "*",
+    "gss/vfl-compiler": "*",
+    "gss/vgl-compiler": "*"
   },
-
-  add: function(item) {
-    var s = this.storage, io = s.indexOf(item);
-    if (s.indexOf(item) == -1) { s[s.length] = item; }
-    this.size = this.storage.length;
-  },
-
-  values: function() {
-    // FIXME(slightlyoff): is it safe to assume we won't be mutated by our caller?
-    //                     if not, return this.storage.slice(0);
-    return this.storage;
-  },
-
-  has: function(item) {
-    var s = this.storage;
-    return (s.indexOf(item) != -1);
-  },
-
-  delete: function(item) {
-    var io = this.storage.indexOf(item);
-    if (io == -1) { return null; }
-    this.storage.splice(io, 1)[0];
-    this.size = this.storage.length;
-  },
-
-  clear: function() {
-    this.storage.length = 0;
-  },
-
-  each: function(func, scope) {
-    if(this.size)
-      this.storage.forEach(func, scope);
-  },
-
-  escapingEach: function(func, scope) {
-    // FIXME(slightlyoff): actually escape!
-    if (this.size)
-      this.storage.forEach(func, scope);
-  },
-
-  toString: function() {
-    var answer = this.size + " {";
-    var first = true;
-    this.each(function(e) {
-      if (!first) {
-        answer += ", ";
-      } else {
-        first = false;
-      }
-      answer += e;
-    });
-    answer += "}\n";
-    return answer;
-  },
-
-  toJSON: function() {
-    var d = [];
-    this.each(function(e) {
-      d[d.length] = e.toJSON();
-    });
-    return {
-      _t: "c.HashSet",
-      data: d
-    };
-  },
-
-  fromJSON: function(o) {
-    var r = new c.HashSet();
-    if (o.data) {
-      r.size = o.data.length;
-      r.storage = o.data;
-    }
-    return r;
-  },
+  "main": "lib/compiler.js",
+  "license": "MIT",
+  "repository": "gss/ccss-compiler"
 });
 
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("slightlyoff-cassowary.js/src/Error.js", function(exports, require, module){
-// Copyright (C) 1998-2000 Greg J. Badros
-// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
-//
-// Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
-
-(function(c){
-  "use strict";
-
-  c.Error = c.inherit({
-    // extends: Error,
-    initialize: function(s /*String*/) { if (s) { this._description = s; } },
-    _name: "c.Error",
-    _description: "An error has occured in Cassowary",
-    set description(v)   { this._description = v; },
-    get description()    { return "(" + this._name + ") " + this._description; },
-    get message()        { return this.description; },
-    toString: function() { return this.description; },
-  });
-
-  var errorType = function(name, error) {
-    return c.inherit({
-      extends: c.Error,
-      initialize: function() { c.Error.apply(this, arguments); },
-      _name: name||"", _description: error||""
-    });
-  };
-
-  c.ConstraintNotFound =
-    errorType("c.ConstraintNotFound",
-        "Tried to remove a constraint never added to the tableu");
-
-  c.InternalError =
-    errorType("c.InternalError");
-
-  c.NonExpression =
-    errorType("c.NonExpression",
-        "The resulting expression would be non");
-
-  c.NotEnoughStays =
-    errorType("c.NotEnoughStays",
-        "There are not enough stays to give specific values to every variable");
-
-  c.RequiredFailure =
-    errorType("c.RequiredFailure", "A required constraint cannot be satisfied");
-
-  c.TooDifficult =
-    errorType("c.TooDifficult", "The constraints are too difficult to solve");
-
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("slightlyoff-cassowary.js/src/SymbolicWeight.js", function(exports, require, module){
-// Copyright (C) 1998-2000 Greg J. Badros
-// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
-//
-// Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
-
-(function(c) {
-"use strict";
-
-var multiplier = 1000;
-
-c.SymbolicWeight = c.inherit({
-  _t: "c.SymbolicWeight",
-  initialize: function(/*w1, w2, w3*/) {
-    this.value = 0;
-    var factor = 1;
-    for (var i = arguments.length - 1; i >= 0; --i) {
-      this.value += arguments[i] * factor;
-      factor *= multiplier;
-    }
-  },
-
-  toJSON: function() {
-    return {
-      _t: this._t,
-      value: this.value
-    };
-  },
-});
-
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("slightlyoff-cassowary.js/src/Strength.js", function(exports, require, module){
-// Copyright (C) 1998-2000 Greg J. Badros
-// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
-//
-// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
-
-// FILE: EDU.Washington.grad.gjb.cassowary
-// package EDU.Washington.grad.gjb.cassowary;
-
-(function(c) {
-
-c.Strength = c.inherit({
-  initialize: function(name /*String*/, symbolicWeight, w2, w3) {
-    this.name = name;
-    if (symbolicWeight instanceof c.SymbolicWeight) {
-      this.symbolicWeight = symbolicWeight;
-    } else {
-      this.symbolicWeight = new c.SymbolicWeight(symbolicWeight, w2, w3);
-    }
-  },
-
-  get required() {
-    return (this === c.Strength.required);
-  },
-
-  toString: function() {
-    return this.name + (!this.isRequired ? (":" + this.symbolicWeight) : "");
-  },
-});
-
-/* public static final */
-c.Strength.required = new c.Strength("<Required>", 1000, 1000, 1000);
-/* public static final  */
-c.Strength.strong = new c.Strength("strong", 1, 0, 0);
-/* public static final  */
-c.Strength.medium = new c.Strength("medium", 0, 1, 0);
-/* public static final  */
-c.Strength.weak = new c.Strength("weak", 0, 0, 1);
-
-})(this["c"]||((typeof module != "undefined") ? module.parent.exports.c : {}));
-
-});
-require.register("slightlyoff-cassowary.js/src/Variable.js", function(exports, require, module){
-// Copyright (C) 1998-2000 Greg J. Badros
-// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
-//
-// Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
-
-(function(c) {
-"use strict";
-
-c.AbstractVariable = c.inherit({
-  isDummy:      false,
-  isExternal:   false,
-  isPivotable:  false,
-  isRestricted: false,
-
-  _init: function(args, varNamePrefix) {
-    // Common mixin initialization.
-    this.hashCode = c._inc();
-    this.name = (varNamePrefix||"") + this.hashCode;
-    if (args) {
-      if (typeof args.name != "undefined") {
-        this.name = args.name;
-      }
-      if (typeof args.value != "undefined") {
-        this.value = args.value;
-      }
-      if (typeof args.prefix != "undefined") {
-        this._prefix = args.prefix;
-      }
-    }
-  },
-
-  _prefix: "",
-  name: "",
-  value: 0,
-
-  valueOf: function() { return this.value; },
-
-  toJSON: function() {
-    var o = {};
-    if (this._t) {
-      o._t = this._t;
-    }
-    if (this.name) {
-      o.name = this.name;
-    }
-    if (typeof this.value != "undefined") {
-      o.value = this.value;
-    }
-    if (this._prefix) {
-      o._prefix = this._prefix;
-    }
-    if (this._t) {
-      o._t = this._t;
-    }
-    return o;
-  },
-
-  fromJSON: function(o, Ctor) {
-    var r = new Ctor();
-    c.extend(r, o);
-    return r;
-  },
-
-  toString: function() {
-    return this._prefix + "[" + this.name + ":" + this.value + "]";
-  },
-
-});
-
-c.Variable = c.inherit({
-  _t: "c.Variable",
-  extends: c.AbstractVariable,
-  initialize: function(args) {
-    this._init(args, "v");
-    var vm = c.Variable._map;
-    if (vm) { vm[this.name] = this; }
-  },
-  isExternal:     true,
-});
-
-/* static */
-// c.Variable._map = [];
-
-c.DummyVariable = c.inherit({
-  _t: "c.DummyVariable",
-  extends: c.AbstractVariable,
-  initialize: function(args) {
-    this._init(args, "d");
-  },
-  isDummy:        true,
-  isRestricted:   true,
-  value:         "dummy",
-});
-
-c.ObjectiveVariable = c.inherit({
-  _t: "c.ObjectiveVariable",
-  extends: c.AbstractVariable,
-  initialize: function(args) {
-    this._init(args, "o");
-  },
-  value:         "obj",
-});
-
-c.SlackVariable = c.inherit({
-  _t: "c.SlackVariable",
-  extends: c.AbstractVariable,
-  initialize: function(args) {
-    this._init(args, "s");
-  },
-  isPivotable:    true,
-  isRestricted:   true,
-  value:         "slack",
-});
-
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("slightlyoff-cassowary.js/src/Point.js", function(exports, require, module){
-// Copyright (C) 1998-2000 Greg J. Badros
-// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
-//
-// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
-
-(function(c) {
-"use strict";
-c.Point = c.inherit({
-  initialize: function(x, y, suffix) {
-    if (x instanceof c.Variable) {
-      this._x = x;
-    } else {
-      var xArgs = { value: x };
-      if (suffix) {
-        xArgs.name = "x" + suffix;
-      }
-      this._x = new c.Variable(xArgs);
-    }
-    if (y instanceof c.Variable) {
-      this._y = y;
-    } else {
-      var yArgs = { value: y };
-      if (suffix) {
-        yArgs.name = "y" + suffix;
-      }
-      this._y = new c.Variable(yArgs);
-    }
-  },
-
-  get x() { return this._x; },
-  set x(xVar) {
-    if (xVar instanceof c.Variable) {
-      this._x = xVar;
-    } else {
-      this._x.value = xVar;
-    }
-  },
-
-  get y() { return this._y; },
-  set y(yVar) {
-    if (yVar instanceof c.Variable) {
-      this._y = yVar;
-    } else {
-      this._y.value = yVar;
-    }
-  },
-
-  toString: function() {
-    return "(" + this.x + ", " + this.y + ")";
-  },
-});
-
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("slightlyoff-cassowary.js/src/Expression.js", function(exports, require, module){
-// Copyright (C) 1998-2000 Greg J. Badros
-// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
-//
-// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
-
-// FILE: EDU.Washington.grad.gjb.cassowary
-// package EDU.Washington.grad.gjb.cassowary;
-
-(function(c) {
-"use strict";
-
-var checkNumber = function(value, otherwise){
-  // if(isNaN(value)) { debugger; }
-  return (typeof value === "number") ? value : otherwise;
-};
-
-c.Expression = c.inherit({
-
-  initialize: function(cvar /*c.AbstractVariable*/,
-                       value /*double*/,
-                       constant /*double*/) {
-    this.constant = checkNumber(constant, 0);
-    this.terms = new c.HashTable();
-    if (cvar instanceof c.AbstractVariable) {
-      value = checkNumber(value, 1);
-      this.setVariable(cvar, value);
-    } else if (typeof cvar == "number") {
-      if (!isNaN(cvar)) {
-        this.constant = cvar;
-      } else {
-        console.trace();
-      }
-    }
-  },
-
-  initializeFromHash: function(constant /*ClDouble*/, terms /*c.Hashtable*/) {
-    if (c.verbose) {
-      console.log("*******************************");
-      console.log("clone c.initializeFromHash");
-      console.log("*******************************");
-    }
-
-    if (c.GC) console.log("clone c.Expression");
-    this.constant = constant;
-    this.terms = terms.clone();
-    return this;
-  },
-
-  multiplyMe: function(x /*double*/) {
-    this.constant *= x;
-    var t = this.terms;
-    t.each(function(clv, coeff) { t.set(clv, coeff * x); });
-    return this;
-  },
-
-  clone: function() {
-    if (c.verbose) {
-      console.log("*******************************");
-      console.log("clone c.Expression");
-      console.log("*******************************");
-    }
-
-    var e = c.Expression.empty();
-    e.initializeFromHash(this.constant, this.terms);
-    return e;
-  },
-
-  times: function(x) {
-    if (typeof x == 'number') {
-      return (this.clone()).multiplyMe(x);
-    } else {
-      if (this.isConstant) {
-        return x.times(this.constant);
-      } else if (x.isConstant) {
-        return this.times(x.constant);
-      } else {
-        throw new c.NonExpression();
-      }
-    }
-  },
-
-  plus: function(expr /*c.Expression*/) {
-    if (expr instanceof c.Expression) {
-      return this.clone().addExpression(expr, 1);
-    } else if (expr instanceof c.Variable) {
-      return this.clone().addVariable(expr, 1);
-    }
-  },
-
-  minus: function(expr /*c.Expression*/) {
-    if (expr instanceof c.Expression) {
-      return this.clone().addExpression(expr, -1);
-    } else if (expr instanceof c.Variable) {
-      return this.clone().addVariable(expr, -1);
-    }
-  },
-
-  divide: function(x) {
-    if (typeof x == 'number') {
-      if (c.approx(x, 0)) {
-        throw new c.NonExpression();
-      }
-      return this.times(1 / x);
-    } else if (x instanceof c.Expression) {
-      if (!x.isConstant) {
-        throw new c.NonExpression();
-      }
-      return this.times(1 / x.constant);
-    }
-  },
-
-  addExpression: function(expr /*c.Expression*/,
-                          n /*double*/,
-                          subject /*c.AbstractVariable*/,
-                          solver /*c.Tableau*/) {
-
-    // console.log("c.Expression::addExpression()", expr, n);
-    // console.trace();
-    if (expr instanceof c.AbstractVariable) {
-      expr = c.Expression.fromVariable(expr);
-      // if(c.trace) console.log("addExpression: Had to cast a var to an expression");
-    }
-    n = checkNumber(n, 1);
-    this.constant += (n * expr.constant);
-    expr.terms.each(function(clv, coeff) {
-      // console.log("clv:", clv, "coeff:", coeff, "subject:", subject);
-      this.addVariable(clv, coeff * n, subject, solver);
-    }, this);
-    return this;
-  },
-
-  addVariable: function(v /*c.AbstractVariable*/, cd /*double*/, subject, solver) {
-    if (cd == null) {
-      cd = 1;
-    }
-
-    /*
-    if (c.trace) console.log("c.Expression::addVariable():", v , cd);
-    */
-    var coeff = this.terms.get(v);
-    if (coeff) {
-      var newCoefficient = coeff + cd;
-      if (newCoefficient == 0 || c.approx(newCoefficient, 0)) {
-        if (solver) {
-          solver.noteRemovedVariable(v, subject);
-        }
-        this.terms.delete(v);
-      } else {
-        this.setVariable(v, newCoefficient);
-      }
-    } else {
-      if (!c.approx(cd, 0)) {
-        this.setVariable(v, cd);
-        if (solver) {
-          solver.noteAddedVariable(v, subject);
-        }
-      }
-    }
-    return this;
-  },
-
-  setVariable: function(v /*c.AbstractVariable*/, c /*double*/) {
-    // console.log("terms.set(", v, c, ")");
-    this.terms.set(v, c);
-    return this;
-  },
-
-  anyPivotableVariable: function() {
-    if (this.isConstant) {
-      throw new c.InternalError("anyPivotableVariable called on a constant");
-    }
-
-    var rv = this.terms.escapingEach(function(clv, c) {
-      if (clv.isPivotable) return { retval: clv };
-    });
-
-    if (rv && rv.retval !== undefined) {
-      return rv.retval;
-    }
-
-    return null;
-  },
-
-  substituteOut: function(outvar  /*c.AbstractVariable*/,
-                          expr    /*c.Expression*/,
-                          subject /*c.AbstractVariable*/,
-                          solver  /*ClTableau*/) {
-
-    /*
-    if (c.trace) {
-      c.fnenterprint("CLE:substituteOut: " + outvar + ", " + expr + ", " + subject + ", ...");
-      c.traceprint("this = " + this);
-    }
-    */
-    var setVariable = this.setVariable.bind(this);
-    var terms = this.terms;
-    var multiplier = terms.get(outvar);
-    terms.delete(outvar);
-    this.constant += (multiplier * expr.constant);
-    /*
-    console.log("substituteOut:",
-                "\n\toutvar:", outvar,
-                "\n\texpr:", expr.toString(),
-                "\n\tmultiplier:", multiplier,
-                "\n\tterms:", terms);
-    */
-    expr.terms.each(function(clv, coeff) {
-      var oldCoefficient = terms.get(clv);
-      if (oldCoefficient) {
-        var newCoefficient = oldCoefficient + multiplier * coeff;
-        if (c.approx(newCoefficient, 0)) {
-          solver.noteRemovedVariable(clv, subject);
-          terms.delete(clv);
-        } else {
-          terms.set(clv, newCoefficient);
-        }
-      } else {
-        terms.set(clv, multiplier * coeff);
-        if (solver) {
-          solver.noteAddedVariable(clv, subject);
-        }
-      }
-    });
-    // if (c.trace) c.traceprint("Now this is " + this);
-  },
-
-  changeSubject: function(old_subject /*c.AbstractVariable*/,
-                          new_subject /*c.AbstractVariable*/) {
-    this.setVariable(old_subject, this.newSubject(new_subject));
-  },
-
-  newSubject: function(subject /*c.AbstractVariable*/) {
-    // if (c.trace) c.fnenterprint("newSubject:" + subject);
-
-    var reciprocal = 1 / this.terms.get(subject);
-    this.terms.delete(subject);
-    this.multiplyMe(-reciprocal);
-    return reciprocal;
-  },
-
-  // Return the coefficient corresponding to variable var, i.e.,
-  // the 'ci' corresponding to the 'vi' that var is:
-  //     v1*c1 + v2*c2 + .. + vn*cn + c
-  coefficientFor: function(clv /*c.AbstractVariable*/) {
-    return this.terms.get(clv) || 0;
-  },
-
-  get isConstant() {
-    return this.terms.size == 0;
-  },
-
-  toString: function() {
-    var bstr = ''; // answer
-    var needsplus = false;
-    if (!c.approx(this.constant, 0) || this.isConstant) {
-      bstr += this.constant;
-      if (this.isConstant) {
-        return bstr;
-      } else {
-        needsplus = true;
-      }
-    }
-    this.terms.each( function(clv, coeff) {
-      if (needsplus) {
-        bstr += " + ";
-      }
-      bstr += coeff + "*" + clv;
-      needsplus = true;
-    });
-    return bstr;
-  },
-
-  equals: function(other) {
-    if (other === this) {
-      return true;
-    }
-
-    return other instanceof c.Expression &&
-           other.constant === this.constant &&
-           other.terms.equals(this.terms);
-  },
-
-  Plus: function(e1 /*c.Expression*/, e2 /*c.Expression*/) {
-    return e1.plus(e2);
-  },
-
-  Minus: function(e1 /*c.Expression*/, e2 /*c.Expression*/) {
-    return e1.minus(e2);
-  },
-
-  Times: function(e1 /*c.Expression*/, e2 /*c.Expression*/) {
-    return e1.times(e2);
-  },
-
-  Divide: function(e1 /*c.Expression*/, e2 /*c.Expression*/) {
-    return e1.divide(e2);
-  },
-});
-
-c.Expression.empty = function() {
-  return new c.Expression(undefined, 1, 0);
-};
-
-c.Expression.fromConstant = function(cons) {
-  return new c.Expression(cons);
-};
-
-c.Expression.fromValue = function(v) {
-  v = +(v);
-  return new c.Expression(undefined, v, 0);
-};
-
-c.Expression.fromVariable = function(v) {
-  return new c.Expression(v, 1, 0);
-}
-
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("slightlyoff-cassowary.js/src/Constraint.js", function(exports, require, module){
-// Copyright (C) 1998-2000 Greg J. Badros
-// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
-//
-// Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
-
-(function(c) {
-"use strict";
-
-c.AbstractConstraint = c.inherit({
-  initialize: function(strength /*c.Strength*/, weight /*double*/) {
-    this.hashCode = c._inc();
-    this.strength = strength || c.Strength.required;
-    this.weight = weight || 1;
-  },
-
-  isEditConstraint: false,
-  isInequality:     false,
-  isStayConstraint: false,
-  get required() { return (this.strength === c.Strength.required); },
-
-  toString: function() {
-    // this is abstract -- it intentionally leaves the parens unbalanced for
-    // the subclasses to complete (e.g., with ' = 0', etc.
-    return this.strength + " {" + this.weight + "} (" + this.expression +")";
-  },
-});
-
-var ts = c.AbstractConstraint.prototype.toString;
-
-var EditOrStayCtor = function(cv /*c.Variable*/, strength /*c.Strength*/, weight /*double*/) {
-  c.AbstractConstraint.call(this, strength || c.Strength.strong, weight);
-  this.variable = cv;
-  this.expression = new c.Expression(cv, -1, cv.value);
-};
-
-c.EditConstraint = c.inherit({
-  extends: c.AbstractConstraint,
-  initialize: function() { EditOrStayCtor.apply(this, arguments); },
-  isEditConstraint: true,
-  toString: function() { return "edit:" + ts.call(this); },
-});
-
-c.StayConstraint = c.inherit({
-  extends: c.AbstractConstraint,
-  initialize: function() { EditOrStayCtor.apply(this, arguments); },
-  isStayConstraint: true,
-  toString: function() { return "stay:" + ts.call(this); },
-});
-
-var lc =
-c.Constraint = c.inherit({
-  extends: c.AbstractConstraint,
-  initialize: function(cle /*c.Expression*/,
-                       strength /*c.Strength*/,
-                       weight /*double*/) {
-    c.AbstractConstraint.call(this, strength, weight);
-    this.expression = cle;
-  },
-});
-
-c.Inequality = c.inherit({
-  extends: c.Constraint,
-
-  _cloneOrNewCle: function(cle) {
-    // FIXME(D4): move somewhere else?
-    if (cle.clone)  {
-      return cle.clone();
-    } else {
-      return new c.Expression(cle);
-    }
-  },
-
-  initialize: function(a1, a2, a3, a4, a5) {
-    // FIXME(slightlyoff): what a disgusting mess. Should at least add docs.
-    // console.log("c.Inequality.initialize(", a1, a2, a3, a4, a5, ")");
-
-    var a1IsExp = a1 instanceof c.Expression,
-        a3IsExp = a3 instanceof c.Expression,
-        a1IsVar = a1 instanceof c.AbstractVariable,
-        a3IsVar = a3 instanceof c.AbstractVariable,
-        a1IsNum = typeof(a1) == 'number',
-        a3IsNum = typeof(a3) == 'number';
-
-    // (cle || number), op, cv
-    if ((a1IsExp || a1IsNum) && a3IsVar) {
-      var cle = a1, op = a2, cv = a3, strength = a4, weight = a5;
-      lc.call(this, this._cloneOrNewCle(cle), strength, weight);
-      if (op == c.LEQ) {
-        this.expression.multiplyMe(-1);
-        this.expression.addVariable(cv);
-      } else if (op == c.GEQ) {
-        this.expression.addVariable(cv, -1);
-      } else {
-        throw new c.InternalError("Invalid operator in c.Inequality constructor");
-      }
-    // cv, op, (cle || number)
-    } else if (a1IsVar && (a3IsExp || a3IsNum)) {
-      var cle = a3, op = a2, cv = a1, strength = a4, weight = a5;
-      lc.call(this, this._cloneOrNewCle(cle), strength, weight);
-      if (op == c.GEQ) {
-        this.expression.multiplyMe(-1);
-        this.expression.addVariable(cv);
-      } else if (op == c.LEQ) {
-        this.expression.addVariable(cv, -1);
-      } else {
-        throw new c.InternalError("Invalid operator in c.Inequality constructor");
-      }
-    // cle, op, num
-    } else if (a1IsExp && a3IsNum) {
-      var cle1 = a1, op = a2, cle2 = a3, strength = a4, weight = a5;
-      lc.call(this, this._cloneOrNewCle(cle1), strength, weight);
-      if (op == c.LEQ) {
-        this.expression.multiplyMe(-1);
-        this.expression.addExpression(this._cloneOrNewCle(cle2));
-      } else if (op == c.GEQ) {
-        this.expression.addExpression(this._cloneOrNewCle(cle2), -1);
-      } else {
-        throw new c.InternalError("Invalid operator in c.Inequality constructor");
-      }
-      return this
-    // num, op, cle
-    } else if (a1IsNum && a3IsExp) {
-      var cle1 = a3, op = a2, cle2 = a1, strength = a4, weight = a5;
-      lc.call(this, this._cloneOrNewCle(cle1), strength, weight);
-      if (op == c.GEQ) {
-        this.expression.multiplyMe(-1);
-        this.expression.addExpression(this._cloneOrNewCle(cle2));
-      } else if (op == c.LEQ) {
-        this.expression.addExpression(this._cloneOrNewCle(cle2), -1);
-      } else {
-        throw new c.InternalError("Invalid operator in c.Inequality constructor");
-      }
-      return this
-    // cle op cle
-    } else if (a1IsExp && a3IsExp) {
-      var cle1 = a1, op = a2, cle2 = a3, strength = a4, weight = a5;
-      lc.call(this, this._cloneOrNewCle(cle2), strength, weight);
-      if (op == c.GEQ) {
-        this.expression.multiplyMe(-1);
-        this.expression.addExpression(this._cloneOrNewCle(cle1));
-      } else if (op == c.LEQ) {
-        this.expression.addExpression(this._cloneOrNewCle(cle1), -1);
-      } else {
-        throw new c.InternalError("Invalid operator in c.Inequality constructor");
-      }
-    // cle
-    } else if (a1IsExp) {
-      return lc.call(this, a1, a2, a3);
-    // >=
-    } else if (a2 == c.GEQ) {
-      lc.call(this, new c.Expression(a3), a4, a5);
-      this.expression.multiplyMe(-1);
-      this.expression.addVariable(a1);
-    // <=
-    } else if (a2 == c.LEQ) {
-      lc.call(this, new c.Expression(a3), a4, a5);
-      this.expression.addVariable(a1,-1);
-    // error
-    } else {
-      throw new c.InternalError("Invalid operator in c.Inequality constructor");
-    }
-  },
-
-  isInequality: true,
-
-  toString: function() {
-    // return "c.Inequality: " + this.hashCode;
-    return lc.prototype.toString.call(this) + " >= 0) id: " + this.hashCode;
-  },
-});
-
-c.Equation = c.inherit({
-  extends: c.Constraint,
-  initialize: function(a1, a2, a3, a4) {
-    // FIXME(slightlyoff): this is just a huge mess.
-    if (a1 instanceof c.Expression && !a2 || a2 instanceof c.Strength) {
-      lc.call(this, a1, a2, a3);
-    } else if ((a1 instanceof c.AbstractVariable) &&
-               (a2 instanceof c.Expression)) {
-
-      var cv = a1, cle = a2, strength = a3, weight = a4;
-      lc.call(this, cle.clone(), strength, weight);
-      this.expression.addVariable(cv, -1);
-
-    } else if ((a1 instanceof c.AbstractVariable) &&
-               (typeof(a2) == 'number')) {
-
-      var cv = a1, val = a2, strength = a3, weight = a4;
-      lc.call(this, new c.Expression(val), strength, weight);
-      this.expression.addVariable(cv, -1);
-
-    } else if ((a1 instanceof c.Expression) &&
-               (a2 instanceof c.AbstractVariable)) {
-
-      var cle = a1, cv = a2, strength = a3, weight = a4;
-      lc.call(this, cle.clone(), strength, weight);
-      this.expression.addVariable(cv, -1);
-
-    } else if (((a1 instanceof c.Expression) || (a1 instanceof c.AbstractVariable) ||
-                (typeof(a1) == 'number')) &&
-               ((a2 instanceof c.Expression) || (a2 instanceof c.AbstractVariable) ||
-                (typeof(a2) == 'number'))) {
-
-      if (a1 instanceof c.Expression) {
-        a1 = a1.clone();
-      } else {
-        a1 = new c.Expression(a1);
-      }
-
-      if (a2 instanceof c.Expression) {
-        a2 = a2.clone();
-      } else {
-        a2 = new c.Expression(a2);
-      }
-
-      lc.call(this, a1, a3, a4);
-      this.expression.addExpression(a2, -1);
-
-    } else {
-      throw "Bad initializer to c.Equation";
-    }
-    c.assert(this.strength instanceof c.Strength, "_strength not set");
-  },
-
-  toString: function() {
-    return lc.prototype.toString.call(this) + " = 0)";
-  },
-});
-
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("slightlyoff-cassowary.js/src/EditInfo.js", function(exports, require, module){
-// Copyright (C) 1998-2000 Greg J. Badros
-// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
-//
-// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
-
-(function(c) {
-"use strict";
-
-c.EditInfo = c.inherit({
-  initialize: function(cn      /*c.Constraint*/,
-                       eplus   /*c.SlackVariable*/,
-                       eminus  /*c.SlackVariable*/,
-                       prevEditConstant /*double*/,
-                       i /*int*/) {
-    this.constraint = cn;
-    this.editPlus = eplus;
-    this.editMinus = eminus;
-    this.prevEditConstant = prevEditConstant;
-    this.index = i;
-  },
-  toString: function() {
-    return "<cn=" + this.constraint +
-           ", ep=" + this.editPlus +
-           ", em=" + this.editMinus +
-           ", pec=" + this.prevEditConstant +
-           ", index=" + this.index + ">";
-  }
-});
-
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("slightlyoff-cassowary.js/src/Tableau.js", function(exports, require, module){
-// Copyright (C) 1998-2000 Greg J. Badros
-// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
-//
-// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
-
-(function(c) {
-"use strict";
-
-c.Tableau = c.inherit({
-  initialize: function() {
-    // columns is a mapping from variables which occur in expressions to the
-    // set of basic variables whose expressions contain them
-    // i.e., it's a mapping from variables in expressions (a column) to the
-    // set of rows that contain them
-    this.columns = new c.HashTable(); // values are sets
-
-    // _rows maps basic variables to the expressions for that row in the tableau
-    this.rows = new c.HashTable();    // values are c.Expressions
-
-    // the collection of basic variables that have infeasible rows
-    // (used when reoptimizing)
-    this._infeasibleRows = new c.HashSet();
-
-    // the set of rows where the basic variable is external this was added to
-    // the C++ version to reduce time in setExternalVariables()
-    this._externalRows = new c.HashSet();
-
-    // the set of external variables which are parametric this was added to the
-    // C++ version to reduce time in setExternalVariables()
-    this._externalParametricVars = new c.HashSet();
-  },
-
-  // Variable v has been removed from an Expression.  If the Expression is in a
-  // tableau the corresponding basic variable is subject (or if subject is nil
-  // then it's in the objective function). Update the column cross-indices.
-  noteRemovedVariable: function(v /*c.AbstractVariable*/,
-                                subject /*c.AbstractVariable*/) {
-    c.trace && console.log("c.Tableau::noteRemovedVariable: ", v, subject);
-    var column = this.columns.get(v);
-    if (subject && column) {
-      column.delete(subject);
-    }
-  },
-
-  noteAddedVariable: function(v /*c.AbstractVariable*/, subject /*c.AbstractVariable*/) {
-    // if (c.trace) console.log("c.Tableau::noteAddedVariable:", v, subject);
-    if (subject) {
-      this.insertColVar(v, subject);
-    }
-  },
-
-  getInternalInfo: function() {
-    var retstr = "Tableau Information:\n";
-    retstr += "Rows: " + this.rows.size;
-    retstr += " (= " + (this.rows.size - 1) + " constraints)";
-    retstr += "\nColumns: " + this.columns.size;
-    retstr += "\nInfeasible Rows: " + this._infeasibleRows.size;
-    retstr += "\nExternal basic variables: " + this._externalRows.size;
-    retstr += "\nExternal parametric variables: ";
-    retstr += this._externalParametricVars.size;
-    retstr += "\n";
-    return retstr;
-  },
-
-  toString: function() {
-    var bstr = "Tableau:\n";
-    this.rows.each(function(clv, expr) {
-      bstr += clv;
-      bstr += " <==> ";
-      bstr += expr;
-      bstr += "\n";
-    });
-    bstr += "\nColumns:\n";
-    bstr += this.columns;
-    bstr += "\nInfeasible rows: ";
-    bstr += this._infeasibleRows;
-    bstr += "External basic variables: ";
-    bstr += this._externalRows;
-    bstr += "External parametric variables: ";
-    bstr += this._externalParametricVars;
-    return bstr;
-  },
-
-  /*
-  toJSON: function() {
-    // Creates an object representation of the Tableau.
-  },
-  */
-
-  // Convenience function to insert a variable into
-  // the set of rows stored at columns[param_var],
-  // creating a new set if needed
-  insertColVar: function(param_var /*c.Variable*/,
-                         rowvar /*c.Variable*/) {
-    var rowset = /* Set */ this.columns.get(param_var);
-    if (!rowset) {
-      rowset = new c.HashSet();
-      this.columns.set(param_var, rowset);
-    }
-    rowset.add(rowvar);
-  },
-
-  addRow: function(aVar /*c.AbstractVariable*/,
-                   expr /*c.Expression*/) {
-    if (c.trace) c.fnenterprint("addRow: " + aVar + ", " + expr);
-    this.rows.set(aVar, expr);
-    expr.terms.each(function(clv, coeff) {
-      this.insertColVar(clv, aVar);
-      if (clv.isExternal) {
-        this._externalParametricVars.add(clv);
-      }
-    }, this);
-    if (aVar.isExternal) {
-      this._externalRows.add(aVar);
-    }
-    if (c.trace) c.traceprint(this.toString());
-  },
-
-  removeColumn: function(aVar /*c.AbstractVariable*/) {
-    if (c.trace) c.fnenterprint("removeColumn:" + aVar);
-    var rows = /* Set */ this.columns.get(aVar);
-    if (rows) {
-      this.columns.delete(aVar);
-      rows.each(function(clv) {
-        var expr = /* c.Expression */this.rows.get(clv);
-        expr.terms.delete(aVar);
-      }, this);
-    } else {
-      if (c.trace) console.log("Could not find var", aVar, "in columns");
-    }
-    if (aVar.isExternal) {
-      this._externalRows.delete(aVar);
-      this._externalParametricVars.delete(aVar);
-    }
-  },
-
-  removeRow: function(aVar /*c.AbstractVariable*/) {
-    if (c.trace) c.fnenterprint("removeRow:" + aVar);
-    var expr = /* c.Expression */this.rows.get(aVar);
-    c.assert(expr != null);
-    expr.terms.each(function(clv, coeff) {
-      var varset = this.columns.get(clv);
-      if (varset != null) {
-        if (c.trace) console.log("removing from varset:", aVar);
-        varset.delete(aVar);
-      }
-    }, this);
-    this._infeasibleRows.delete(aVar);
-    if (aVar.isExternal) {
-      this._externalRows.delete(aVar);
-    }
-    this.rows.delete(aVar);
-    if (c.trace) c.fnexitprint("returning " + expr);
-    return expr;
-  },
-
-  substituteOut: function(oldVar /*c.AbstractVariable*/,
-                          expr /*c.Expression*/) {
-    if (c.trace) c.fnenterprint("substituteOut:" + oldVar + ", " + expr);
-    if (c.trace) c.traceprint(this.toString());
-
-    var varset = this.columns.get(oldVar);
-    varset.each(function(v) {
-      var row = this.rows.get(v);
-      row.substituteOut(oldVar, expr, v, this);
-      if (v.isRestricted && row.constant < 0) {
-        this._infeasibleRows.add(v);
-      }
-    }, this);
-
-    if (oldVar.isExternal) {
-      this._externalRows.add(oldVar);
-      this._externalParametricVars.delete(oldVar);
-    }
-
-    this.columns.delete(oldVar);
-  },
-
-  columnsHasKey: function(subject /*c.AbstractVariable*/) {
-    return !!this.columns.get(subject);
-  },
-});
-
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("slightlyoff-cassowary.js/src/SimplexSolver.js", function(exports, require, module){
-// Copyright (C) 1998-2000 Greg J. Badros
-// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
-//
-// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
-
-(function(c) {
-var t = c.Tableau;
-var tp = t.prototype;
-var epsilon = 1e-8;
-var weak = c.Strength.weak;
-
-c.SimplexSolver = c.inherit({
-  extends: c.Tableau,
-  initialize: function(){
-
-    c.Tableau.call(this);
-    this._stayMinusErrorVars = [];
-    this._stayPlusErrorVars = [];
-
-    this._errorVars = new c.HashTable(); // cn -> Set of cv
-
-    this._markerVars = new c.HashTable(); // cn -> Set of cv
-
-    // this._resolve_pair = [0, 0];
-    this._objective = new c.ObjectiveVariable({ name: "Z" });
-
-    this._editVarMap = new c.HashTable(); // cv -> c.EditInfo
-    this._editVarList = [];
-
-    this._slackCounter = 0;
-    this._artificialCounter = 0;
-    this._dummyCounter = 0;
-    this.autoSolve = true;
-    this._needsSolving = false;
-
-    this._optimizeCount = 0;
-
-    this.rows.set(this._objective, c.Expression.empty());
-    this._editVariableStack = [0]; // Stack
-    if (c.trace)
-      c.traceprint("objective expr == " + this.rows.get(this._objective));
-  },
-
-  add: function(/*c.Constraint, ...*/) {
-    for (var x = 0; x < arguments.length; x++) {
-      this.addConstraint(arguments[x]);
-    }
-    return this;
-  },
-
-  _addEditConstraint: function(cn, eplus_eminus, prevEConstant) {
-      var i = this._editVarMap.size;
-      var cvEplus = /* c.SlackVariable */eplus_eminus[0];
-      var cvEminus = /* c.SlackVariable */eplus_eminus[1];
-      /*
-      if (!cvEplus instanceof c.SlackVariable) {
-        console.warn("cvEplus not a slack variable =", cvEplus);
-      }
-      if (!cvEminus instanceof c.SlackVariable) {
-        console.warn("cvEminus not a slack variable =", cvEminus);
-      }
-      c.debug && console.log("new c.EditInfo(" + cn + ", " + cvEplus + ", " +
-                                  cvEminus + ", " + prevEConstant + ", " +
-                                  i +")");
-      */
-      var ei = new c.EditInfo(cn, cvEplus, cvEminus, prevEConstant, i)
-      this._editVarMap.set(cn.variable, ei);
-      this._editVarList[i] = { v: cn.variable, info: ei };
-  },
-
-  addConstraint: function(cn /*c.Constraint*/) {
-    c.trace && c.fnenterprint("addConstraint: " + cn);
-    var eplus_eminus = new Array(2);
-    var prevEConstant = new Array(1); // so it can be output to
-    var expr = this.newExpression(cn, /*output to*/ eplus_eminus, prevEConstant);
-    prevEConstant = prevEConstant[0];
-
-    if (!this.tryAddingDirectly(expr)) {
-      this.addWithArtificialVariable(expr);
-    }
-
-
-    this._needsSolving = true;
-    if (cn.isEditConstraint) {
-      this._addEditConstraint(cn, eplus_eminus, prevEConstant);
-    }
-    if (this.autoSolve) {
-      this.optimize(this._objective);
-      this._setExternalVariables();
-    }
-    return this;
-  },
-
-  addConstraintNoException: function(cn /*c.Constraint*/) {
-    c.trace && c.fnenterprint("addConstraintNoException: " + cn);
-    // FIXME(slightlyoff): change this to enable chaining
-    try {
-      this.addConstraint(cn);
-      return true;
-    } catch (e /*c.RequiredFailure*/){
-      return false;
-    }
-  },
-
-  addEditVar: function(v /*c.Variable*/, strength /*c.Strength*/, weight /*double*/) {
-    c.trace && c.fnenterprint("addEditVar: " + v + " @ " + strength + " {" + weight + "}");
-    return this.addConstraint(
-        new c.EditConstraint(v, strength || c.Strength.strong, weight));
-  },
-
-  beginEdit: function() {
-    // FIXME(slightlyoff): we shouldn't throw here. Log instead
-    c.assert(this._editVarMap.size > 0, "_editVarMap.size > 0");
-    this._infeasibleRows.clear();
-    this._resetStayConstants();
-    this._editVariableStack[this._editVariableStack.length] = this._editVarMap.size;
-    return this;
-  },
-
-  endEdit: function() {
-    // FIXME(slightlyoff): we shouldn't throw here. Log instead
-    c.assert(this._editVarMap.size > 0, "_editVarMap.size > 0");
-    this.resolve();
-    this._editVariableStack.pop();
-    this.removeEditVarsTo(
-      this._editVariableStack[this._editVariableStack.length - 1]
-    );
-    return this;
-  },
-
-  removeAllEditVars: function() {
-    return this.removeEditVarsTo(0);
-  },
-
-  removeEditVarsTo: function(n /*int*/) {
-    try {
-      var evll = this._editVarList.length;
-      // only remove the variable if it's not in the set of variable
-      // from a previous nested outer edit
-      // e.g., if I do:
-      // Edit x,y
-      // Edit w,h,x,y
-      // EndEdit
-      // The end edit needs to only get rid of the edits on w,h
-      // not the ones on x,y
-      for(var x = n; x < evll; x++) {
-        if (this._editVarList[x]) {
-          this.removeConstraint(
-            this._editVarMap.get(this._editVarList[x].v).constraint
-          );
-        }
-      }
-      this._editVarList.length = n;
-      c.assert(this._editVarMap.size == n, "_editVarMap.size == n");
-      return this;
-    } catch (e /*ConstraintNotFound*/){
-      throw new c.InternalError("Constraint not found in removeEditVarsTo");
-    }
-  },
-
-  // Add weak stays to the x and y parts of each point. These have
-  // increasing weights so that the solver will try to satisfy the x
-  // and y stays on the same point, rather than the x stay on one and
-  // the y stay on another.
-  addPointStays: function(points /*[{ x: .., y: ..}, ...]*/) {
-    c.trace && console.log("addPointStays", points);
-    points.forEach(function(p, idx) {
-      this.addStay(p.x, weak, Math.pow(2, idx));
-      this.addStay(p.y, weak, Math.pow(2, idx));
-    }, this);
-    return this;
-  },
-
-  addStay: function(v /*c.Variable*/, strength /*c.Strength*/, weight /*double*/) {
-    var cn = new c.StayConstraint(v,
-                                  strength || weak,
-                                  weight   || 1);
-    return this.addConstraint(cn);
-  },
-
-  // FIXME(slightlyoff): add a removeStay
-
-  removeConstraint: function(cn /*c.Constraint*/) {
-    // console.log("removeConstraint('", cn, "')");
-    c.trace && c.fnenterprint("removeConstraintInternal: " + cn);
-    c.trace && c.traceprint(this.toString());
-    this._needsSolving = true;
-    this._resetStayConstants();
-    var zRow = this.rows.get(this._objective);
-    var eVars = /* Set */this._errorVars.get(cn);
-    c.trace && c.traceprint("eVars == " + eVars);
-    if (eVars != null) {
-      eVars.each(function(cv) {
-        var expr = this.rows.get(cv);
-        if (expr == null) {
-          zRow.addVariable(cv,
-                           -cn.weight * cn.strength.symbolicWeight.value,
-                           this._objective,
-                           this);
-        } else {
-          zRow.addExpression(expr,
-                             -cn.weight * cn.strength.symbolicWeight.value,
-                             this._objective,
-                             this);
-        }
-        c.trace && c.traceprint("now eVars == " + eVars);
-      }, this);
-    }
-    var marker = this._markerVars.get(cn);
-    this._markerVars.delete(cn);
-    if (marker == null) {
-      throw new c.InternalError("Constraint not found in removeConstraintInternal");
-    }
-    c.trace && c.traceprint("Looking to remove var " + marker);
-    if (this.rows.get(marker) == null) {
-      var col = this.columns.get(marker);
-      // console.log("col is:", col, "from marker:", marker);
-      c.trace && c.traceprint("Must pivot -- columns are " + col);
-      var exitVar = null;
-      var minRatio = 0;
-      col.each(function(v) {
-        if (v.isRestricted) {
-          var expr = this.rows.get(v);
-          var coeff = expr.coefficientFor(marker);
-          c.trace && c.traceprint("Marker " + marker + "'s coefficient in " + expr + " is " + coeff);
-          if (coeff < 0) {
-            var r = -expr.constant / coeff;
-            if (
-              exitVar == null ||
-              r < minRatio    ||
-              (c.approx(r, minRatio) && v.hashCode < exitVar.hashCode)
-            ) {
-              minRatio = r;
-              exitVar = v;
-            }
-          }
-        }
-      }, this);
-      if (exitVar == null) {
-        c.trace && c.traceprint("exitVar is still null");
-        col.each(function(v) {
-          if (v.isRestricted) {
-            var expr = this.rows.get(v);
-            var coeff = expr.coefficientFor(marker);
-            var r = expr.constant / coeff;
-            if (exitVar == null || r < minRatio) {
-              minRatio = r;
-              exitVar = v;
-            }
-          }
-        }, this);
-      }
-      if (exitVar == null) {
-        if (col.size == 0) {
-          this.removeColumn(marker);
-        } else {
-          col.escapingEach(function(v) {
-            if (v != this._objective) {
-              exitVar = v;
-              return { brk: true };
-            }
-          }, this);
-        }
-      }
-      if (exitVar != null) {
-        this.pivot(marker, exitVar);
-      }
-    }
-    if (this.rows.get(marker) != null) {
-      var expr = this.removeRow(marker);
-    }
-
-    if (eVars != null) {
-      eVars.each(function(v) {
-        if (v != marker) { this.removeColumn(v); }
-      }, this);
-    }
-
-    if (cn.isStayConstraint) {
-      if (eVars != null) {
-        for (var i = 0; i < this._stayPlusErrorVars.length; i++) {
-          eVars.delete(this._stayPlusErrorVars[i]);
-          eVars.delete(this._stayMinusErrorVars[i]);
-        }
-      }
-    } else if (cn.isEditConstraint) {
-      c.assert(eVars != null, "eVars != null");
-      var cei = this._editVarMap.get(cn.variable);
-      this.removeColumn(cei.editMinus);
-      this._editVarMap.delete(cn.variable);
-    }
-
-    if (eVars != null) {
-      this._errorVars.delete(eVars);
-    }
-
-    if (this.autoSolve) {
-      this.optimize(this._objective);
-      this._setExternalVariables();
-    }
-
-    return this;
-  },
-
-  reset: function() {
-    c.trace && c.fnenterprint("reset");
-    throw new c.InternalError("reset not implemented");
-  },
-
-  resolveArray: function(newEditConstants) {
-    c.trace && c.fnenterprint("resolveArray" + newEditConstants);
-    var l = newEditConstants.length
-    this._editVarMap.each(function(v, cei) {
-      var i = cei.index;
-      if (i < l)
-        this.suggestValue(v, newEditConstants[i]);
-    }, this);
-    this.resolve();
-  },
-
-  resolvePair: function(x /*double*/, y /*double*/) {
-    this.suggestValue(this._editVarList[0].v, x);
-    this.suggestValue(this._editVarList[1].v, y);
-    this.resolve();
-  },
-
-  resolve: function() {
-    c.trace && c.fnenterprint("resolve()");
-    this.dualOptimize();
-    this._setExternalVariables();
-    this._infeasibleRows.clear();
-    this._resetStayConstants();
-  },
-
-  suggestValue: function(v /*c.Variable*/, x /*double*/) {
-    c.trace && console.log("suggestValue(" + v + ", " + x + ")");
-    var cei = this._editVarMap.get(v);
-    if (!cei) {
-      throw new c.Error("suggestValue for variable " + v + ", but var is not an edit variable");
-    }
-    var delta = x - cei.prevEditConstant;
-    cei.prevEditConstant = x;
-    this.deltaEditConstant(delta, cei.editPlus, cei.editMinus);
-    return this;
-  },
-
-  solve: function() {
-    if (this._needsSolving) {
-      this.optimize(this._objective);
-      this._setExternalVariables();
-    }
-    return this;
-  },
-
-  setEditedValue: function(v /*c.Variable*/, n /*double*/) {
-    if (!(this.columnsHasKey(v) || (this.rows.get(v) != null))) {
-      v.value = n;
-      return this;
-    }
-
-    if (!c.approx(n, v.value)) {
-      this.addEditVar(v);
-      this.beginEdit();
-
-      try {
-        this.suggestValue(v, n);
-      } catch (e) {
-        throw new c.InternalError("Error in setEditedValue");
-      }
-
-      this.endEdit();
-    }
-    return this;
-  },
-
-  addVar: function(v /*c.Variable*/) {
-    if (!(this.columnsHasKey(v) || (this.rows.get(v) != null))) {
-      try {
-        this.addStay(v);
-      } catch (e /*c.RequiredFailure*/){
-        throw new c.InternalError("Error in addVar -- required failure is impossible");
-      }
-
-      c.trace && c.traceprint("added initial stay on " + v);
-    }
-    return this;
-  },
-
-  getInternalInfo: function() {
-    var retstr = tp.getInternalInfo.call(this);
-    retstr += "\nSolver info:\n";
-    retstr += "Stay Error Variables: ";
-    retstr += this._stayPlusErrorVars.length + this._stayMinusErrorVars.length;
-    retstr += " (" + this._stayPlusErrorVars.length + " +, ";
-    retstr += this._stayMinusErrorVars.length + " -)\n";
-    retstr += "Edit Variables: " + this._editVarMap.size;
-    retstr += "\n";
-    return retstr;
-  },
-
-  getDebugInfo: function() {
-    return this.toString() + this.getInternalInfo() + "\n";
-  },
-
-  toString: function() {
-    var bstr = tp.getInternalInfo.call(this);
-    bstr += "\n_stayPlusErrorVars: ";
-    bstr += '[' + this._stayPlusErrorVars + ']';
-    bstr += "\n_stayMinusErrorVars: ";
-    bstr += '[' + this._stayMinusErrorVars + ']';
-    bstr += "\n";
-    bstr += "_editVarMap:\n" + this._editVarMap;
-    bstr += "\n";
-    return bstr;
-  },
-
-  addWithArtificialVariable: function(expr /*c.Expression*/) {
-    c.trace && c.fnenterprint("addWithArtificialVariable: " + expr);
-    var av = new c.SlackVariable({
-      value: ++this._artificialCounter,
-      prefix: "a"
-    });
-    var az = new c.ObjectiveVariable({ name: "az" });
-    var azRow = /* c.Expression */expr.clone();
-    c.trace && c.traceprint("before addRows:\n" + this);
-    this.addRow(az, azRow);
-    this.addRow(av, expr);
-    c.trace && c.traceprint("after addRows:\n" + this);
-    this.optimize(az);
-    var azTableauRow = this.rows.get(az);
-    c.trace && c.traceprint("azTableauRow.constant == " + azTableauRow.constant);
-    if (!c.approx(azTableauRow.constant, 0)) {
-      this.removeRow(az);
-      this.removeColumn(av);
-      throw new c.RequiredFailure();
-    }
-    var e = this.rows.get(av);
-    if (e != null) {
-      if (e.isConstant) {
-        this.removeRow(av);
-        this.removeRow(az);
-        return;
-      }
-      var entryVar = e.anyPivotableVariable();
-      this.pivot(entryVar, av);
-    }
-    c.assert(this.rows.get(av) == null, "rowExpression(av) == null");
-    this.removeColumn(av);
-    this.removeRow(az);
-  },
-
-  tryAddingDirectly: function(expr /*c.Expression*/) {
-    c.trace && c.fnenterprint("tryAddingDirectly: " + expr);
-    var subject = this.chooseSubject(expr);
-    if (subject == null) {
-      c.trace && c.fnexitprint("returning false");
-      return false;
-    }
-    expr.newSubject(subject);
-    if (this.columnsHasKey(subject)) {
-      this.substituteOut(subject, expr);
-    }
-    this.addRow(subject, expr);
-    c.trace && c.fnexitprint("returning true");
-    return true;
-  },
-
-  chooseSubject: function(expr /*c.Expression*/) {
-    c.trace && c.fnenterprint("chooseSubject: " + expr);
-    var subject = null;
-    var foundUnrestricted = false;
-    var foundNewRestricted = false;
-    var terms = expr.terms;
-    var rv = terms.escapingEach(function(v, c) {
-      if (foundUnrestricted) {
-        if (!v.isRestricted) {
-          if (!this.columnsHasKey(v)) {
-            return { retval: v };
-          }
-        }
-      } else {
-        if (v.isRestricted) {
-          if (!foundNewRestricted && !v.isDummy && c < 0) {
-            var col = this.columns.get(v);
-            if (col == null ||
-                (col.size == 1 && this.columnsHasKey(this._objective))
-            ) {
-              subject = v;
-              foundNewRestricted = true;
-            }
-          }
-        } else {
-          subject = v;
-          foundUnrestricted = true;
-        }
-      }
-    }, this);
-    if (rv && rv.retval !== undefined) {
-      return rv.retval;
-    }
-
-    if (subject != null) {
-      return subject;
-    }
-
-    var coeff = 0;
-
-    // subject is nil.
-    // Make one last check -- if all of the variables in expr are dummy
-    // variables, then we can pick a dummy variable as the subject
-    var rv = terms.escapingEach(function(v,c) {
-      if (!v.isDummy)  {
-        return {retval:null};
-      }
-      if (!this.columnsHasKey(v)) {
-        subject = v;
-        coeff = c;
-      }
-    }, this);
-    if (rv && rv.retval !== undefined) return rv.retval;
-
-    if (!c.approx(expr.constant, 0)) {
-      throw new c.RequiredFailure();
-    }
-    if (coeff > 0) {
-      expr.multiplyMe(-1);
-    }
-    return subject;
-  },
-
-  deltaEditConstant: function(delta /*double*/,
-                              plusErrorVar /*c.AbstractVariable*/,
-                              minusErrorVar /*c.AbstractVariable*/) {
-    if (c.trace)
-      c.fnenterprint("deltaEditConstant :" + delta + ", " + plusErrorVar + ", " + minusErrorVar);
-
-    var exprPlus = this.rows.get(plusErrorVar);
-    if (exprPlus != null) {
-      exprPlus.constant += delta;
-      if (exprPlus.constant < 0) {
-        this._infeasibleRows.add(plusErrorVar);
-      }
-      return;
-    }
-    var exprMinus = this.rows.get(minusErrorVar);
-    if (exprMinus != null) {
-      exprMinus.constant += -delta;
-      if (exprMinus.constant < 0) {
-        this._infeasibleRows.add(minusErrorVar);
-      }
-      return;
-    }
-    var columnVars = this.columns.get(minusErrorVar);
-    if (!columnVars) {
-      console.log("columnVars is null -- tableau is:\n" + this);
-    }
-    columnVars.each(function(basicVar) {
-      var expr = this.rows.get(basicVar);
-      var c = expr.coefficientFor(minusErrorVar);
-      expr.constant += (c * delta);
-      if (basicVar.isRestricted && expr.constant < 0) {
-        this._infeasibleRows.add(basicVar);
-      }
-    }, this);
-  },
-
-  // We have set new values for the constants in the edit constraints.
-  // Re-Optimize using the dual simplex algorithm.
-  dualOptimize: function() {
-    c.trace && c.fnenterprint("dualOptimize:");
-    var zRow = this.rows.get(this._objective);
-    // need to handle infeasible rows
-    while (this._infeasibleRows.size) {
-      var exitVar = this._infeasibleRows.values()[0];
-      this._infeasibleRows.delete(exitVar);
-      var entryVar = null;
-      var expr = this.rows.get(exitVar);
-      // exitVar might have become basic after some other pivoting
-      // so allow for the case of its not being there any longer
-      if (expr) {
-        if (expr.constant < 0) {
-          var ratio = Number.MAX_VALUE;
-          var r;
-          var terms = expr.terms;
-          terms.each(function(v, cd) {
-            if (cd > 0 && v.isPivotable) {
-              var zc = zRow.coefficientFor(v);
-              r = zc / cd;
-              if (r < ratio ||
-                  (c.approx(r, ratio) && v.hashCode < entryVar.hashCode)
-              ) {
-                entryVar = v;
-                ratio = r;
-              }
-            }
-          });
-          if (ratio == Number.MAX_VALUE) {
-            throw new c.InternalError("ratio == nil (MAX_VALUE) in dualOptimize");
-          }
-          this.pivot(entryVar, exitVar);
-        }
-      }
-    }
-  },
-
-  // Make a new linear Expression representing the constraint cn,
-  // replacing any basic variables with their defining expressions.
-  // Normalize if necessary so that the Constant is non-negative.  If
-  // the constraint is non-required give its error variables an
-  // appropriate weight in the objective function.
-  newExpression: function(cn /*c.Constraint*/,
-                          /** outputs to **/ eplus_eminus /*Array*/,
-                          prevEConstant) {
-    if (c.trace) {
-      c.fnenterprint("newExpression: " + cn);
-      c.traceprint("cn.isInequality == " + cn.isInequality);
-      c.traceprint("cn.required == " + cn.required);
-    }
-
-    var cnExpr = cn.expression;
-    var expr = c.Expression.fromConstant(cnExpr.constant);
-    var slackVar = new c.SlackVariable();
-    var dummyVar = new c.DummyVariable();
-    var eminus = new c.SlackVariable();
-    var eplus = new c.SlackVariable();
-    var cnTerms = cnExpr.terms;
-    // console.log(cnTerms.size);
-
-    cnTerms.each(function(v, c) {
-      var e = this.rows.get(v);
-      if (!e) {
-        expr.addVariable(v, c);
-      } else {
-        expr.addExpression(e, c);
-      }
-    }, this);
-
-    if (cn.isInequality) {
-      // cn is an inequality, so Add a slack variable. The original constraint
-      // is expr>=0, so that the resulting equality is expr-slackVar=0. If cn is
-      // also non-required Add a negative error variable, giving:
-      //
-      //    expr - slackVar = -errorVar
-      //
-      // in other words:
-      //
-      //    expr - slackVar + errorVar = 0
-      //
-      // Since both of these variables are newly created we can just Add
-      // them to the Expression (they can't be basic).
-      c.trace && c.traceprint("Inequality, adding slack");
-      ++this._slackCounter;
-      slackVar = new c.SlackVariable({
-        value: this._slackCounter,
-        prefix: "s"
-      });
-      expr.setVariable(slackVar, -1);
-
-      this._markerVars.set(cn, slackVar);
-      if (!cn.required) {
-        ++this._slackCounter;
-        eminus = new c.SlackVariable({
-          value: this._slackCounter,
-          prefix: "em"
-        });
-        expr.setVariable(eminus, 1);
-        var zRow = this.rows.get(this._objective);
-        zRow.setVariable(eminus, cn.strength.symbolicWeight.value * cn.weight);
-        this.insertErrorVar(cn, eminus);
-        this.noteAddedVariable(eminus, this._objective);
-      }
-    } else {
-      if (cn.required) {
-        c.trace && c.traceprint("Equality, required");
-        // Add a dummy variable to the Expression to serve as a marker for this
-        // constraint.  The dummy variable is never allowed to enter the basis
-        // when pivoting.
-        ++this._dummyCounter;
-        dummyVar = new c.DummyVariable({
-          value: this._dummyCounter,
-          prefix: "d"
-        });
-        eplus_eminus[0] = dummyVar;
-        eplus_eminus[1] = dummyVar;
-        prevEConstant[0] = cnExpr.constant;
-        expr.setVariable(dummyVar, 1);
-        this._markerVars.set(cn, dummyVar);
-        c.trace && c.traceprint("Adding dummyVar == d" + this._dummyCounter);
-      } else {
-        // cn is a non-required equality. Add a positive and a negative error
-        // variable, making the resulting constraint
-        //       expr = eplus - eminus
-        // in other words:
-        //       expr - eplus + eminus = 0
-        c.trace && c.traceprint("Equality, not required");
-        ++this._slackCounter;
-        eplus = new c.SlackVariable({
-          value: this._slackCounter,
-          prefix: "ep"
-        });
-        eminus = new c.SlackVariable({
-          value: this._slackCounter,
-          prefix: "em"
-        });
-        expr.setVariable(eplus, -1);
-        expr.setVariable(eminus, 1);
-        this._markerVars.set(cn, eplus);
-        var zRow = this.rows.get(this._objective);
-        c.trace && console.log(zRow);
-        var swCoeff = cn.strength.symbolicWeight.value * cn.weight;
-        if (swCoeff == 0) {
-          c.trace && c.traceprint("cn == " + cn);
-          c.trace && c.traceprint("adding " + eplus + " and " + eminus + " with swCoeff == " + swCoeff);
-        }
-        zRow.setVariable(eplus, swCoeff);
-        this.noteAddedVariable(eplus, this._objective);
-        zRow.setVariable(eminus, swCoeff);
-        this.noteAddedVariable(eminus, this._objective);
-
-        this.insertErrorVar(cn, eminus);
-        this.insertErrorVar(cn, eplus);
-
-        if (cn.isStayConstraint) {
-          this._stayPlusErrorVars[this._stayPlusErrorVars.length] = eplus;
-          this._stayMinusErrorVars[this._stayMinusErrorVars.length] = eminus;
-        } else if (cn.isEditConstraint) {
-          eplus_eminus[0] = eplus;
-          eplus_eminus[1] = eminus;
-          prevEConstant[0] = cnExpr.constant;
-        }
-      }
-    }
-    // the Constant in the Expression should be non-negative. If necessary
-    // normalize the Expression by multiplying by -1
-    if (expr.constant < 0) expr.multiplyMe(-1);
-    c.trace && c.fnexitprint("returning " + expr);
-    return expr;
-  },
-
-  // Minimize the value of the objective.  (The tableau should already be
-  // feasible.)
-  optimize: function(zVar /*c.ObjectiveVariable*/) {
-    c.trace && c.fnenterprint("optimize: " + zVar);
-    c.trace && c.traceprint(this.toString());
-    this._optimizeCount++;
-
-    var zRow = this.rows.get(zVar);
-    c.assert(zRow != null, "zRow != null");
-    var entryVar = null;
-    var exitVar = null;
-    var objectiveCoeff, terms;
-
-    while (true) {
-      objectiveCoeff = 0;
-      terms = zRow.terms;
-
-      // Find the most negative coefficient in the objective function (ignoring
-      // the non-pivotable dummy variables). If all coefficients are positive
-      // we're done
-      terms.escapingEach(function(v, c) {
-        if (v.isPivotable && c < objectiveCoeff) {
-          objectiveCoeff = c;
-          entryVar = v;
-          // Break on success
-          return { brk: 1 };
-        }
-      }, this);
-
-      if (objectiveCoeff >= -epsilon)
-        return;
-
-      c.trace && console.log("entryVar:", entryVar,
-                             "objectiveCoeff:", objectiveCoeff);
-
-      // choose which variable to move out of the basis
-      // Only consider pivotable basic variables
-      // (i.e. restricted, non-dummy variables)
-      var minRatio = Number.MAX_VALUE;
-      var columnVars = this.columns.get(entryVar);
-      var r = 0;
-
-      columnVars.each(function(v) {
-        c.trace && c.traceprint("Checking " + v);
-        if (v.isPivotable) {
-          var expr = this.rows.get(v);
-          var coeff = expr.coefficientFor(entryVar);
-          c.trace && c.traceprint("pivotable, coeff = " + coeff);
-          // only consider negative coefficients
-          if (coeff < 0) {
-            r = -expr.constant / coeff;
-            // Bland's anti-cycling rule:
-            // if multiple variables are about the same,
-            // always pick the lowest via some total
-            // ordering -- I use their addresses in memory
-            //    if (r < minRatio ||
-            //              (c.approx(r, minRatio) &&
-            //               v.get_pclv() < exitVar.get_pclv()))
-            if (r < minRatio ||
-                (c.approx(r, minRatio) &&
-                 v.hashCode < exitVar.hashCode)
-            ) {
-              minRatio = r;
-              exitVar = v;
-            }
-          }
-        }
-      }, this);
-
-      // If minRatio is still nil at this point, it means that the
-      // objective function is unbounded, i.e. it can become
-      // arbitrarily negative.  This should never happen in this
-      // application.
-      if (minRatio == Number.MAX_VALUE) {
-        throw new c.InternalError("Objective function is unbounded in optimize");
-      }
-
-      // console.time("SimplexSolver::optimize pivot()");
-      this.pivot(entryVar, exitVar);
-      // console.timeEnd("SimplexSolver::optimize pivot()");
-
-      c.trace && c.traceprint(this.toString());
-    }
-  },
-
-  // Do a Pivot.  Move entryVar into the basis (i.e. make it a basic variable),
-  // and move exitVar out of the basis (i.e., make it a parametric variable)
-  pivot: function(entryVar /*c.AbstractVariable*/, exitVar /*c.AbstractVariable*/) {
-    c.trace && console.log("pivot: ", entryVar, exitVar);
-    var time = false;
-
-    time && console.time(" SimplexSolver::pivot");
-
-    // the entryVar might be non-pivotable if we're doing a RemoveConstraint --
-    // otherwise it should be a pivotable variable -- enforced at call sites,
-    // hopefully
-    if (entryVar == null) {
-      console.warn("pivot: entryVar == null");
-    }
-
-    if (exitVar == null) {
-      console.warn("pivot: exitVar == null");
-    }
-    // console.log("SimplexSolver::pivot(", entryVar, exitVar, ")")
-
-    // expr is the Expression for the exit variable (about to leave the basis) --
-    // so that the old tableau includes the equation:
-    //   exitVar = expr
-    time && console.time("  removeRow");
-    var expr = this.removeRow(exitVar);
-    time && console.timeEnd("  removeRow");
-
-    // Compute an Expression for the entry variable.  Since expr has
-    // been deleted from the tableau we can destructively modify it to
-    // build this Expression.
-    time && console.time("  changeSubject");
-    expr.changeSubject(exitVar, entryVar);
-    time && console.timeEnd("  changeSubject");
-
-    time && console.time("  substituteOut");
-    this.substituteOut(entryVar, expr);
-    time && console.timeEnd("  substituteOut");
-    /*
-    if (entryVar.isExternal) {
-      // entry var is no longer a parametric variable since we're moving
-      // it into the basis
-      console.log("entryVar is external!");
-      this._externalParametricVars.delete(entryVar);
-    }
-    */
-
-    time && console.time("  addRow")
-    this.addRow(entryVar, expr);
-    time && console.timeEnd("  addRow")
-
-    time && console.timeEnd(" SimplexSolver::pivot");
-  },
-
-  // Each of the non-required stays will be represented by an equation
-  // of the form
-  //     v = c + eplus - eminus
-  // where v is the variable with the stay, c is the previous value of
-  // v, and eplus and eminus are slack variables that hold the error
-  // in satisfying the stay constraint.  We are about to change
-  // something, and we want to fix the constants in the equations
-  // representing the stays.  If both eplus and eminus are nonbasic
-  // they have value 0 in the current solution, meaning the previous
-  // stay was exactly satisfied.  In this case nothing needs to be
-  // changed.  Otherwise one of them is basic, and the other must
-  // occur only in the Expression for that basic error variable.
-  // Reset the Constant in this Expression to 0.
-  _resetStayConstants: function() {
-    c.trace && console.log("_resetStayConstants");
-    var spev = this._stayPlusErrorVars;
-    var l = spev.length;
-    for (var i = 0; i < l; i++) {
-      var expr = this.rows.get(spev[i]);
-      if (expr === null) {
-        expr = this.rows.get(this._stayMinusErrorVars[i]);
-      }
-      if (expr != null) {
-        expr.constant = 0;
-      }
-    }
-  },
-
-  _setExternalVariables: function() {
-    c.trace && c.fnenterprint("_setExternalVariables:");
-    c.trace && c.traceprint(this.toString());
-    var changed = {};
-
-    // console.log("this._externalParametricVars:", this._externalParametricVars);
-    this._externalParametricVars.each(function(v) {
-      if (this.rows.get(v) != null) {
-        if (c.trace)
-          console.log("Error: variable" + v + " in _externalParametricVars is basic");
-      } else {
-        v.value = 0;
-        changed[v.name] = 0;
-      }
-    }, this);
-    // console.log("this._externalRows:", this._externalRows);
-    this._externalRows.each(function(v) {
-      var expr = this.rows.get(v);
-      if (v.value != expr.constant) {
-        // console.log(v.toString(), v.value, expr.constant);
-        v.value = expr.constant;
-        changed[v.name] = expr.constant;
-      }
-      // c.trace && console.log("v == " + v);
-      // c.trace && console.log("expr == " + expr);
-    }, this);
-    this._changed = changed;
-    this._needsSolving = false;
-    this._informCallbacks();
-    this.onsolved();
-  },
-
-  onsolved: function() {
-    // Lifecycle stub. Here for dirty, dirty monkey patching.
-  },
-
-  _informCallbacks: function() {
-    if(!this._callbacks) return;
-
-    var changed = this._changed;
-    this._callbacks.forEach(function(fn) {
-      fn(changed);
-    });
-  },
-
-  _addCallback: function(fn) {
-    var a = (this._callbacks || (this._callbacks = []));
-    a[a.length] = fn;
-  },
-
-  insertErrorVar: function(cn /*c.Constraint*/, aVar /*c.AbstractVariable*/) {
-    c.trace && c.fnenterprint("insertErrorVar:" + cn + ", " + aVar);
-    var constraintSet = /* Set */this._errorVars.get(aVar);
-    if (!constraintSet) {
-      constraintSet = new c.HashSet();
-      this._errorVars.set(cn, constraintSet);
-    }
-    constraintSet.add(aVar);
-  },
-});
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("slightlyoff-cassowary.js/src/Timer.js", function(exports, require, module){
-// Copyright (C) 1998-2000 Greg J. Badros
-// Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
-//
-// Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
-
-(function(c) {
-"use strict";
-
-c.Timer = c.inherit({
-  initialize: function() {
-    this.isRunning = false;
-    this._elapsedMs = 0;
-  },
-
-  start: function() {
-    this.isRunning = true;
-    this._startReading = new Date();
-    return this;
-  },
-
-  stop: function() {
-    this.isRunning = false;
-    this._elapsedMs += (new Date()) - this._startReading;
-    return this;
-  },
-
-  reset: function() {
-    this.isRunning = false;
-    this._elapsedMs = 0;
-    return this;
-  },
-
-  elapsedTime : function() {
-    if (!this.isRunning) {
-      return this._elapsedMs / 1000;
-    } else {
-      return (this._elapsedMs + (new Date() - this._startReading)) / 1000;
-    }
-  },
-});
-
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("slightlyoff-cassowary.js/src/parser/parser.js", function(exports, require, module){
-this.c.parser = (function(){
-  /*
-   * Generated by PEG.js 0.7.0.
-   *
-   * http://pegjs.majda.cz/
-   */
-  
-  function quote(s) {
-    /*
-     * ECMA-262, 5th ed., 7.8.4: All characters may appear literally in a
-     * string literal except for the closing quote character, backslash,
-     * carriage return, line separator, paragraph separator, and line feed.
-     * Any character may appear in the form of an escape sequence.
-     *
-     * For portability, we also escape escape all control and non-ASCII
-     * characters. Note that "\0" and "\v" escape sequences are not used
-     * because JSHint does not like the first and IE the second.
-     */
-     return '"' + s
-      .replace(/\\/g, '\\\\')  // backslash
-      .replace(/"/g, '\\"')    // closing quote character
-      .replace(/\x08/g, '\\b') // backspace
-      .replace(/\t/g, '\\t')   // horizontal tab
-      .replace(/\n/g, '\\n')   // line feed
-      .replace(/\f/g, '\\f')   // form feed
-      .replace(/\r/g, '\\r')   // carriage return
-      .replace(/[\x00-\x07\x0B\x0E-\x1F\x80-\uFFFF]/g, escape)
-      + '"';
-  }
-  
-  var result = {
-    /*
-     * Parses the input with a generated parser. If the parsing is successfull,
-     * returns a value explicitly or implicitly specified by the grammar from
-     * which the parser was generated (see |PEG.buildParser|). If the parsing is
-     * unsuccessful, throws |PEG.parser.SyntaxError| describing the error.
-     */
-    parse: function(input, startRule) {
-      var parseFunctions = {
-        "start": parse_start,
-        "Statement": parse_Statement,
-        "SourceCharacter": parse_SourceCharacter,
-        "IdentifierStart": parse_IdentifierStart,
-        "WhiteSpace": parse_WhiteSpace,
-        "LineTerminator": parse_LineTerminator,
-        "LineTerminatorSequence": parse_LineTerminatorSequence,
-        "EOS": parse_EOS,
-        "EOF": parse_EOF,
-        "Comment": parse_Comment,
-        "MultiLineComment": parse_MultiLineComment,
-        "MultiLineCommentNoLineTerminator": parse_MultiLineCommentNoLineTerminator,
-        "SingleLineComment": parse_SingleLineComment,
-        "_": parse__,
-        "__": parse___,
-        "Literal": parse_Literal,
-        "Integer": parse_Integer,
-        "Real": parse_Real,
-        "SignedInteger": parse_SignedInteger,
-        "Identifier": parse_Identifier,
-        "IdentifierName": parse_IdentifierName,
-        "PrimaryExpression": parse_PrimaryExpression,
-        "UnaryExpression": parse_UnaryExpression,
-        "UnaryOperator": parse_UnaryOperator,
-        "MultiplicativeExpression": parse_MultiplicativeExpression,
-        "MultiplicativeOperator": parse_MultiplicativeOperator,
-        "AdditiveExpression": parse_AdditiveExpression,
-        "AdditiveOperator": parse_AdditiveOperator,
-        "InequalityExpression": parse_InequalityExpression,
-        "InequalityOperator": parse_InequalityOperator,
-        "LinearExpression": parse_LinearExpression
-      };
-      
-      if (startRule !== undefined) {
-        if (parseFunctions[startRule] === undefined) {
-          throw new Error("Invalid rule name: " + quote(startRule) + ".");
-        }
-      } else {
-        startRule = "start";
-      }
-      
-      var pos = 0;
-      var reportFailures = 0;
-      var rightmostFailuresPos = 0;
-      var rightmostFailuresExpected = [];
-      
-      function padLeft(input, padding, length) {
-        var result = input;
-        
-        var padLength = length - input.length;
-        for (var i = 0; i < padLength; i++) {
-          result = padding + result;
-        }
-        
-        return result;
-      }
-      
-      function escape(ch) {
-        var charCode = ch.charCodeAt(0);
-        var escapeChar;
-        var length;
-        
-        if (charCode <= 0xFF) {
-          escapeChar = 'x';
-          length = 2;
-        } else {
-          escapeChar = 'u';
-          length = 4;
-        }
-        
-        return '\\' + escapeChar + padLeft(charCode.toString(16).toUpperCase(), '0', length);
-      }
-      
-      function matchFailed(failure) {
-        if (pos < rightmostFailuresPos) {
-          return;
-        }
-        
-        if (pos > rightmostFailuresPos) {
-          rightmostFailuresPos = pos;
-          rightmostFailuresExpected = [];
-        }
-        
-        rightmostFailuresExpected.push(failure);
-      }
-      
-      function parse_start() {
-        var result0, result1, result2;
-        var pos0, pos1;
-        
-        pos0 = pos;
-        pos1 = pos;
-        result0 = parse___();
-        if (result0 !== null) {
-          result1 = [];
-          result2 = parse_Statement();
-          while (result2 !== null) {
-            result1.push(result2);
-            result2 = parse_Statement();
-          }
-          if (result1 !== null) {
-            result2 = parse___();
-            if (result2 !== null) {
-              result0 = [result0, result1, result2];
-            } else {
-              result0 = null;
-              pos = pos1;
-            }
-          } else {
-            result0 = null;
-            pos = pos1;
-          }
-        } else {
-          result0 = null;
-          pos = pos1;
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, statements) { return statements; })(pos0, result0[1]);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_Statement() {
-        var result0, result1;
-        var pos0, pos1;
-        
-        pos0 = pos;
-        pos1 = pos;
-        result0 = parse_LinearExpression();
-        if (result0 !== null) {
-          result1 = parse_EOS();
-          if (result1 !== null) {
-            result0 = [result0, result1];
-          } else {
-            result0 = null;
-            pos = pos1;
-          }
-        } else {
-          result0 = null;
-          pos = pos1;
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, expression) { return expression; })(pos0, result0[0]);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_SourceCharacter() {
-        var result0;
-        
-        if (input.length > pos) {
-          result0 = input.charAt(pos);
-          pos++;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("any character");
-          }
-        }
-        return result0;
-      }
-      
-      function parse_IdentifierStart() {
-        var result0;
-        
-        if (/^[a-zA-Z]/.test(input.charAt(pos))) {
-          result0 = input.charAt(pos);
-          pos++;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("[a-zA-Z]");
-          }
-        }
-        if (result0 === null) {
-          if (input.charCodeAt(pos) === 36) {
-            result0 = "$";
-            pos++;
-          } else {
-            result0 = null;
-            if (reportFailures === 0) {
-              matchFailed("\"$\"");
-            }
-          }
-          if (result0 === null) {
-            if (input.charCodeAt(pos) === 95) {
-              result0 = "_";
-              pos++;
-            } else {
-              result0 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"_\"");
-              }
-            }
-          }
-        }
-        return result0;
-      }
-      
-      function parse_WhiteSpace() {
-        var result0;
-        
-        reportFailures++;
-        if (/^[\t\x0B\f \xA0\uFEFF]/.test(input.charAt(pos))) {
-          result0 = input.charAt(pos);
-          pos++;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("[\\t\\x0B\\f \\xA0\\uFEFF]");
-          }
-        }
-        reportFailures--;
-        if (reportFailures === 0 && result0 === null) {
-          matchFailed("whitespace");
-        }
-        return result0;
-      }
-      
-      function parse_LineTerminator() {
-        var result0;
-        
-        if (/^[\n\r\u2028\u2029]/.test(input.charAt(pos))) {
-          result0 = input.charAt(pos);
-          pos++;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("[\\n\\r\\u2028\\u2029]");
-          }
-        }
-        return result0;
-      }
-      
-      function parse_LineTerminatorSequence() {
-        var result0;
-        
-        reportFailures++;
-        if (input.charCodeAt(pos) === 10) {
-          result0 = "\n";
-          pos++;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("\"\\n\"");
-          }
-        }
-        if (result0 === null) {
-          if (input.substr(pos, 2) === "\r\n") {
-            result0 = "\r\n";
-            pos += 2;
-          } else {
-            result0 = null;
-            if (reportFailures === 0) {
-              matchFailed("\"\\r\\n\"");
-            }
-          }
-          if (result0 === null) {
-            if (input.charCodeAt(pos) === 13) {
-              result0 = "\r";
-              pos++;
-            } else {
-              result0 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"\\r\"");
-              }
-            }
-            if (result0 === null) {
-              if (input.charCodeAt(pos) === 8232) {
-                result0 = "\u2028";
-                pos++;
-              } else {
-                result0 = null;
-                if (reportFailures === 0) {
-                  matchFailed("\"\\u2028\"");
-                }
-              }
-              if (result0 === null) {
-                if (input.charCodeAt(pos) === 8233) {
-                  result0 = "\u2029";
-                  pos++;
-                } else {
-                  result0 = null;
-                  if (reportFailures === 0) {
-                    matchFailed("\"\\u2029\"");
-                  }
-                }
-              }
-            }
-          }
-        }
-        reportFailures--;
-        if (reportFailures === 0 && result0 === null) {
-          matchFailed("end of line");
-        }
-        return result0;
-      }
-      
-      function parse_EOS() {
-        var result0, result1;
-        var pos0;
-        
-        pos0 = pos;
-        result0 = parse___();
-        if (result0 !== null) {
-          if (input.charCodeAt(pos) === 59) {
-            result1 = ";";
-            pos++;
-          } else {
-            result1 = null;
-            if (reportFailures === 0) {
-              matchFailed("\";\"");
-            }
-          }
-          if (result1 !== null) {
-            result0 = [result0, result1];
-          } else {
-            result0 = null;
-            pos = pos0;
-          }
-        } else {
-          result0 = null;
-          pos = pos0;
-        }
-        if (result0 === null) {
-          pos0 = pos;
-          result0 = parse__();
-          if (result0 !== null) {
-            result1 = parse_LineTerminatorSequence();
-            if (result1 !== null) {
-              result0 = [result0, result1];
-            } else {
-              result0 = null;
-              pos = pos0;
-            }
-          } else {
-            result0 = null;
-            pos = pos0;
-          }
-          if (result0 === null) {
-            pos0 = pos;
-            result0 = parse___();
-            if (result0 !== null) {
-              result1 = parse_EOF();
-              if (result1 !== null) {
-                result0 = [result0, result1];
-              } else {
-                result0 = null;
-                pos = pos0;
-              }
-            } else {
-              result0 = null;
-              pos = pos0;
-            }
-          }
-        }
-        return result0;
-      }
-      
-      function parse_EOF() {
-        var result0;
-        var pos0;
-        
-        pos0 = pos;
-        reportFailures++;
-        if (input.length > pos) {
-          result0 = input.charAt(pos);
-          pos++;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("any character");
-          }
-        }
-        reportFailures--;
-        if (result0 === null) {
-          result0 = "";
-        } else {
-          result0 = null;
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_Comment() {
-        var result0;
-        
-        reportFailures++;
-        result0 = parse_MultiLineComment();
-        if (result0 === null) {
-          result0 = parse_SingleLineComment();
-        }
-        reportFailures--;
-        if (reportFailures === 0 && result0 === null) {
-          matchFailed("comment");
-        }
-        return result0;
-      }
-      
-      function parse_MultiLineComment() {
-        var result0, result1, result2, result3;
-        var pos0, pos1, pos2;
-        
-        pos0 = pos;
-        if (input.substr(pos, 2) === "/*") {
-          result0 = "/*";
-          pos += 2;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("\"/*\"");
-          }
-        }
-        if (result0 !== null) {
-          result1 = [];
-          pos1 = pos;
-          pos2 = pos;
-          reportFailures++;
-          if (input.substr(pos, 2) === "*/") {
-            result2 = "*/";
-            pos += 2;
-          } else {
-            result2 = null;
-            if (reportFailures === 0) {
-              matchFailed("\"*/\"");
-            }
-          }
-          reportFailures--;
-          if (result2 === null) {
-            result2 = "";
-          } else {
-            result2 = null;
-            pos = pos2;
-          }
-          if (result2 !== null) {
-            result3 = parse_SourceCharacter();
-            if (result3 !== null) {
-              result2 = [result2, result3];
-            } else {
-              result2 = null;
-              pos = pos1;
-            }
-          } else {
-            result2 = null;
-            pos = pos1;
-          }
-          while (result2 !== null) {
-            result1.push(result2);
-            pos1 = pos;
-            pos2 = pos;
-            reportFailures++;
-            if (input.substr(pos, 2) === "*/") {
-              result2 = "*/";
-              pos += 2;
-            } else {
-              result2 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"*/\"");
-              }
-            }
-            reportFailures--;
-            if (result2 === null) {
-              result2 = "";
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-            if (result2 !== null) {
-              result3 = parse_SourceCharacter();
-              if (result3 !== null) {
-                result2 = [result2, result3];
-              } else {
-                result2 = null;
-                pos = pos1;
-              }
-            } else {
-              result2 = null;
-              pos = pos1;
-            }
-          }
-          if (result1 !== null) {
-            if (input.substr(pos, 2) === "*/") {
-              result2 = "*/";
-              pos += 2;
-            } else {
-              result2 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"*/\"");
-              }
-            }
-            if (result2 !== null) {
-              result0 = [result0, result1, result2];
-            } else {
-              result0 = null;
-              pos = pos0;
-            }
-          } else {
-            result0 = null;
-            pos = pos0;
-          }
-        } else {
-          result0 = null;
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_MultiLineCommentNoLineTerminator() {
-        var result0, result1, result2, result3;
-        var pos0, pos1, pos2;
-        
-        pos0 = pos;
-        if (input.substr(pos, 2) === "/*") {
-          result0 = "/*";
-          pos += 2;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("\"/*\"");
-          }
-        }
-        if (result0 !== null) {
-          result1 = [];
-          pos1 = pos;
-          pos2 = pos;
-          reportFailures++;
-          if (input.substr(pos, 2) === "*/") {
-            result2 = "*/";
-            pos += 2;
-          } else {
-            result2 = null;
-            if (reportFailures === 0) {
-              matchFailed("\"*/\"");
-            }
-          }
-          if (result2 === null) {
-            result2 = parse_LineTerminator();
-          }
-          reportFailures--;
-          if (result2 === null) {
-            result2 = "";
-          } else {
-            result2 = null;
-            pos = pos2;
-          }
-          if (result2 !== null) {
-            result3 = parse_SourceCharacter();
-            if (result3 !== null) {
-              result2 = [result2, result3];
-            } else {
-              result2 = null;
-              pos = pos1;
-            }
-          } else {
-            result2 = null;
-            pos = pos1;
-          }
-          while (result2 !== null) {
-            result1.push(result2);
-            pos1 = pos;
-            pos2 = pos;
-            reportFailures++;
-            if (input.substr(pos, 2) === "*/") {
-              result2 = "*/";
-              pos += 2;
-            } else {
-              result2 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"*/\"");
-              }
-            }
-            if (result2 === null) {
-              result2 = parse_LineTerminator();
-            }
-            reportFailures--;
-            if (result2 === null) {
-              result2 = "";
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-            if (result2 !== null) {
-              result3 = parse_SourceCharacter();
-              if (result3 !== null) {
-                result2 = [result2, result3];
-              } else {
-                result2 = null;
-                pos = pos1;
-              }
-            } else {
-              result2 = null;
-              pos = pos1;
-            }
-          }
-          if (result1 !== null) {
-            if (input.substr(pos, 2) === "*/") {
-              result2 = "*/";
-              pos += 2;
-            } else {
-              result2 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"*/\"");
-              }
-            }
-            if (result2 !== null) {
-              result0 = [result0, result1, result2];
-            } else {
-              result0 = null;
-              pos = pos0;
-            }
-          } else {
-            result0 = null;
-            pos = pos0;
-          }
-        } else {
-          result0 = null;
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_SingleLineComment() {
-        var result0, result1, result2, result3;
-        var pos0, pos1, pos2;
-        
-        pos0 = pos;
-        if (input.substr(pos, 2) === "//") {
-          result0 = "//";
-          pos += 2;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("\"//\"");
-          }
-        }
-        if (result0 !== null) {
-          result1 = [];
-          pos1 = pos;
-          pos2 = pos;
-          reportFailures++;
-          result2 = parse_LineTerminator();
-          reportFailures--;
-          if (result2 === null) {
-            result2 = "";
-          } else {
-            result2 = null;
-            pos = pos2;
-          }
-          if (result2 !== null) {
-            result3 = parse_SourceCharacter();
-            if (result3 !== null) {
-              result2 = [result2, result3];
-            } else {
-              result2 = null;
-              pos = pos1;
-            }
-          } else {
-            result2 = null;
-            pos = pos1;
-          }
-          while (result2 !== null) {
-            result1.push(result2);
-            pos1 = pos;
-            pos2 = pos;
-            reportFailures++;
-            result2 = parse_LineTerminator();
-            reportFailures--;
-            if (result2 === null) {
-              result2 = "";
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-            if (result2 !== null) {
-              result3 = parse_SourceCharacter();
-              if (result3 !== null) {
-                result2 = [result2, result3];
-              } else {
-                result2 = null;
-                pos = pos1;
-              }
-            } else {
-              result2 = null;
-              pos = pos1;
-            }
-          }
-          if (result1 !== null) {
-            result2 = parse_LineTerminator();
-            if (result2 === null) {
-              result2 = parse_EOF();
-            }
-            if (result2 !== null) {
-              result0 = [result0, result1, result2];
-            } else {
-              result0 = null;
-              pos = pos0;
-            }
-          } else {
-            result0 = null;
-            pos = pos0;
-          }
-        } else {
-          result0 = null;
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse__() {
-        var result0, result1;
-        
-        result0 = [];
-        result1 = parse_WhiteSpace();
-        if (result1 === null) {
-          result1 = parse_MultiLineCommentNoLineTerminator();
-          if (result1 === null) {
-            result1 = parse_SingleLineComment();
-          }
-        }
-        while (result1 !== null) {
-          result0.push(result1);
-          result1 = parse_WhiteSpace();
-          if (result1 === null) {
-            result1 = parse_MultiLineCommentNoLineTerminator();
-            if (result1 === null) {
-              result1 = parse_SingleLineComment();
-            }
-          }
-        }
-        return result0;
-      }
-      
-      function parse___() {
-        var result0, result1;
-        
-        result0 = [];
-        result1 = parse_WhiteSpace();
-        if (result1 === null) {
-          result1 = parse_LineTerminatorSequence();
-          if (result1 === null) {
-            result1 = parse_Comment();
-          }
-        }
-        while (result1 !== null) {
-          result0.push(result1);
-          result1 = parse_WhiteSpace();
-          if (result1 === null) {
-            result1 = parse_LineTerminatorSequence();
-            if (result1 === null) {
-              result1 = parse_Comment();
-            }
-          }
-        }
-        return result0;
-      }
-      
-      function parse_Literal() {
-        var result0;
-        var pos0;
-        
-        pos0 = pos;
-        result0 = parse_Real();
-        if (result0 === null) {
-          result0 = parse_Integer();
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, val) {
-            return {
-              type: "NumericLiteral",
-              value: val
-            }
-          })(pos0, result0);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_Integer() {
-        var result0, result1;
-        var pos0;
-        
-        pos0 = pos;
-        if (/^[0-9]/.test(input.charAt(pos))) {
-          result1 = input.charAt(pos);
-          pos++;
-        } else {
-          result1 = null;
-          if (reportFailures === 0) {
-            matchFailed("[0-9]");
-          }
-        }
-        if (result1 !== null) {
-          result0 = [];
-          while (result1 !== null) {
-            result0.push(result1);
-            if (/^[0-9]/.test(input.charAt(pos))) {
-              result1 = input.charAt(pos);
-              pos++;
-            } else {
-              result1 = null;
-              if (reportFailures === 0) {
-                matchFailed("[0-9]");
-              }
-            }
-          }
-        } else {
-          result0 = null;
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, digits) {
-            return parseInt(digits.join(""));
-          })(pos0, result0);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_Real() {
-        var result0, result1, result2;
-        var pos0, pos1;
-        
-        pos0 = pos;
-        pos1 = pos;
-        result0 = parse_Integer();
-        if (result0 !== null) {
-          if (input.charCodeAt(pos) === 46) {
-            result1 = ".";
-            pos++;
-          } else {
-            result1 = null;
-            if (reportFailures === 0) {
-              matchFailed("\".\"");
-            }
-          }
-          if (result1 !== null) {
-            result2 = parse_Integer();
-            if (result2 !== null) {
-              result0 = [result0, result1, result2];
-            } else {
-              result0 = null;
-              pos = pos1;
-            }
-          } else {
-            result0 = null;
-            pos = pos1;
-          }
-        } else {
-          result0 = null;
-          pos = pos1;
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, digits) {
-            return parseFloat(digits.join(""));
-          })(pos0, result0);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_SignedInteger() {
-        var result0, result1, result2;
-        var pos0;
-        
-        pos0 = pos;
-        if (/^[\-+]/.test(input.charAt(pos))) {
-          result0 = input.charAt(pos);
-          pos++;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("[\\-+]");
-          }
-        }
-        result0 = result0 !== null ? result0 : "";
-        if (result0 !== null) {
-          if (/^[0-9]/.test(input.charAt(pos))) {
-            result2 = input.charAt(pos);
-            pos++;
-          } else {
-            result2 = null;
-            if (reportFailures === 0) {
-              matchFailed("[0-9]");
-            }
-          }
-          if (result2 !== null) {
-            result1 = [];
-            while (result2 !== null) {
-              result1.push(result2);
-              if (/^[0-9]/.test(input.charAt(pos))) {
-                result2 = input.charAt(pos);
-                pos++;
-              } else {
-                result2 = null;
-                if (reportFailures === 0) {
-                  matchFailed("[0-9]");
-                }
-              }
-            }
-          } else {
-            result1 = null;
-          }
-          if (result1 !== null) {
-            result0 = [result0, result1];
-          } else {
-            result0 = null;
-            pos = pos0;
-          }
-        } else {
-          result0 = null;
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_Identifier() {
-        var result0;
-        var pos0;
-        
-        reportFailures++;
-        pos0 = pos;
-        result0 = parse_IdentifierName();
-        if (result0 !== null) {
-          result0 = (function(offset, name) { return name; })(pos0, result0);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        reportFailures--;
-        if (reportFailures === 0 && result0 === null) {
-          matchFailed("identifier");
-        }
-        return result0;
-      }
-      
-      function parse_IdentifierName() {
-        var result0, result1, result2;
-        var pos0, pos1;
-        
-        reportFailures++;
-        pos0 = pos;
-        pos1 = pos;
-        result0 = parse_IdentifierStart();
-        if (result0 !== null) {
-          result1 = [];
-          result2 = parse_IdentifierStart();
-          while (result2 !== null) {
-            result1.push(result2);
-            result2 = parse_IdentifierStart();
-          }
-          if (result1 !== null) {
-            result0 = [result0, result1];
-          } else {
-            result0 = null;
-            pos = pos1;
-          }
-        } else {
-          result0 = null;
-          pos = pos1;
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, start, parts) {
-              return start + parts.join("");
-            })(pos0, result0[0], result0[1]);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        reportFailures--;
-        if (reportFailures === 0 && result0 === null) {
-          matchFailed("identifier");
-        }
-        return result0;
-      }
-      
-      function parse_PrimaryExpression() {
-        var result0, result1, result2, result3, result4;
-        var pos0, pos1;
-        
-        pos0 = pos;
-        result0 = parse_Identifier();
-        if (result0 !== null) {
-          result0 = (function(offset, name) { return { type: "Variable", name: name }; })(pos0, result0);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        if (result0 === null) {
-          result0 = parse_Literal();
-          if (result0 === null) {
-            pos0 = pos;
-            pos1 = pos;
-            if (input.charCodeAt(pos) === 40) {
-              result0 = "(";
-              pos++;
-            } else {
-              result0 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"(\"");
-              }
-            }
-            if (result0 !== null) {
-              result1 = parse___();
-              if (result1 !== null) {
-                result2 = parse_LinearExpression();
-                if (result2 !== null) {
-                  result3 = parse___();
-                  if (result3 !== null) {
-                    if (input.charCodeAt(pos) === 41) {
-                      result4 = ")";
-                      pos++;
-                    } else {
-                      result4 = null;
-                      if (reportFailures === 0) {
-                        matchFailed("\")\"");
-                      }
-                    }
-                    if (result4 !== null) {
-                      result0 = [result0, result1, result2, result3, result4];
-                    } else {
-                      result0 = null;
-                      pos = pos1;
-                    }
-                  } else {
-                    result0 = null;
-                    pos = pos1;
-                  }
-                } else {
-                  result0 = null;
-                  pos = pos1;
-                }
-              } else {
-                result0 = null;
-                pos = pos1;
-              }
-            } else {
-              result0 = null;
-              pos = pos1;
-            }
-            if (result0 !== null) {
-              result0 = (function(offset, expression) { return expression; })(pos0, result0[2]);
-            }
-            if (result0 === null) {
-              pos = pos0;
-            }
-          }
-        }
-        return result0;
-      }
-      
-      function parse_UnaryExpression() {
-        var result0, result1, result2;
-        var pos0, pos1;
-        
-        result0 = parse_PrimaryExpression();
-        if (result0 === null) {
-          pos0 = pos;
-          pos1 = pos;
-          result0 = parse_UnaryOperator();
-          if (result0 !== null) {
-            result1 = parse___();
-            if (result1 !== null) {
-              result2 = parse_UnaryExpression();
-              if (result2 !== null) {
-                result0 = [result0, result1, result2];
-              } else {
-                result0 = null;
-                pos = pos1;
-              }
-            } else {
-              result0 = null;
-              pos = pos1;
-            }
-          } else {
-            result0 = null;
-            pos = pos1;
-          }
-          if (result0 !== null) {
-            result0 = (function(offset, operator, expression) {
-                return {
-                  type:       "UnaryExpression",
-                  operator:   operator,
-                  expression: expression
-                };
-              })(pos0, result0[0], result0[2]);
-          }
-          if (result0 === null) {
-            pos = pos0;
-          }
-        }
-        return result0;
-      }
-      
-      function parse_UnaryOperator() {
-        var result0;
-        
-        if (input.charCodeAt(pos) === 43) {
-          result0 = "+";
-          pos++;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("\"+\"");
-          }
-        }
-        if (result0 === null) {
-          if (input.charCodeAt(pos) === 45) {
-            result0 = "-";
-            pos++;
-          } else {
-            result0 = null;
-            if (reportFailures === 0) {
-              matchFailed("\"-\"");
-            }
-          }
-          if (result0 === null) {
-            if (input.charCodeAt(pos) === 33) {
-              result0 = "!";
-              pos++;
-            } else {
-              result0 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"!\"");
-              }
-            }
-          }
-        }
-        return result0;
-      }
-      
-      function parse_MultiplicativeExpression() {
-        var result0, result1, result2, result3, result4, result5;
-        var pos0, pos1, pos2;
-        
-        pos0 = pos;
-        pos1 = pos;
-        result0 = parse_UnaryExpression();
-        if (result0 !== null) {
-          result1 = [];
-          pos2 = pos;
-          result2 = parse___();
-          if (result2 !== null) {
-            result3 = parse_MultiplicativeOperator();
-            if (result3 !== null) {
-              result4 = parse___();
-              if (result4 !== null) {
-                result5 = parse_UnaryExpression();
-                if (result5 !== null) {
-                  result2 = [result2, result3, result4, result5];
-                } else {
-                  result2 = null;
-                  pos = pos2;
-                }
-              } else {
-                result2 = null;
-                pos = pos2;
-              }
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-          } else {
-            result2 = null;
-            pos = pos2;
-          }
-          while (result2 !== null) {
-            result1.push(result2);
-            pos2 = pos;
-            result2 = parse___();
-            if (result2 !== null) {
-              result3 = parse_MultiplicativeOperator();
-              if (result3 !== null) {
-                result4 = parse___();
-                if (result4 !== null) {
-                  result5 = parse_UnaryExpression();
-                  if (result5 !== null) {
-                    result2 = [result2, result3, result4, result5];
-                  } else {
-                    result2 = null;
-                    pos = pos2;
-                  }
-                } else {
-                  result2 = null;
-                  pos = pos2;
-                }
-              } else {
-                result2 = null;
-                pos = pos2;
-              }
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-          }
-          if (result1 !== null) {
-            result0 = [result0, result1];
-          } else {
-            result0 = null;
-            pos = pos1;
-          }
-        } else {
-          result0 = null;
-          pos = pos1;
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, head, tail) {
-              var result = head;
-              for (var i = 0; i < tail.length; i++) {
-                result = {
-                  type:     "MultiplicativeExpression",
-                  operator: tail[i][1],
-                  left:     result,
-                  right:    tail[i][3]
-                };
-              }
-              return result;
-            })(pos0, result0[0], result0[1]);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_MultiplicativeOperator() {
-        var result0;
-        
-        if (input.charCodeAt(pos) === 42) {
-          result0 = "*";
-          pos++;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("\"*\"");
-          }
-        }
-        if (result0 === null) {
-          if (input.charCodeAt(pos) === 47) {
-            result0 = "/";
-            pos++;
-          } else {
-            result0 = null;
-            if (reportFailures === 0) {
-              matchFailed("\"/\"");
-            }
-          }
-        }
-        return result0;
-      }
-      
-      function parse_AdditiveExpression() {
-        var result0, result1, result2, result3, result4, result5;
-        var pos0, pos1, pos2;
-        
-        pos0 = pos;
-        pos1 = pos;
-        result0 = parse_MultiplicativeExpression();
-        if (result0 !== null) {
-          result1 = [];
-          pos2 = pos;
-          result2 = parse___();
-          if (result2 !== null) {
-            result3 = parse_AdditiveOperator();
-            if (result3 !== null) {
-              result4 = parse___();
-              if (result4 !== null) {
-                result5 = parse_MultiplicativeExpression();
-                if (result5 !== null) {
-                  result2 = [result2, result3, result4, result5];
-                } else {
-                  result2 = null;
-                  pos = pos2;
-                }
-              } else {
-                result2 = null;
-                pos = pos2;
-              }
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-          } else {
-            result2 = null;
-            pos = pos2;
-          }
-          while (result2 !== null) {
-            result1.push(result2);
-            pos2 = pos;
-            result2 = parse___();
-            if (result2 !== null) {
-              result3 = parse_AdditiveOperator();
-              if (result3 !== null) {
-                result4 = parse___();
-                if (result4 !== null) {
-                  result5 = parse_MultiplicativeExpression();
-                  if (result5 !== null) {
-                    result2 = [result2, result3, result4, result5];
-                  } else {
-                    result2 = null;
-                    pos = pos2;
-                  }
-                } else {
-                  result2 = null;
-                  pos = pos2;
-                }
-              } else {
-                result2 = null;
-                pos = pos2;
-              }
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-          }
-          if (result1 !== null) {
-            result0 = [result0, result1];
-          } else {
-            result0 = null;
-            pos = pos1;
-          }
-        } else {
-          result0 = null;
-          pos = pos1;
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, head, tail) {
-              var result = head;
-              for (var i = 0; i < tail.length; i++) {
-                result = {
-                  type:     "AdditiveExpression",
-                  operator: tail[i][1],
-                  left:     result,
-                  right:    tail[i][3]
-                };
-              }
-              return result;
-            })(pos0, result0[0], result0[1]);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_AdditiveOperator() {
-        var result0;
-        
-        if (input.charCodeAt(pos) === 43) {
-          result0 = "+";
-          pos++;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("\"+\"");
-          }
-        }
-        if (result0 === null) {
-          if (input.charCodeAt(pos) === 45) {
-            result0 = "-";
-            pos++;
-          } else {
-            result0 = null;
-            if (reportFailures === 0) {
-              matchFailed("\"-\"");
-            }
-          }
-        }
-        return result0;
-      }
-      
-      function parse_InequalityExpression() {
-        var result0, result1, result2, result3, result4, result5;
-        var pos0, pos1, pos2;
-        
-        pos0 = pos;
-        pos1 = pos;
-        result0 = parse_AdditiveExpression();
-        if (result0 !== null) {
-          result1 = [];
-          pos2 = pos;
-          result2 = parse___();
-          if (result2 !== null) {
-            result3 = parse_InequalityOperator();
-            if (result3 !== null) {
-              result4 = parse___();
-              if (result4 !== null) {
-                result5 = parse_AdditiveExpression();
-                if (result5 !== null) {
-                  result2 = [result2, result3, result4, result5];
-                } else {
-                  result2 = null;
-                  pos = pos2;
-                }
-              } else {
-                result2 = null;
-                pos = pos2;
-              }
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-          } else {
-            result2 = null;
-            pos = pos2;
-          }
-          while (result2 !== null) {
-            result1.push(result2);
-            pos2 = pos;
-            result2 = parse___();
-            if (result2 !== null) {
-              result3 = parse_InequalityOperator();
-              if (result3 !== null) {
-                result4 = parse___();
-                if (result4 !== null) {
-                  result5 = parse_AdditiveExpression();
-                  if (result5 !== null) {
-                    result2 = [result2, result3, result4, result5];
-                  } else {
-                    result2 = null;
-                    pos = pos2;
-                  }
-                } else {
-                  result2 = null;
-                  pos = pos2;
-                }
-              } else {
-                result2 = null;
-                pos = pos2;
-              }
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-          }
-          if (result1 !== null) {
-            result0 = [result0, result1];
-          } else {
-            result0 = null;
-            pos = pos1;
-          }
-        } else {
-          result0 = null;
-          pos = pos1;
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, head, tail) {
-              var result = head;
-              for (var i = 0; i < tail.length; i++) {
-                result = {
-                  type:     "Inequality",
-                  operator: tail[i][1],
-                  left:     result,
-                  right:    tail[i][3]
-                };
-              }
-              return result;
-            })(pos0, result0[0], result0[1]);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_InequalityOperator() {
-        var result0;
-        
-        if (input.substr(pos, 2) === "<=") {
-          result0 = "<=";
-          pos += 2;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("\"<=\"");
-          }
-        }
-        if (result0 === null) {
-          if (input.substr(pos, 2) === ">=") {
-            result0 = ">=";
-            pos += 2;
-          } else {
-            result0 = null;
-            if (reportFailures === 0) {
-              matchFailed("\">=\"");
-            }
-          }
-          if (result0 === null) {
-            if (input.charCodeAt(pos) === 60) {
-              result0 = "<";
-              pos++;
-            } else {
-              result0 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"<\"");
-              }
-            }
-            if (result0 === null) {
-              if (input.charCodeAt(pos) === 62) {
-                result0 = ">";
-                pos++;
-              } else {
-                result0 = null;
-                if (reportFailures === 0) {
-                  matchFailed("\">\"");
-                }
-              }
-            }
-          }
-        }
-        return result0;
-      }
-      
-      function parse_LinearExpression() {
-        var result0, result1, result2, result3, result4, result5;
-        var pos0, pos1, pos2;
-        
-        pos0 = pos;
-        pos1 = pos;
-        result0 = parse_InequalityExpression();
-        if (result0 !== null) {
-          result1 = [];
-          pos2 = pos;
-          result2 = parse___();
-          if (result2 !== null) {
-            if (input.substr(pos, 2) === "==") {
-              result3 = "==";
-              pos += 2;
-            } else {
-              result3 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"==\"");
-              }
-            }
-            if (result3 !== null) {
-              result4 = parse___();
-              if (result4 !== null) {
-                result5 = parse_InequalityExpression();
-                if (result5 !== null) {
-                  result2 = [result2, result3, result4, result5];
-                } else {
-                  result2 = null;
-                  pos = pos2;
-                }
-              } else {
-                result2 = null;
-                pos = pos2;
-              }
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-          } else {
-            result2 = null;
-            pos = pos2;
-          }
-          while (result2 !== null) {
-            result1.push(result2);
-            pos2 = pos;
-            result2 = parse___();
-            if (result2 !== null) {
-              if (input.substr(pos, 2) === "==") {
-                result3 = "==";
-                pos += 2;
-              } else {
-                result3 = null;
-                if (reportFailures === 0) {
-                  matchFailed("\"==\"");
-                }
-              }
-              if (result3 !== null) {
-                result4 = parse___();
-                if (result4 !== null) {
-                  result5 = parse_InequalityExpression();
-                  if (result5 !== null) {
-                    result2 = [result2, result3, result4, result5];
-                  } else {
-                    result2 = null;
-                    pos = pos2;
-                  }
-                } else {
-                  result2 = null;
-                  pos = pos2;
-                }
-              } else {
-                result2 = null;
-                pos = pos2;
-              }
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-          }
-          if (result1 !== null) {
-            result0 = [result0, result1];
-          } else {
-            result0 = null;
-            pos = pos1;
-          }
-        } else {
-          result0 = null;
-          pos = pos1;
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, head, tail) {
-              var result = head;
-              for (var i = 0; i < tail.length; i++) {
-                result = {
-                  type:     "Equality",
-                  operator: tail[i][1],
-                  left:     result,
-                  right:    tail[i][3]
-                };
-              }
-              return result;
-            })(pos0, result0[0], result0[1]);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      
-      function cleanupExpected(expected) {
-        expected.sort();
-        
-        var lastExpected = null;
-        var cleanExpected = [];
-        for (var i = 0; i < expected.length; i++) {
-          if (expected[i] !== lastExpected) {
-            cleanExpected.push(expected[i]);
-            lastExpected = expected[i];
-          }
-        }
-        return cleanExpected;
-      }
-      
-      function computeErrorPosition() {
-        /*
-         * The first idea was to use |String.split| to break the input up to the
-         * error position along newlines and derive the line and column from
-         * there. However IE's |split| implementation is so broken that it was
-         * enough to prevent it.
-         */
-        
-        var line = 1;
-        var column = 1;
-        var seenCR = false;
-        
-        for (var i = 0; i < Math.max(pos, rightmostFailuresPos); i++) {
-          var ch = input.charAt(i);
-          if (ch === "\n") {
-            if (!seenCR) { line++; }
-            column = 1;
-            seenCR = false;
-          } else if (ch === "\r" || ch === "\u2028" || ch === "\u2029") {
-            line++;
-            column = 1;
-            seenCR = true;
-          } else {
-            column++;
-            seenCR = false;
-          }
-        }
-        
-        return { line: line, column: column };
-      }
-      
-      
-      var result = parseFunctions[startRule]();
-      
-      /*
-       * The parser is now in one of the following three states:
-       *
-       * 1. The parser successfully parsed the whole input.
-       *
-       *    - |result !== null|
-       *    - |pos === input.length|
-       *    - |rightmostFailuresExpected| may or may not contain something
-       *
-       * 2. The parser successfully parsed only a part of the input.
-       *
-       *    - |result !== null|
-       *    - |pos < input.length|
-       *    - |rightmostFailuresExpected| may or may not contain something
-       *
-       * 3. The parser did not successfully parse any part of the input.
-       *
-       *   - |result === null|
-       *   - |pos === 0|
-       *   - |rightmostFailuresExpected| contains at least one failure
-       *
-       * All code following this comment (including called functions) must
-       * handle these states.
-       */
-      if (result === null || pos !== input.length) {
-        var offset = Math.max(pos, rightmostFailuresPos);
-        var found = offset < input.length ? input.charAt(offset) : null;
-        var errorPosition = computeErrorPosition();
-        
-        throw new this.SyntaxError(
-          cleanupExpected(rightmostFailuresExpected),
-          found,
-          offset,
-          errorPosition.line,
-          errorPosition.column
-        );
-      }
-      
-      return result;
-    },
-    
-    /* Returns the parser source code. */
-    toSource: function() { return this._source; }
-  };
-  
-  /* Thrown when a parser encounters a syntax error. */
-  
-  result.SyntaxError = function(expected, found, offset, line, column) {
-    function buildMessage(expected, found) {
-      var expectedHumanized, foundHumanized;
-      
-      switch (expected.length) {
-        case 0:
-          expectedHumanized = "end of input";
-          break;
-        case 1:
-          expectedHumanized = expected[0];
-          break;
-        default:
-          expectedHumanized = expected.slice(0, expected.length - 1).join(", ")
-            + " or "
-            + expected[expected.length - 1];
-      }
-      
-      foundHumanized = found ? quote(found) : "end of input";
-      
-      return "Expected " + expectedHumanized + " but " + foundHumanized + " found.";
-    }
-    
-    this.name = "SyntaxError";
-    this.expected = expected;
-    this.found = found;
-    this.message = buildMessage(expected, found);
-    this.offset = offset;
-    this.line = line;
-    this.column = column;
-  };
-  
-  result.SyntaxError.prototype = Error.prototype;
-  
-  return result;
-})();
-
-});
-require.register("slightlyoff-cassowary.js/src/parser/api.js", function(exports, require, module){
-// Copyright (C) 2013, Alex Russell <slightlyoff@chromium.org>
-// Use of this source code is governed by
-//    http://www.apache.org/licenses/LICENSE-2.0
-
-(function(c){
-"use strict";
-
-var solver = new c.SimplexSolver();
-var vars = {};
-var exprs = {};
-
-var weak = c.Strength.weak;
-var medium = c.Strength.medium;
-var strong = c.Strength.strong;
-var required = c.Strength.required;
-
-var _c = function(expr) {
-  if (exprs[expr]) {
-    return exprs[expr];
-  }
-  switch(expr.type) {
-    case "Inequality":
-      var op = (expr.operator == "<=") ? c.LEQ : c.GEQ;
-      var i = new c.Inequality(_c(expr.left), op, _c(expr.right), weak);
-      solver.addConstraint(i);
-      return i;
-    case "Equality":
-      var i = new c.Equation(_c(expr.left), _c(expr.right), weak);
-      solver.addConstraint(i);
-      return i;
-    case "MultiplicativeExpression":
-      var i = c.times(_c(expr.left), _c(expr.right));
-      solver.addConstraint(i);
-      return i;
-    case "AdditiveExpression":
-      if (expr.operator == "+") {
-        return c.plus(_c(expr.left), _c(expr.right));
-      } else {
-        return c.minus(_c(expr.left), _c(expr.right));
-      }
-    case "NumericLiteral":
-      return new c.Expression(expr.value);
-    case "Variable":
-      // console.log(expr);
-      if(!vars[expr.name]) {
-        vars[expr.name] = new c.Variable({ name: expr.name });
-      }
-      return vars[expr.name];
-    case "UnaryExpression":
-      console.log("UnaryExpression...WTF?");
-      break;
-  }
-};
-
-var compile = function(expressions) {
-  return expressions.map(_c);
-};
-
-// Global API entrypoint
-c._api = function() {
-  var args = Array.prototype.slice.call(arguments);
-  if (args.length == 1) {
-    if(typeof args[0] == "string") {
-      // Parse and execute it
-      var r = c.parser.parse(args[0]);
-      return compile(r);
-    } else if(typeof args[0] == "function") {
-      solver._addCallback(args[0]);
-    }
-  }
-};
-
-})(this["c"]||module.parent.exports||{});
-
-});
-require.register("gss/lib/Engine.js", function(exports, require, module){
+require.register("gss", function (exports, module) {
 /* Base class: Engine
 
 Engine is a base class for scripting environment.
@@ -19796,28 +19702,28 @@ var Engine,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 Engine = (function() {
-  Engine.prototype.Command = require('./Command');
+  Engine.prototype.Command = require('gss/lib/Command.js');
 
-  Engine.prototype.Domain = require('./Domain');
+  Engine.prototype.Domain = require('gss/lib/Domain.js');
 
-  Engine.prototype.Update = require('./Update');
+  Engine.prototype.Update = require('gss/lib/Update.js');
 
-  Engine.prototype.Query = require('./Query');
+  Engine.prototype.Query = require('gss/lib/Query.js');
 
-  Engine.prototype.Console = require('./utilities/Console');
+  Engine.prototype.Console = require('gss/lib/utilities/Console.js');
 
-  Engine.prototype.Inspector = require('./utilities/Inspector');
+  Engine.prototype.Inspector = require('gss/lib/utilities/Inspector.js');
 
-  Engine.prototype.Exporter = require('./utilities/Exporter');
+  Engine.prototype.Exporter = require('gss/lib/utilities/Exporter.js');
 
   Engine.prototype.Domains = {
-    Document: require('./domains/Document'),
-    Abstract: require('./domains/Abstract'),
-    Intrinsic: require('./domains/Intrinsic'),
-    Numeric: require('./domains/Numeric'),
-    Linear: require('./domains/Linear'),
-    Finite: require('./domains/Finite'),
-    Boolean: require('./domains/Boolean')
+    Document: require('gss/lib/domains/Document.js'),
+    Abstract: require('gss/lib/domains/Abstract.js'),
+    Intrinsic: require('gss/lib/domains/Intrinsic.js'),
+    Numeric: require('gss/lib/domains/Numeric.js'),
+    Linear: require('gss/lib/domains/Linear.js'),
+    Finite: require('gss/lib/domains/Finite.js'),
+    Boolean: require('gss/lib/domains/Boolean.js')
   };
 
   function Engine() {
@@ -19885,6 +19791,7 @@ Engine = (function() {
     this.solved = new this.Boolean;
     this.solved.displayName = 'Solved';
     this.solved.priority = -200;
+    this.solved.finalized = true;
     this.solved.setup();
     this.values = this.solved.values;
     for (property in assumed) {
@@ -20253,7 +20160,7 @@ Engine = (function() {
   };
 
   Engine.prototype.getVariableDomain = function(operation, Default) {
-    var domain, i, index, intrinsic, op, path, prefix, property, _ref, _ref1, _ref2, _ref3, _ref4;
+    var i, intrinsic, op, path, property, props, _ref, _ref1, _ref2, _ref3;
     if (operation.domain) {
       return operation.domain;
     }
@@ -20263,23 +20170,20 @@ Engine = (function() {
     }
     if (this.assumed.values.hasOwnProperty(path)) {
       return this.assumed;
-    } else if (property && (intrinsic = (_ref = this.intrinsic) != null ? _ref.properties : void 0)) {
-      if ((intrinsic[path] != null) || (intrinsic[property] && !intrinsic[property].matcher)) {
-        return this.intrinsic;
+    } else if (property && (intrinsic = this.intrinsic)) {
+      if (props = intrinsic.properties) {
+        if ((props[path] != null) || (props[property] && !props[property].matcher)) {
+          return intrinsic;
+        }
+      }
+      if (property.indexOf('computed-') === 0 || property.indexOf('intrinsic-') === 0) {
+        return intrinsic;
       }
     }
     if (Default) {
       return Default;
     }
-    if (property && (index = property.indexOf('-')) > -1) {
-      prefix = property.substring(0, index);
-      if ((domain = this[prefix])) {
-        if (domain instanceof this.Domain) {
-          return domain;
-        }
-      }
-    }
-    if (op = (_ref1 = this.variables[path]) != null ? (_ref2 = _ref1.constraints) != null ? (_ref3 = _ref2[0]) != null ? (_ref4 = _ref3.operations[0]) != null ? _ref4.domain : void 0 : void 0 : void 0 : void 0) {
+    if (op = (_ref = this.variables[path]) != null ? (_ref1 = _ref.constraints) != null ? (_ref2 = _ref1[0]) != null ? (_ref3 = _ref2.operations[0]) != null ? _ref3.domain : void 0 : void 0 : void 0 : void 0) {
       return op;
     }
     if (this.domain.url) {
@@ -20549,7 +20453,8 @@ Engine.clone = Engine.prototype.clone = function(object) {
 module.exports = this.GSS = Engine;
 
 });
-require.register("gss/lib/Domain.js", function(exports, require, module){
+
+require.register("gss/lib/Domain.js", function (exports, module) {
 /* Domain: Observable object. 
 
 Has 3 use cases:
@@ -20603,7 +20508,7 @@ Domain = (function() {
       this.Property.compile(this.Properties.prototype, this);
       Properties = this.Properties;
     }
-    this.properties = new (Properties || Object);
+    this.properties = new (Properties || Object)(this.engine);
     if (this.url && this.getWorkerURL) {
       if (this.url && (this.url = typeof this.getWorkerURL === "function" ? this.getWorkerURL(this.url) : void 0)) {
         if (engine !== this) {
@@ -20794,7 +20699,7 @@ Domain = (function() {
           break;
         }
         if (value != null) {
-          watcher.command.ascend(this, watcher, watchers[index + 1], watchers[index + 2], value, true);
+          watcher.command.solve(this, watcher, watchers[index + 1], watchers[index + 2], true);
         } else {
           watcher.command.patch(this, watcher, watchers[index + 1], watchers[index + 2]);
         }
@@ -21109,7 +21014,8 @@ Domain = (function() {
 module.exports = Domain;
 
 });
-require.register("gss/lib/Command.js", function(exports, require, module){
+
+require.register("gss/lib/Command.js", function (exports, module) {
 var Command, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -21266,7 +21172,7 @@ Command = (function() {
         if (argument.parent == null) {
           argument.parent = operation;
         }
-        type = engine.Command(argument, operation, i).type;
+        type = (argument.domain || engine).Command(argument, operation, i).type;
       } else {
         type = this.types[typeof argument];
         if (type === 'Object') {
@@ -21351,8 +21257,9 @@ Command = (function() {
   };
 
   Command.prototype.transfer = function(engine, operation, continuation, scope, ascender, ascending, top, replacement) {
+    debugger;
     var domain, meta, parent, path, value, _ref, _ref1, _ref2;
-    if ((meta = this.getMeta(operation))) {
+    if ((meta = this.getMeta(operation)) && !engine.finalized) {
       for (path in operation.variables) {
         if ((value = (replacement || engine).values[path]) != null) {
           (meta.values || (meta.values = {}))[path] = value;
@@ -22032,13 +21939,14 @@ Command.Meta = (function(_super) {
 module.exports = Command;
 
 });
-require.register("gss/lib/Update.js", function(exports, require, module){
+
+require.register("gss/lib/Update.js", function (exports, module) {
 var Update, Updater,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 Updater = function(engine) {
   var Update, property, value, _ref;
-  Update = function(problem, domain, parent, Domain) {
+  Update = function(problem, domain, parent, Domain, Auto) {
     var arg, index, object, result, update, vardomain, _i, _len;
     if (this instanceof Update) {
       this.problems = problem && (domain.push && problem || [problem]) || [];
@@ -22046,6 +21954,12 @@ Updater = function(engine) {
       return;
     }
     update = void 0;
+    if (typeof problem[0] === 'string') {
+      if (!engine.domain.signatures[problem[0]]) {
+        Domain = problem.domain = engine.solved;
+        debugger;
+      }
+    }
     for (index = _i = 0, _len = problem.length; _i < _len; index = ++_i) {
       arg = problem[index];
       if (!(arg != null ? arg.push : void 0)) {
@@ -22071,7 +21985,7 @@ Updater = function(engine) {
     }
     if (!(problem[0] instanceof Array)) {
       if (update) {
-        update.wrap(problem, parent, domain || Domain);
+        update.wrap(problem, parent, domain || Domain, engine.intrinsic);
       } else if (problem[0] !== 'remove') {
         return;
       } else {
@@ -22185,7 +22099,7 @@ Update.prototype = {
       }
     }
   },
-  wrap: function(operation, parent, Domain) {
+  wrap: function(operation, parent, Domain, Auto) {
     var argument, domain, i, index, j, other, position, positions, problems, signed, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _ref;
     positions = void 0;
     _ref = this.problems;
@@ -22207,9 +22121,10 @@ Update.prototype = {
         }
       }
     }
-    if (Domain && (!other || other.displayName !== Domain.displayName)) {
+    if (!other || (Domain && other.displayName !== Domain.displayName)) {
       other = Domain;
-      position = this.push([operation], Domain);
+      debugger;
+      position = this.push([operation], other);
     }
     if (!positions) {
       this.push([operation], null);
@@ -22636,12 +22551,13 @@ Update.prototype = {
 module.exports = Update;
 
 });
-require.register("gss/lib/Query.js", function(exports, require, module){
+
+require.register("gss/lib/Query.js", function (exports, module) {
 var Command, Query,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Command = require('./Command');
+Command = require('gss/lib/Command.js');
 
 Query = (function(_super) {
   __extends(Query, _super);
@@ -23923,12 +23839,385 @@ Query = (function(_super) {
 module.exports = Query;
 
 });
-require.register("gss/lib/Condition.js", function(exports, require, module){
+
+require.register("gss/lib/Style.js", function (exports, module) {
+var Matcher, Shorthand, Style;
+
+Style = function(definition, name, styles, keywords, types, keys, properties, required, optional, depth) {
+  var callback, def, index, initial, item, key, matcher, max, p, pad, previous, prop, property, requirement, style, substyle, type, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3;
+  if (keywords == null) {
+    keywords = {};
+  }
+  if (types == null) {
+    types = [];
+  }
+  if (keys == null) {
+    keys = [];
+  }
+  if (properties == null) {
+    properties = [];
+  }
+  if (required == null) {
+    required = {};
+  }
+  if (depth == null) {
+    depth = 0;
+  }
+  requirement = true;
+  pad = initial = previous = void 0;
+  max = depth;
+  if (definition.length === void 0) {
+    for (key in definition) {
+      def = definition[key];
+      if (typeof def !== 'object') {
+        continue;
+      }
+      property = key.indexOf('-') > -1 && styles[key] && key || name + '-' + key;
+      style = this.Style(def, property, styles, null, null, null, null, null, null, null, depth);
+      if (optional !== true) {
+        required[property] = optional || requirement;
+        requirement = property;
+      }
+      if (style.types) {
+        _ref = style.types;
+        for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+          type = _ref[index];
+          types.push(type);
+          prop = ((_ref1 = style.keys) != null ? _ref1[index] : void 0) || property;
+          keys.push(prop);
+          if (properties.indexOf(prop) === -1) {
+            properties.push(prop);
+          }
+        }
+      }
+      if (style.keywords) {
+        _ref2 = style.keywords;
+        for (prop in _ref2) {
+          value = _ref2[prop];
+          for (_j = 0, _len1 = value.length; _j < _len1; _j++) {
+            item = value[_j];
+            _ref3 = item.push && item || [item];
+            for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
+              p = _ref3[_k];
+              if (properties.indexOf(p) === -1) {
+                properties.push(p);
+              }
+            }
+          }
+          (keywords[prop] || (keywords[prop] = [])).push(value);
+        }
+      }
+    }
+  } else {
+    for (index = _l = 0, _len3 = definition.length; _l < _len3; index = ++_l) {
+      property = definition[index];
+      switch (typeof property) {
+        case "object":
+          substyle = this.Style(property, name, styles, keywords, types, keys, properties, required, (property.push && (requirement || true)) || optional, depth + 1);
+          pad = property.pad || substyle.pad;
+          max = Math.max(substyle.depth, max);
+          break;
+        case "string":
+          if (type = this.engine[property]) {
+            types.push(type);
+            if (initial === void 0) {
+              /*if storage = Types[type.displayName + 's']
+                for key of storage
+                  if type.call(@, key)
+                    initial = key
+                  break\
+              */
+
+              if (initial == null) {
+                initial = 0;
+              }
+            }
+          } else {
+            if (initial == null) {
+              initial = property;
+            }
+            (keywords[property] || (keywords[property] = [])).push(name);
+          }
+          break;
+        default:
+          if (initial == null) {
+            initial = property;
+          }
+      }
+    }
+  }
+  if (typeof initial === 'function') {
+    callback = initial;
+    initial = void 0;
+  }
+  if (initial === void 0) {
+    initial = new Shorthand;
+    initial.displayName = initial.prototype.property = name;
+    for (_m = 0, _len4 = properties.length; _m < _len4; _m++) {
+      property = properties[_m];
+      initial.prototype[property] = styles[property].initial;
+    }
+  } else if (keys.length === 0) {
+    keys = void 0;
+  }
+  matcher = new Matcher(name, keywords, types, keys, required, pad, max, initial, callback);
+  if (initial != null ? initial.displayName : void 0) {
+    initial.prototype.style = matcher;
+    initial.prototype.styles = styles;
+    initial.prototype.properties = properties;
+  }
+  matcher.format = function(value) {
+    return Shorthand.prototype.toExpressionString(name, value, false, styles);
+  };
+  return styles[name] = matcher;
+};
+
+Shorthand = (function() {
+  function Shorthand(callback) {
+    callback || (callback = function(options) {
+      var key, value;
+      if (options) {
+        for (key in options) {
+          value = options[key];
+          this[key] = value;
+        }
+      }
+      return this;
+    });
+    callback.prototype = this;
+    return callback;
+  }
+
+  Shorthand.prototype.format = function(styles, number) {
+    var expression, i, index, k, key, keys, pad, prefix, previous, string, style, types, value, _i, _j, _len, _ref, _ref1;
+    string = void 0;
+    if (this.style.keys) {
+      while (style = this[i = (i != null ? i : -1) + 1]) {
+        string = (string && string + ', ' || '') + style.format(styles, i + 1);
+      }
+      pad = this.style.pad;
+      _ref = keys = this.properties;
+      for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+        key = _ref[index];
+        if (index && pad) {
+          if (index > 2) {
+            if (this.equals(key, keys[1])) {
+              continue;
+            }
+          } else if (index > 1) {
+            if (this.equals(key, keys[0]) && (!this.hasOwnProperty[keys[3]] || this.equals(keys[3], keys[1]))) {
+              continue;
+            }
+          } else {
+            if (this.equals(key, keys[0]) && this.equals(keys[1], keys[2]) && this.equals(keys[2], keys[3])) {
+              continue;
+            }
+          }
+        } else {
+          if (styles && number && ((value = styles[key + '-' + number]) != null)) {
+            prefix = previous = void 0;
+            if (typeof value !== 'string') {
+              keys = this.style.keys;
+              types = this.style.types;
+              for (index = _j = _ref1 = keys.indexOf(key) - 1; _j > 0; index = _j += -1) {
+                if ((k = keys[index]) !== previous) {
+                  if (this.hasOwnProperty(k)) {
+                    break;
+                  }
+                  if (types[index] === this.engine.Length) {
+                    expression = this.toExpressionString(k, this[k]);
+                    prefix = ((string || prefix) && ' ' || '') + expression + (prefix && ' ' + prefix || '');
+                    previous = k;
+                  }
+                }
+              }
+            }
+            if (prefix) {
+              string += prefix;
+            }
+          } else {
+            if (!this.hasOwnProperty(key)) {
+              continue;
+            }
+            value = this[key];
+          }
+        }
+        expression = this.toExpressionString(key, value);
+        string = (string && string + ' ' || '') + expression;
+      }
+    }
+    return string;
+  };
+
+  Shorthand.prototype.equals = function(first, second) {
+    var a, b;
+    a = this[first];
+    b = this[second];
+    if (typeof a !== 'object') {
+      return a === b;
+    } else {
+      return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+    }
+  };
+
+  Shorthand.prototype.toExpressionString = function(key, operation, expression, styles) {
+    var index, name, string, type, types, _i, _j, _len, _ref;
+    if (styles == null) {
+      styles = this.styles;
+    }
+    switch (typeof operation) {
+      case 'object':
+        name = operation[0];
+        if (name === '%' || this.styles.signatures[name]) {
+          return this.toExpressionString(key, operation[1], true) + name;
+        } else {
+          string = name + '(';
+          for (index = _i = 1, _ref = operation.length - 1; 1 <= _ref ? _i <= _ref : _i >= _ref; index = 1 <= _ref ? ++_i : --_i) {
+            if (index !== 1) {
+              string += ',';
+            }
+            string += this.toExpressionString(key, operation[index], true);
+          }
+          return string + ')';
+        }
+        break;
+      case 'number':
+        if (!expression) {
+          types = styles[key].types;
+          for (_j = 0, _len = types.length; _j < _len; _j++) {
+            type = types[_j];
+            if (type.displayName === 'Integer' || type.displayName === 'Float') {
+              return operation;
+            }
+          }
+          if (operation !== 0) {
+            operation = Math.floor(operation) + 'px';
+          }
+        }
+    }
+    return operation;
+  };
+
+  return Shorthand;
+
+})();
+
+Matcher = function(name, keywords, types, keys, required, pad, depth, initial, callback) {
+  var matcher;
+  matcher = function() {
+    var arg, args, argument, i, index, j, matched, property, props, req, result, returned, type, typed, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
+    result = matched = void 0;
+    if (pad && arguments.length < 4) {
+      args = [arguments[0], (_ref = arguments[1]) != null ? _ref : arguments[0], (_ref1 = arguments[2]) != null ? _ref1 : arguments[0], (_ref2 = arguments[1]) != null ? _ref2 : arguments[0]];
+    }
+    _ref3 = args || arguments;
+    for (i = _i = 0, _len = _ref3.length; _i < _len; i = ++_i) {
+      argument = _ref3[i];
+      switch (typeof argument) {
+        case 'object':
+          if (typeof argument[0] !== 'string' || argument.length === 1) {
+            if (matched = matcher.apply(this, argument)) {
+              (result || (result = new initial))[i] = matched;
+            } else {
+              return;
+            }
+          }
+          break;
+        case 'string':
+          if (props = keywords[argument]) {
+            if (keys) {
+              j = pad && i || 0;
+              while ((property = props[j++]) != null) {
+                if (!result || !result.hasOwnProperty(property)) {
+                  if (!required[property] || (result && result[required[property]] !== void 0)) {
+                    matched = (result || (result = new initial))[property] = argument;
+                    break;
+                  }
+                } else if (props.length === 1 && argument !== result[property]) {
+                  arg = argument;
+                  argument = result[property];
+                  result[property] = arg;
+                  if (typeof argument === 'string' && (props = keywords[argument])) {
+                    j = pad && i || 0;
+                    continue;
+                  }
+                  break;
+                }
+                if (pad) {
+                  break;
+                }
+              }
+            } else {
+              return argument;
+            }
+          }
+      }
+      if (types && (matched == null)) {
+        if (keys) {
+          for (index = _j = 0, _len1 = keys.length; _j < _len1; index = ++_j) {
+            property = keys[index];
+            if (!result || (!result.hasOwnProperty(property) && (!(req = required[property]) || result.hasOwnProperty(req)))) {
+              if ((matched = types[index].call(this, argument)) !== void 0) {
+                (result || (result = new initial))[property] = matched;
+                break;
+              }
+            }
+          }
+        } else {
+          for (index = _k = 0, _len2 = types.length; _k < _len2; index = ++_k) {
+            type = types[index];
+            if ((typed = type.call(this, argument)) !== void 0) {
+              return typed;
+            }
+          }
+        }
+      }
+      if (matched == null) {
+        return;
+      }
+      matched = void 0;
+    }
+    if (callback && ((returned = callback(result)) != null)) {
+      return returned;
+    }
+    return result;
+  };
+  matcher.matcher = true;
+  matcher.displayName = name;
+  if (keywords != null) {
+    matcher.keywords = keywords;
+  }
+  if (types != null) {
+    matcher.types = types;
+  }
+  if (keys != null) {
+    matcher.keys = keys;
+  }
+  if (pad != null) {
+    matcher.pad = pad;
+  }
+  if (depth != null) {
+    matcher.depth = depth;
+  }
+  if (initial != null) {
+    matcher.initial = initial;
+  }
+  if (callback != null) {
+    matcher.callback = callback;
+  }
+  return matcher;
+};
+
+module.exports = Style;
+
+});
+
+require.register("gss/lib/commands/Condition.js", function (exports, module) {
 var Condition, Query,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Query = require('./Query');
+Query = require('gss/lib/Query.js');
 
 Condition = (function(_super) {
   __extends(Condition, _super);
@@ -24148,10 +24437,11 @@ Condition.define('elsif', {});
 module.exports = Condition;
 
 });
-require.register("gss/lib/Constraint.js", function(exports, require, module){
+
+require.register("gss/lib/commands/Constraint.js", function (exports, module) {
 var Command, Constraint;
 
-Command = require('./Command');
+Command = require('gss/lib/Command.js');
 
 Constraint = Command.extend({
   type: 'Constraint',
@@ -24463,12 +24753,13 @@ Constraint = Command.extend({
 module.exports = Constraint;
 
 });
-require.register("gss/lib/Iterator.js", function(exports, require, module){
+
+require.register("gss/lib/commands/Iterator.js", function (exports, module) {
 var Command, Iterator, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Command = require('./Command');
+Command = require('gss/lib/Command.js');
 
 Iterator = (function(_super) {
   __extends(Iterator, _super);
@@ -24530,7 +24821,8 @@ Iterator.define({
 module.exports = Iterator;
 
 });
-require.register("gss/lib/Selector.js", function(exports, require, module){
+
+require.register("gss/lib/commands/Selector.js", function (exports, module) {
 /* Selectors with custom combinators 
 inspired by Slick of mootools fame (shout-out & credits)
 
@@ -24542,13 +24834,13 @@ var Query, Selector, dummy,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __slice = [].slice;
 
-Query = require('./Query');
+Query = require('gss/lib/Query.js');
 
-require('../vendor/weakmap.js');
+require('gss/vendor/weakmap.js');
 
-require('../vendor/MutationObserver.js');
+require('gss/vendor/MutationObserver.js');
 
-require('../vendor/MutationObserver.attributes.js');
+require('gss/vendor/MutationObserver.attributes.js');
 
 Selector = (function(_super) {
   __extends(Selector, _super);
@@ -25610,7 +25902,8 @@ if (typeof document !== "undefined" && document !== null) {
 module.exports = Selector;
 
 });
-require.register("gss/lib/Style.js", function(exports, require, module){
+
+require.register("gss/lib/commands/Style.js", function (exports, module) {
 var Matcher, Shorthand, Style;
 
 Style = function(definition, name, styles, keywords, types, keys, properties, required, optional, depth) {
@@ -25688,7 +25981,7 @@ Style = function(definition, name, styles, keywords, types, keys, properties, re
           max = Math.max(substyle.depth, max);
           break;
         case "string":
-          Types = this.Types;
+          Types = this.Type;
           if (type = Types[property]) {
             types.push(type);
             if (initial === void 0) {
@@ -25805,7 +26098,7 @@ Shorthand = (function() {
                   if (this.hasOwnProperty(k)) {
                     break;
                   }
-                  if (types[index] === this.styles.Types.Length) {
+                  if (types[index] === this.styles.Type.Length) {
                     expression = this.toExpressionString(k, this[k]);
                     prefix = ((string || prefix) && ' ' || '') + expression + (prefix && ' ' + prefix || '');
                     previous = k;
@@ -25849,7 +26142,7 @@ Shorthand = (function() {
     switch (typeof operation) {
       case 'object':
         name = operation[0];
-        if (name === '%' || this.styles.Units[name] || this.styles.Types.Times[name]) {
+        if (name === '%' || this.styles.Unit[name] || this.styles.Type.Times[name]) {
           return this.toExpressionString(key, operation[1], true) + name;
         } else {
           string = name + '(';
@@ -25992,16 +26285,17 @@ Matcher = function(name, keywords, types, keys, required, pad, depth, initial, c
 module.exports = Style;
 
 });
-require.register("gss/lib/Stylesheet.js", function(exports, require, module){
+
+require.register("gss/lib/commands/Stylesheet.js", function (exports, module) {
 var Command, Parser, Query, Stylesheet, _ref, _ref1,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Parser = require('ccss-compiler');
+Parser = require('gss~ccss-compiler@550e442f2c64992f3a8c7babdaf90b5c643c4465');
 
-Query = require('./Query');
+Command = require('gss/lib/Command.js');
 
-Command = require('./Command');
+Query = require('gss/lib/Query.js');
 
 Stylesheet = (function(_super) {
   __extends(Stylesheet, _super);
@@ -26441,7 +26735,9 @@ Stylesheet = (function(_super) {
     return this.key;
   };
 
-  Stylesheet.prototype["continue"] = Query.prototype["continue"];
+  Stylesheet.prototype["continue"] = function() {
+    return Query.prototype["continue"].apply(this, arguments);
+  };
 
   return Stylesheet;
 
@@ -26627,12 +26923,13 @@ Stylesheet.Import = (function(_super) {
 module.exports = Stylesheet;
 
 });
-require.register("gss/lib/Variable.js", function(exports, require, module){
+
+require.register("gss/lib/commands/Variable.js", function (exports, module) {
 var Command, Variable, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Command = require('./Command');
+Command = require('gss/lib/Command.js');
 
 Variable = (function(_super) {
   __extends(Variable, _super);
@@ -26654,6 +26951,7 @@ Variable = (function(_super) {
   Variable.prototype.before = function(args, engine, operation, continuation, scope, ascender, ascending) {
     var value, _ref;
     if ((value = ascending != null ? (_ref = ascending.values) != null ? _ref[args[0]] : void 0 : void 0) != null) {
+      debugger;
       return value;
     }
   };
@@ -26718,13 +27016,70 @@ Variable.Expression.algebra = {
   },
   '/': function(left, right) {
     return left / right;
+  },
+  'min': function(left, right) {
+    return Math.min(left, right);
+  },
+  'max': function(left, right) {
+    return Math.max(left, right);
   }
 };
 
 module.exports = Variable;
 
 });
-require.register("gss/lib/domains/Numeric.js", function(exports, require, module){
+
+require.register("gss/lib/commands/Unit.js", function (exports, module) {
+var Unit, Variable, _ref,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Variable = require('gss/lib/commands/Variable.js');
+
+Unit = (function(_super) {
+  __extends(Unit, _super);
+
+  function Unit() {
+    _ref = Unit.__super__.constructor.apply(this, arguments);
+    return _ref;
+  }
+
+  Unit.prototype.signature = [
+    {
+      value: ['Variable', 'Number']
+    }
+  ];
+
+  Unit.define({
+    em: function(value, engine, operation, continuation, scope) {
+      return ['*', ['px', value], ['get', 'font-size']];
+    },
+    rem: function(value, engine, operation, continuation, scope) {
+      return ['*', ['px', value], ['get', this.engine.getPath(engine.scope._gss_id, 'font-size')]];
+    },
+    vw: function(value, engine, operation, continuation, scope) {
+      return ['*', ['/', ['px', value], 100], ['get', '::window[width]']];
+    },
+    vh: function(value, engine, operation, continuation, scope) {
+      return ['*', ['/', ['px', value], 100], ['get', '::window[height]']];
+    },
+    vmin: function(value, engine, operation, continuation, scope) {
+      return ['*', ['/', ['px', value], 100], ['min', ['get', '::window[height]'], ['get', '::window[width]']]];
+    },
+    vmax: function(value, engine, operation, continuation, scope) {
+      return ['*', ['/', ['px', value], 100], ['max', ['get', '::window[height]'], ['get', '::window[width]']]];
+    }
+  });
+
+  return Unit;
+
+})(Variable);
+
+module.exports = Unit;
+
+});
+
+require.register("gss/lib/domains/Numeric.js", function (exports, module) {
 /* Domain: Solved values
 
 Merges values from all other domains, 
@@ -26735,11 +27090,11 @@ var Command, Domain, Numeric, Variable, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Domain = require('../Domain');
+Domain = require('gss/lib/Domain.js');
 
-Command = require('../Command');
+Command = require('gss/lib/Command.js');
 
-Variable = require('../Variable');
+Variable = require('gss/lib/commands/Variable.js');
 
 Numeric = (function(_super) {
   __extends(Numeric, _super);
@@ -26750,6 +27105,8 @@ Numeric = (function(_super) {
   }
 
   Numeric.prototype.priority = 200;
+
+  Numeric.prototype.Units = require('gss/lib/commands/Unit.js');
 
   Numeric.prototype.url = null;
 
@@ -26802,19 +27159,20 @@ Numeric.prototype.Meta = Command.Meta.extend({}, {
 module.exports = Numeric;
 
 });
-require.register("gss/lib/domains/Abstract.js", function(exports, require, module){
+
+require.register("gss/lib/domains/Abstract.js", function (exports, module) {
 var Abstract, Command, Constraint, Domain, Top, Variable, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __slice = [].slice;
 
-Domain = require('../Domain');
+Domain = require('gss/lib/Domain.js');
 
-Command = require('../Command');
+Command = require('gss/lib/Command.js');
 
-Variable = require('../Variable');
+Variable = require('gss/lib/commands/Variable.js');
 
-Constraint = require('../Constraint');
+Constraint = require('gss/lib/commands/Constraint.js');
 
 Abstract = (function(_super) {
   __extends(Abstract, _super);
@@ -26828,11 +27186,13 @@ Abstract = (function(_super) {
 
   Abstract.prototype.helps = true;
 
-  Abstract.prototype.Iterator = require('../Iterator');
+  Abstract.prototype.Iterator = require('gss/lib/commands/Iterator.js');
 
-  Abstract.prototype.Condition = require('../Condition');
+  Abstract.prototype.Condition = require('gss/lib/commands/Condition.js');
 
-  Abstract.prototype.Properties = require('../properties/Axioms');
+  Abstract.prototype.Unit = require('gss/lib/commands/Unit.js');
+
+  Abstract.prototype.Properties = require('gss/lib/properties/Dimensions.js');
 
   return Abstract;
 
@@ -27034,14 +27394,15 @@ Abstract.prototype.Assignment.Style = Abstract.prototype.Assignment.extend({
 module.exports = Abstract;
 
 });
-require.register("gss/lib/domains/Boolean.js", function(exports, require, module){
+
+require.register("gss/lib/domains/Boolean.js", function (exports, module) {
 var Boolean, Constraint, Numeric, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Numeric = require('./Numeric');
+Numeric = require('gss/lib/domains/Numeric.js');
 
-Constraint = require('../Constraint');
+Constraint = require('gss/lib/commands/Constraint.js');
 
 Boolean = (function(_super) {
   __extends(Boolean, _super);
@@ -27094,12 +27455,13 @@ Boolean.prototype.Constraint = Constraint.extend({
 module.exports = Boolean;
 
 });
-require.register("gss/lib/domains/Intrinsic.js", function(exports, require, module){
+
+require.register("gss/lib/domains/Intrinsic.js", function (exports, module) {
 var Intrinsic, Numeric, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Numeric = require('./Numeric');
+Numeric = require('gss/lib/domains/Numeric.js');
 
 Intrinsic = (function(_super) {
   __extends(Intrinsic, _super);
@@ -27117,30 +27479,56 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.url = null;
 
-  Intrinsic.prototype.Style = require('../Style');
+  Intrinsic.prototype.Getters = require('gss/lib/properties/Getters.js');
 
-  Intrinsic.prototype.Styles = require('../properties/Styles');
+  Intrinsic.prototype.Styles = require('gss/lib/properties/Styles.js');
 
-  Intrinsic.prototype.Units = require('../properties/Units');
+  Intrinsic.prototype.Style = require('gss/lib/Style.js');
 
-  Intrinsic.prototype.Types = require('../properties/Types');
+  Intrinsic.Primitive = require('gss/lib/types/Primitive.js');
 
-  Intrinsic.prototype.Transformation = require('../properties/Transformations');
+  Intrinsic.Measurement = require('gss/lib/types/Measurement.js');
 
-  Intrinsic.prototype.Dimensions = require('../properties/Dimensions');
+  Intrinsic.prototype.Matrix = require('gss/lib/types/Matrix.js');
+
+  Intrinsic.prototype.Easing = require('gss/lib/types/Easing.js');
+
+  Intrinsic.prototype.URL = require('gss/lib/types/URL.js');
+
+  Intrinsic.prototype.Number = Intrinsic.Primitive.Number;
+
+  Intrinsic.prototype.Integer = Intrinsic.Primitive.Integer;
+
+  Intrinsic.prototype.String = Intrinsic.Primitive.String;
+
+  Intrinsic.prototype.Strings = Intrinsic.Primitive.Strings;
+
+  Intrinsic.prototype.Size = Intrinsic.Primitive.Size;
+
+  Intrinsic.prototype.Position = Intrinsic.Primitive.Position;
+
+  Intrinsic.prototype.Length = Intrinsic.Measurement.Size;
+
+  Intrinsic.prototype.Time = Intrinsic.Measurement.Time;
+
+  Intrinsic.prototype.Frequency = Intrinsic.Measurement.Frequency;
+
+  Intrinsic.prototype.Angle = Intrinsic.Measurement.Angle;
 
   Intrinsic.prototype.Properties = (function() {
     var Properties, property, value, _ref1;
-    Properties = function() {};
+    Properties = function(engine) {
+      if (engine) {
+        return this.engine = engine;
+      }
+    };
     Properties.prototype = new Intrinsic.prototype.Styles;
     Properties.prototype = new Properties;
-    _ref1 = Intrinsic.prototype.Dimensions.prototype;
+    _ref1 = Intrinsic.prototype.Getters.prototype;
     for (property in _ref1) {
       value = _ref1[property];
       Properties.prototype[property] = value;
     }
-    Properties.prototype.Units = Intrinsic.prototype.Units;
-    Properties.prototype.Types = Intrinsic.prototype.Types;
     return Properties;
   })();
 
@@ -27260,31 +27648,33 @@ Intrinsic = (function(_super) {
   Intrinsic.prototype.get = function(object, property, continuation) {
     var id, j, path, prop, value;
     path = this.getPath(object, property);
-    if ((prop = this.properties[path]) != null) {
-      if (typeof prop === 'function') {
-        value = prop.call(this, object, continuation);
+    if ((value = Numeric.prototype.get.call(this, null, path, continuation)) == null) {
+      if ((prop = this.properties[path]) != null) {
+        if (typeof prop === 'function') {
+          value = prop.call(this, object, continuation);
+        } else {
+          value = prop;
+        }
+        this.set(null, path, value);
+        return value;
       } else {
-        value = prop;
-      }
-      this.set(null, path, value);
-      return value;
-    } else {
-      if ((j = path.indexOf('[')) > -1) {
-        id = path.substring(0, j);
-        property = path.substring(j + 1, path.length - 1);
-        object = this.identity.solve(path.substring(0, j));
-        if ((prop = this.properties[property]) != null) {
-          if (prop.axiom) {
-            return prop.call(this, object, continuation);
-          } else if (typeof prop !== 'function') {
-            return prop;
-          } else if (!prop.matcher && property.indexOf('intrinsic') === -1) {
-            return prop.call(this, object, continuation);
+        if ((j = path.indexOf('[')) > -1) {
+          id = path.substring(0, j);
+          property = path.substring(j + 1, path.length - 1);
+          object = this.identity.solve(path.substring(0, j));
+          if ((prop = this.properties[property]) != null) {
+            if (prop.axiom) {
+              return prop.call(this, object, continuation);
+            } else if (typeof prop !== 'function') {
+              return prop;
+            } else if (!prop.matcher && property.indexOf('intrinsic') === -1) {
+              return prop.call(this, object, continuation);
+            }
           }
         }
       }
     }
-    return Numeric.prototype.get.call(this, null, path, continuation) || 0;
+    return value || 0;
   };
 
   Intrinsic.prototype.validate = function(node) {
@@ -27383,10 +27773,12 @@ Intrinsic = (function(_super) {
           switch (prop) {
             case "x":
             case "intrinsic-x":
+            case "computed-x":
               this.set(id, prop, x + node.offsetLeft);
               break;
             case "y":
             case "intrinsic-y":
+            case "computed-y":
               this.set(id, prop, y + node.offsetTop);
               break;
             case "width":
@@ -27398,26 +27790,15 @@ Intrinsic = (function(_super) {
               this.set(id, prop, node.offsetHeight);
               break;
             default:
-              style = this.getIntrinsicProperty(prop) || prop;
+              style = prop.replace(/$(?:computed|intrinsic)-/, '');
               if ((_ref1 = this.properties[style]) != null ? _ref1.matcher : void 0) {
                 this.set(id, prop, this.getStyle(node, style));
               } else {
-                this.set(id, prop, this.get(node, prop));
+                this.set(id, prop, this.get(node, style));
               }
           }
         }
       }
-    }
-  };
-
-  Intrinsic.prototype.getIntrinsicProperty = function(path) {
-    var index, last, property;
-    index = path.indexOf('intrinsic-');
-    if (index > -1) {
-      if ((last = path.indexOf(']', index)) === -1) {
-        last = void 0;
-      }
-      return property = path.substring(index + 10, last);
     }
   };
 
@@ -27546,21 +27927,22 @@ Intrinsic = (function(_super) {
 module.exports = Intrinsic;
 
 });
-require.register("gss/lib/domains/Document.js", function(exports, require, module){
+
+require.register("gss/lib/domains/Document.js", function (exports, module) {
 var Abstract, Document,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Abstract = require('./Abstract');
+Abstract = require('gss/lib/domains/Abstract.js');
 
 Document = (function(_super) {
   __extends(Document, _super);
 
   Document.prototype.priority = Infinity;
 
-  Document.prototype.Selector = require('../Selector');
+  Document.prototype.Selector = require('gss/lib/commands/Selector.js');
 
-  Document.prototype.Stylesheet = require('../Stylesheet');
+  Document.prototype.Stylesheet = require('gss/lib/commands/Stylesheet.js');
 
   function Document() {
     var state,
@@ -27709,19 +28091,22 @@ Document = (function(_super) {
 module.exports = Document;
 
 });
-require.register("gss/lib/domains/Linear.js", function(exports, require, module){
-var Command, Constraint, Domain, Linear, Variable, _ref,
+
+require.register("gss/lib/domains/Linear.js", function (exports, module) {
+var Command, Constraint, Domain, Linear, Variable, c, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __slice = [].slice;
 
-Domain = require('../Domain');
+Domain = require('gss/lib/Domain.js');
 
-Command = require('../Command');
+Command = require('gss/lib/Command.js');
 
-Variable = require('../Variable');
+Variable = require('gss/lib/commands/Variable.js');
 
-Constraint = require('../Constraint');
+Constraint = require('gss/lib/commands/Constraint.js');
+
+c = require('slightlyoff~cassowary.js@master');
 
 Linear = (function(_super) {
   __extends(Linear, _super);
@@ -27733,7 +28118,7 @@ Linear = (function(_super) {
 
   Linear.prototype.priority = 0;
 
-  Linear.prototype.Solver = require('cassowary');
+  Linear.prototype.Solver = c;
 
   Linear.prototype.setup = function() {
     Linear.__super__.setup.apply(this, arguments);
@@ -27907,8 +28292,13 @@ Linear.prototype.Meta = Command.Meta.extend({}, {
       }
     },
     descend: function(engine, operation) {
+      var continuation, meta, scope;
+      if (meta = operation[0]) {
+        continuation = meta.key;
+        scope = meta.scope && engine.identity[meta.scope] || engine.scope;
+      }
       operation[1].parent = operation;
-      return [operation[1].command.solve(engine, operation[1], '', void 0, void 0, operation[0]), engine, operation];
+      return [operation[1].command.solve(engine, operation[1], continuation, scope, void 0, operation[0]), engine, operation];
     }
   }
 });
@@ -27967,18 +28357,19 @@ Linear.hack = function() {
 module.exports = Linear;
 
 });
-require.register("gss/lib/domains/Finite.js", function(exports, require, module){
+
+require.register("gss/lib/domains/Finite.js", function (exports, module) {
 var Command, Constraint, Domain, Finite, Variable,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Domain = require('../Domain');
+Domain = require('gss/lib/Domain.js');
 
-Command = require('../Command');
+Command = require('gss/lib/Command.js');
 
-Variable = require('../Variable');
+Variable = require('gss/lib/commands/Variable.js');
 
-Constraint = require('../Constraint');
+Constraint = require('gss/lib/commands/Constraint.js');
 
 Finite = (function(_super) {
   __extends(Finite, _super);
@@ -28045,25 +28436,26 @@ Finite.Variable.Expression = Variable.Expression.extend({
 module.exports = Finite;
 
 });
-require.register("gss/lib/properties/Axioms.js", function(exports, require, module){
-var Axioms;
 
-Axioms = (function() {
-  function Axioms() {}
+require.register("gss/lib/properties/Dimensions.js", function (exports, module) {
+var Dimensions;
 
-  Axioms.prototype.right = function(scope) {
+Dimensions = (function() {
+  function Dimensions() {}
+
+  Dimensions.prototype.right = function(scope) {
     var id;
     id = this.identify(scope);
     return ['+', ['get', this.getPath(id, 'x')], ['get', this.getPath(id, 'width')]];
   };
 
-  Axioms.prototype.bottom = function(scope, path) {
+  Dimensions.prototype.bottom = function(scope, path) {
     var id;
     id = this.identify(scope);
     return ['+', ['get', this.getPath(id, 'y')], ['get', this.getPath(id, 'height')]];
   };
 
-  Axioms.prototype.center = {
+  Dimensions.prototype.center = {
     x: function(scope, path) {
       var id;
       id = this.identify(scope);
@@ -28076,20 +28468,21 @@ Axioms = (function() {
     }
   };
 
-  return Axioms;
+  return Dimensions;
 
 })();
 
-module.exports = Axioms;
+module.exports = Dimensions;
 
 });
-require.register("gss/lib/properties/Dimensions.js", function(exports, require, module){
-var Dimensions;
 
-Dimensions = (function() {
-  function Dimensions() {}
+require.register("gss/lib/properties/Getters.js", function (exports, module) {
+var Getters;
 
-  Dimensions.prototype['::window'] = {
+Getters = (function() {
+  function Getters() {}
+
+  Getters.prototype['::window'] = {
     width: function() {
       return window.innerWidth;
     },
@@ -28108,7 +28501,7 @@ Dimensions = (function() {
     y: 0
   };
 
-  Dimensions.prototype['::document'] = {
+  Getters.prototype['::document'] = {
     scroll: {
       left: '::window[scroll-left]',
       top: '::window[scroll-top]'
@@ -28117,14 +28510,14 @@ Dimensions = (function() {
     y: '::window[y]'
   };
 
-  Dimensions.prototype.intrinsic = {
+  Getters.prototype.intrinsic = {
     height: function(element) {},
     width: function(element) {},
     y: function(element) {},
     x: function(element) {}
   };
 
-  Dimensions.prototype.scroll = {
+  Getters.prototype.scroll = {
     left: function(element) {
       return element.scrollLeft;
     },
@@ -28139,7 +28532,7 @@ Dimensions = (function() {
     }
   };
 
-  Dimensions.prototype.client = {
+  Getters.prototype.client = {
     left: function(element) {
       return element.clientLeft;
     },
@@ -28154,7 +28547,7 @@ Dimensions = (function() {
     }
   };
 
-  Dimensions.prototype.offset = {
+  Getters.prototype.offset = {
     left: function(element) {
       return element.offsetLeft;
     },
@@ -28169,14 +28562,15 @@ Dimensions = (function() {
     }
   };
 
-  return Dimensions;
+  return Getters;
 
 })();
 
-module.exports = Dimensions;
+module.exports = Getters;
 
 });
-require.register("gss/lib/properties/Styles.js", function(exports, require, module){
+
+require.register("gss/lib/properties/Styles.js", function (exports, module) {
 var Command, Styles;
 
 Styles = (function() {
@@ -28188,7 +28582,7 @@ Styles = (function() {
     [
       function() {
         return mat4.create();
-      }, 'matrix'
+      }, 'Matrix'
     ]
   ];
 
@@ -28446,73 +28840,121 @@ Styles = (function() {
 
 })();
 
-Command = require('../Command');
+Command = require('gss/lib/Command.js');
 
 module.exports = Styles;
 
 });
-require.register("gss/lib/properties/Types.js", function(exports, require, module){
-var Types;
 
-Types = (function() {
-  function Types() {}
+require.register("gss/lib/types/Color.js", function (exports, module) {
+var Color;
 
-  Types.define = function(property, value) {
-    var prop, _results;
-    if (value) {
-      return this[property] = value;
-    } else {
-      _results = [];
-      for (prop in property) {
-        value = property[prop];
-        _results.push(this.define(prop, value));
-      }
-      return _results;
-    }
+Color = (function() {
+  function Color() {}
+
+  Color.Keywords = {
+    'transparent': 'transparent',
+    'currentColor': 'currentColor'
   };
 
-  return Types;
+  Color.define({
+    hsl: function(h, s, l) {
+      var b, c, g, i, r, t1, t2, t3, _i, _ref;
+      if (s === 0) {
+        r = g = b = l * 255;
+      } else {
+        t3 = [0, 0, 0];
+        c = [0, 0, 0];
+        t2 = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        t1 = 2 * l - t2;
+        h /= 360;
+        t3[0] = h + 1 / 3;
+        t3[1] = h;
+        t3[2] = h - 1 / 3;
+        for (i = _i = 0; _i <= 2; i = ++_i) {
+          if (t3[i] < 0) {
+            t3[i] += 1;
+          }
+          if (t3[i] > 1) {
+            t3[i] -= 1;
+          }
+          if (6 * t3[i] < 1) {
+            c[i] = t1 + (t2 - t1) * 6 * t3[i];
+          } else if (2 * t3[i] < 1) {
+            c[i] = t2;
+          } else if (3 * t3[i] < 2) {
+            c[i] = t1 + (t2 - t1) * ((2 / 3) - t3[i]) * 6;
+          } else {
+            c[i] = t1;
+          }
+        }
+        _ref = [Math.round(c[0] * 255), Math.round(c[1] * 255), Math.round(c[2] * 255)], r = _ref[0], g = _ref[1], b = _ref[2];
+      }
+      return ['rgb', r, g, b];
+    },
+    hsla: function(h, s, l, a) {
+      return Type.Color.hsl.execute(h, s, l).concat[a];
+    },
+    rgb: function(r, g, b) {
+      return ['rgb', r, g, b];
+    },
+    rgba: function(r, g, b, a) {
+      return ['rgba', r, g, b, a];
+    },
+    hex: function(hex) {
+      var a, b, g, r, u;
+      if (hex.match(/^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)) {
+        if (hex.length === 4 || hex.length === 7) {
+          hex = hex.substr(1);
+        }
+        if (hex.length === 3) {
+          hex = hex.split("");
+          hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        }
+        u = parseInt(hex, 16);
+        r = u >> 16;
+        g = u >> 8 & 0xFF;
+        b = u & 0xFF;
+        return ['rgb', r, g, b];
+      }
+      if (hex.match(/^#?([A-Fa-f0-9]{8})$/)) {
+        if (hex.length === 9) {
+          hex = hex.substr(1);
+        }
+        u = parseInt(hex, 16);
+        r = u >> 24 & 0xFF;
+        g = u >> 16 & 0xFF;
+        b = u >> 8 & 0xFF;
+        a = u & 0xFF;
+        return ['rgba', r, g, b, a];
+      }
+    }
+  });
+
+  return Color;
 
 })();
 
-Types.define({
-  Float: function(obj) {
-    var parsed;
-    parsed = parseFloat(obj);
-    if (parsed === obj) {
-      return parsed;
-    }
-  },
-  Integer: function(obj) {
-    var parsed;
-    parsed = parseInt(obj);
-    if (String(parsed) === String(obj)) {
-      return parsed;
-    }
-  },
-  String: function(obj) {
-    if (typeof obj === 'string') {
-      return obj;
-    }
-  },
-  Strings: function(obj) {
-    if (typeof obj === 'string' || obj instanceof Array) {
-      return obj;
-    }
-  },
-  Timings: {
-    'ease': ['cubic-bezier', .42, 0, 1, 1],
-    'ease-in': ['cubic-bezier', .42, 0, 1, 1],
-    'ease-out': ['cubic-bezier', 0, 0, .58, 1],
-    'ease-in-out': ['cubic-bezier', .42, 0, .58, 1],
-    'linear': ['cubic-bezier', 0, 0, 1, 1],
-    'step-start': 'step-start',
-    'step-end': 'step-end'
-  },
-  Timing: function(obj) {
-    if (obj == null) {
-      obj = 'ease';
-    }
+module.exports = Color;
+
+});
+
+require.register("gss/lib/types/Easing.js", function (exports, module) {
+var Command, Easing, _ref,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Command = require('gss/lib/commands/Variable.js');
+
+Easing = (function(_super) {
+  __extends(Easing, _super);
+
+  function Easing() {
+    _ref = Easing.__super__.constructor.apply(this, arguments);
+    return _ref;
+  }
+
+  Easing.condition = function(obj) {
     if (typeof obj === 'string') {
       if (obj = this.Type.Timings[obj]) {
         return obj;
@@ -28520,223 +28962,50 @@ Types.define({
     } else if (obj[0] === 'steps' || obj[0] === 'cubic-bezier') {
       return obj;
     }
-  },
-  Length: function(obj) {
-    if (typeof obj === 'number') {
-      return obj;
-    }
-    if (this.Units[obj[0]]) {
-      if (obj[1] === 0) {
-        return 0;
-      }
-      return obj;
-    }
-  },
-  Percentage: function(obj) {
-    if (obj[0] === '%') {
-      return obj;
-    }
-  },
-  Positions: {
-    "top": "top",
-    "bottom": "bottom",
-    "left": "left",
-    "right": "right"
-  },
-  Position: function(obj) {
-    if (this.Types.Positions[obj]) {
-      return obj;
-    }
-  },
-  Times: {
-    's': 's',
-    'ms': 'ms',
-    'm': 'm'
-  },
-  Time: function(obj) {
-    if (this.Types.Times[obj[0]]) {
-      return obj;
-    }
-  },
-  Colors: {
-    'transparent': 'transparent',
-    'hsl': 'hsl',
-    'rgb': 'rgb',
-    'hsla': 'hsla',
-    'rgba': 'rgba',
-    'hsb': 'hsb'
-  },
-  Pseudocolors: {
-    'transparent': 'transparent',
-    'currentColor': 'currentColor'
-  },
-  Color: function(obj) {
-    if (typeof obj === 'string') {
-      if (this.Types.Pseudocolors[obj]) {
-        return obj;
-      }
-    } else {
-      if (this.Types.Colors[obj[0]]) {
-        return obj;
-      }
-    }
-  },
-  Sizes: {
-    'medium': 'medium',
-    'xx-small': 'xx-small',
-    'x-small': 'x-small',
-    'small': 'small',
-    'large': 'large',
-    'x-large': 'x-large',
-    'xx-large': 'xx-large',
-    'smaller': 'smaller',
-    'larger': 'larger'
-  },
-  Size: function(obj) {
-    if (this.Types.Sizes[obj]) {
-      return obj;
-    }
-  },
-  Gradients: {
-    'linear-gradient': 'linear-gradient',
-    'radial-gradient': 'radial-gradient',
-    'repeating-linear-gradient': 'repeating-linear-gradient',
-    'repeating-radial-gradient': 'repeating-radial-gradient'
-  },
-  Gradient: function(obj) {
-    if (this.Types.Gradients[obj[0]]) {
-      return obj;
-    }
-  },
-  URLs: {
-    'url': 'url',
-    'src': 'src'
-  },
-  URL: function(obj) {
-    if (this.Types.URLs[obj[0]]) {
-      return obj;
-    }
-  },
-  Property: function(obj) {
-    if (this.properties[obj]) {
-      return obj;
-    }
-  },
-  Matrix: function(obj) {
-    if (typeof obj === 'object' && object.length !== void 0) {
-      return obj;
-    }
-  }
-});
+  };
 
-module.exports = Types;
+  Easing.define({
+    'ease': ['cubic-bezier', .42, 0, 1, 1],
+    'ease-in': ['cubic-bezier', .42, 0, 1, 1],
+    'ease-out': ['cubic-bezier', 0, 0, .58, 1],
+    'ease-in-out': ['cubic-bezier', .42, 0, .58, 1],
+    'linear': ['cubic-bezier', 0, 0, 1, 1],
+    'step-start': 'step-start',
+    'step-end': 'step-end'
+  });
 
-});
-require.register("gss/lib/properties/Units.js", function(exports, require, module){
-var Command, Unit, _ref,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Command = require('../Command');
-
-Unit = (function(_super) {
-  __extends(Unit, _super);
-
-  function Unit() {
-    _ref = Unit.__super__.constructor.apply(this, arguments);
-    return _ref;
-  }
-
-  Unit.prototype.type = 'Unit';
-
-  Unit.prototype.signature = [
-    {
-      value: ['Variable']
-    }
-  ];
-
-  return Unit;
+  return Easing;
 
 })(Command);
 
-Unit.define({
-  px: function(value) {
-    return value;
-  },
-  pt: function(value) {
-    return value;
-  },
-  cm: function(value) {
-    return this['*'](value, 37.8);
-  },
-  mm: function(value) {
-    return this['*'](value, 3.78);
-  },
-  "in": function(value) {
-    return this['*'](value, 96);
-  },
-  deg: function(value) {
-    return this['*'](value, Math.PI / 180);
-  },
-  grad: function(value) {
-    return this.deg(this['/'](value, 360 / 400));
-  },
-  turn: function(value) {
-    return this.deg(this['*'](value, 360));
-  },
-  rad: function(value) {
-    return value;
-  }
-});
-
-Unit.define({
-  em: function(value, engine, operation, continuation, scope) {
-    return this['*'](this.get(scope, 'font-size', continuation), value);
-  },
-  rem: function(value, engine, operation, continuation, scope) {
-    return this['*'](this.get('::window', 'font-size', continuation), value);
-  },
-  vw: function(value, engine, operation, continuation, scope) {
-    return this['*'](this['/'](this.get('::window', 'width', continuation), 100), value);
-  },
-  vh: function(value, engine, operation, continuation, scope) {
-    return this['*'](this['/'](this.get('::window', 'height', continuation), 100), value);
-  },
-  vmin: function(value, engine, operation, continuation, scope) {
-    return this['*'](this['/'](this.get('::window', 'min', continuation), 100), value);
-  },
-  vmax: function(value, engine, operation, continuation, scope) {
-    return this['*'](this['/'](this.get('::window', 'max', continuation), 100), value);
-  }
-});
-
-module.exports = Unit;
+module.exports = Easing;
 
 });
-require.register("gss/lib/properties/Transformations.js", function(exports, require, module){
-var Command, Transformation, _ref,
+
+require.register("gss/lib/types/Matrix.js", function (exports, module) {
+var Command, Matrix, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Command = require('../Command');
+Command = require('gss/lib/Command.js');
 
-Transformation = (function(_super) {
-  __extends(Transformation, _super);
+Matrix = (function(_super) {
+  __extends(Matrix, _super);
 
-  function Transformation() {
-    _ref = Transformation.__super__.constructor.apply(this, arguments);
+  function Matrix() {
+    _ref = Matrix.__super__.constructor.apply(this, arguments);
     return _ref;
   }
 
-  Transformation.prototype.type = 'Transformation';
+  Matrix.prototype.type = 'Matrix';
 
-  Transformation.Matrix = require('../../vendor/gl-matrix');
+  Matrix.Matrix = require('gss/vendor/gl-matrix.js');
 
-  Transformation.prototype.matrix = function() {};
+  Matrix.prototype.matrix = function() {};
 
-  Transformation.prototype.matrix3d = function() {};
+  Matrix.prototype.matrix3d = function() {};
 
-  Transformation.prototype._transform = function(matrix, method, a, b, c) {
+  Matrix.prototype._transform = function(matrix, method, a, b, c) {
     if (matrix.length === 9) {
       return mat3[method](matrix, matrix, a, b, c);
     } else {
@@ -28744,14 +29013,14 @@ Transformation = (function(_super) {
     }
   };
 
-  Transformation.prototype._transform3d = function(matrix, method, a, b, c) {
+  Matrix.prototype._transform3d = function(matrix, method, a, b, c) {
     if (matrix.length === 9) {
       matrix = mat4.fromMat3(matrix);
     }
     return mat4[method](matrix, matrix, a, b, c);
   };
 
-  Transformation.prototype.translate = [
+  Matrix.prototype.translate = [
     function(matrix, x, y) {
       if (y == null) {
         y = x;
@@ -28783,7 +29052,7 @@ Transformation = (function(_super) {
     }
   ];
 
-  Transformation.prototype.rotate = [
+  Matrix.prototype.rotate = [
     function(matrix, x, y, angle) {
       return this._transform(matrix, 'rotate', [x, y], angle);
     }, {
@@ -28802,7 +29071,7 @@ Transformation = (function(_super) {
     }
   ];
 
-  Transformation.prototype.scale = [
+  Matrix.prototype.scale = [
     function(matrix, x, y, z) {
       if (y == null) {
         y = x;
@@ -28828,7 +29097,7 @@ Transformation = (function(_super) {
     }
   ];
 
-  return Transformation;
+  return Matrix;
 
 })(Command);
 
@@ -28841,7 +29110,357 @@ Transformation = (function(_super) {
 
 
 });
-require.register("gss/lib/utilities/Console.js", function(exports, require, module){
+
+require.register("gss/lib/types/Measurement.js", function (exports, module) {
+var Measurement, Variable, _ref, _ref1, _ref2, _ref3, _ref4,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Variable = require('gss/lib/commands/Variable.js');
+
+Measurement = (function(_super) {
+  __extends(Measurement, _super);
+
+  function Measurement() {
+    _ref = Measurement.__super__.constructor.apply(this, arguments);
+    return _ref;
+  }
+
+  Measurement.prototype.signature = [
+    {
+      value: ['Variable', 'Number']
+    }
+  ];
+
+  return Measurement;
+
+})(Variable);
+
+Measurement.Length = (function(_super) {
+  __extends(Length, _super);
+
+  function Length() {
+    _ref1 = Length.__super__.constructor.apply(this, arguments);
+    return _ref1;
+  }
+
+  Length.define({
+    px: function(value) {
+      return value;
+    },
+    pt: function(value) {
+      return value;
+    },
+    cm: function(value) {
+      return value * 37.8;
+    },
+    mm: function(value) {
+      return value * 3.78;
+    },
+    "in": function(value) {
+      return value * 96;
+    }
+  });
+
+  return Length;
+
+})(Measurement);
+
+Measurement.Angle = (function(_super) {
+  __extends(Angle, _super);
+
+  function Angle() {
+    _ref2 = Angle.__super__.constructor.apply(this, arguments);
+    return _ref2;
+  }
+
+  Angle.define({
+    deg: function(value) {
+      return value * (Math.PI / 180);
+    },
+    grad: function(value) {
+      return value * (Math.PI / 180) / (360 / 400);
+    },
+    turn: function(value) {
+      return value * (Math.PI / 180) * 360;
+    },
+    rad: function(value) {
+      return value;
+    }
+  });
+
+  return Angle;
+
+})(Measurement);
+
+Measurement.Time = (function(_super) {
+  __extends(Time, _super);
+
+  function Time() {
+    _ref3 = Time.__super__.constructor.apply(this, arguments);
+    return _ref3;
+  }
+
+  Time.define({
+    h: function(value) {
+      return value * 60 * 60 * 1000;
+    },
+    min: function(value) {
+      return value * 60 * 1000;
+    },
+    s: function(value) {
+      return value * 1000;
+    },
+    ms: function(value) {
+      return value;
+    }
+  });
+
+  return Time;
+
+})(Measurement);
+
+Measurement.Frequency = (function(_super) {
+  __extends(Frequency, _super);
+
+  function Frequency() {
+    _ref4 = Frequency.__super__.constructor.apply(this, arguments);
+    return _ref4;
+  }
+
+  Frequency.define({
+    deg: function(value) {
+      return value * (Math.PI / 180);
+    },
+    grad: function(value) {
+      return value * (Math.PI / 180) / (360 / 400);
+    },
+    turn: function(value) {
+      return value * (Math.PI / 180) * 360;
+    },
+    rad: function(value) {
+      return value;
+    }
+  });
+
+  return Frequency;
+
+})(Measurement);
+
+module.exports = Measurement;
+
+});
+
+require.register("gss/lib/types/Primitive.js", function (exports, module) {
+var Command, Primitive, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Command = require('gss/lib/Command.js');
+
+Primitive = (function(_super) {
+  __extends(Primitive, _super);
+
+  function Primitive() {
+    _ref = Primitive.__super__.constructor.apply(this, arguments);
+    return _ref;
+  }
+
+  Primitive.condition = function(obj) {
+    var _ref1;
+    if (typeof obj === 'string' && ((_ref1 = this.Keywords) != null ? _ref1[obj] : void 0)) {
+      return obj;
+    }
+  };
+
+  return Primitive;
+
+})(Command);
+
+Primitive.Number = (function(_super) {
+  __extends(Number, _super);
+
+  function Number() {
+    _ref1 = Number.__super__.constructor.apply(this, arguments);
+    return _ref1;
+  }
+
+  Number.prototype.type = 'Number';
+
+  Number.condition = function(obj) {
+    var parsed;
+    parsed = parseFloat(obj);
+    if (parsed === obj) {
+      return parsed;
+    }
+  };
+
+  return Number;
+
+})(Primitive);
+
+Primitive.Integer = (function(_super) {
+  __extends(Integer, _super);
+
+  function Integer() {
+    _ref2 = Integer.__super__.constructor.apply(this, arguments);
+    return _ref2;
+  }
+
+  Integer.prototype.type = 'Integer';
+
+  Integer.condition = function(obj) {
+    var parsed;
+    parsed = parseInt(obj);
+    if (String(parsed) === String(obj)) {
+      return parsed;
+    }
+  };
+
+  return Integer;
+
+})(Primitive);
+
+Primitive.String = (function(_super) {
+  __extends(String, _super);
+
+  function String() {
+    _ref3 = String.__super__.constructor.apply(this, arguments);
+    return _ref3;
+  }
+
+  String.prototype.type = 'String';
+
+  String.condition = function(obj) {
+    if (typeof obj === 'string') {
+      return obj;
+    }
+  };
+
+  return String;
+
+})(Primitive);
+
+Primitive.Strings = (function(_super) {
+  __extends(Strings, _super);
+
+  function Strings() {
+    _ref4 = Strings.__super__.constructor.apply(this, arguments);
+    return _ref4;
+  }
+
+  Strings.prototype.type = 'Strings';
+
+  Strings.condition = function(obj) {
+    if (typeof obj === 'string' || obj instanceof Array) {
+      return obj;
+    }
+  };
+
+  return Strings;
+
+})(Primitive);
+
+Primitive.Size = (function(_super) {
+  __extends(Size, _super);
+
+  function Size() {
+    _ref5 = Size.__super__.constructor.apply(this, arguments);
+    return _ref5;
+  }
+
+  Size.prototype.type = 'Size';
+
+  Size.Keywords = {
+    'medium': 'medium',
+    'xx-small': 'xx-small',
+    'x-small': 'x-small',
+    'small': 'small',
+    'large': 'large',
+    'x-large': 'x-large',
+    'xx-large': 'xx-large',
+    'smaller': 'smaller',
+    'larger': 'larger'
+  };
+
+  return Size;
+
+})(Primitive);
+
+Primitive.Position = (function(_super) {
+  __extends(Position, _super);
+
+  function Position() {
+    _ref6 = Position.__super__.constructor.apply(this, arguments);
+    return _ref6;
+  }
+
+  Position.prototype.type = 'Position';
+
+  Position.Keywords = {
+    "top": "top",
+    "bottom": "bottom",
+    "left": "left",
+    "right": "right"
+  };
+
+  return Position;
+
+})(Primitive);
+
+Primitive.Property = (function(_super) {
+  __extends(Property, _super);
+
+  function Property() {
+    _ref7 = Property.__super__.constructor.apply(this, arguments);
+    return _ref7;
+  }
+
+  Property.prototype.type = 'Property';
+
+  Property.prototype.Property = function(obj) {
+    if (this.properties[obj]) {
+      return obj;
+    }
+  };
+
+  return Property;
+
+})(Primitive);
+
+module.exports = Primitive;
+
+});
+
+require.register("gss/lib/types/URL.js", function (exports, module) {
+var Command, URL, _ref,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Command = require('gss/lib/Command.js');
+
+URL = (function(_super) {
+  __extends(URL, _super);
+
+  function URL() {
+    _ref = URL.__super__.constructor.apply(this, arguments);
+    return _ref;
+  }
+
+  URL.prototype.type = 'URL';
+
+  URL.define({
+    'url': function() {},
+    'src': function() {}
+  });
+
+  return URL;
+
+})(Command);
+
+});
+
+require.register("gss/lib/utilities/Console.js", function (exports, module) {
 var Console, method, _i, _len, _ref;
 
 Console = (function() {
@@ -29089,7 +29708,8 @@ for (_i = 0, _len = _ref.length; _i < _len; _i++) {
 module.exports = Console;
 
 });
-require.register("gss/lib/utilities/Exporter.js", function(exports, require, module){
+
+require.register("gss/lib/utilities/Exporter.js", function (exports, module) {
 var Exporter,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -29206,7 +29826,8 @@ Exporter = (function() {
 module.exports = Exporter;
 
 });
-require.register("gss/lib/utilities/Inspector.js", function(exports, require, module){
+
+require.register("gss/lib/utilities/Inspector.js", function (exports, module) {
 var Inspector,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   __hasProp = {}.hasOwnProperty;
@@ -29270,6 +29891,7 @@ Inspector = (function() {
   Inspector.prototype.refresh = function() {
     var bits, id, ids, property, value, values, _i, _len, _ref, _ref1, _results;
     values = {};
+    this.singles = void 0;
     _ref = this.engine.values;
     for (property in _ref) {
       value = _ref[property];
@@ -29399,7 +30021,7 @@ Inspector = (function() {
   };
 
   Inspector.prototype.constraints = function(id, element, props, all) {
-    var diff, domain, el, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _results,
+    var d, diff, domain, el, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3,
       _this = this;
     if (!this.panel) {
       this.panel = document.createElement('panel');
@@ -29425,55 +30047,58 @@ Inspector = (function() {
       }
       element.appendChild(this.panel);
     }
-    _ref2 = this.engine.domains;
-    _results = [];
-    for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
-      domain = _ref2[_j];
-      if (String(domain.uid) === String(id)) {
-        this.panel.innerHTML = (_ref3 = domain.constraints) != null ? _ref3.map(function(constraint) {
-          return _this.toExpressionString(constraint.operations[0]);
-        }).filter(function(string) {
-          var prop, _k, _len2;
-          if (!props) {
-            return true;
-          }
-          for (_k = 0, _len2 = props.length; _k < _len2; _k++) {
-            prop = props[_k];
-            if (string.indexOf(prop) > -1) {
-              if (!all && props.length > 1) {
-                props.splice(1);
-              }
-              return true;
-            }
-          }
-          return false;
-        }).map(function(string) {
-          var prop, _k, _len2;
-          if (props) {
-            for (_k = 0, _len2 = props.length; _k < _len2; _k++) {
-              prop = props[_k];
-              prop = prop.replace(/([\[\]$])/g, '\\$1');
-              string = string.replace(new RegExp('\\>(' + prop + '[\\[\\"])', 'g'), ' mark>$1');
-            }
-          }
-          return string;
-        }).join('\n') : void 0;
-        if (props) {
-          this.panel.classList.add('filtered');
+    if (id === 'singles') {
+      domain = this.singles;
+    } else {
+      _ref2 = this.engine.domains;
+      for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+        d = _ref2[_j];
+        if (String(d.uid) === String(id)) {
+          domain = d;
+          break;
         }
-        diff = element.offsetLeft + element.offsetWidth + 10 - this.panel.offsetWidth;
-        if (diff > 0) {
-          this.panel.style.left = diff + 'px';
-        } else {
-          this.panel.style.left = '';
-        }
-        element.classList.add('active');
-        break;
-      } else {
-        _results.push(void 0);
       }
     }
-    return _results;
+    if (domain) {
+      this.panel.innerHTML = (_ref3 = domain.constraints) != null ? _ref3.map(function(constraint) {
+        return _this.toExpressionString(constraint.operations[0]);
+      }).filter(function(string) {
+        var prop, _k, _len2;
+        if (!props) {
+          return true;
+        }
+        for (_k = 0, _len2 = props.length; _k < _len2; _k++) {
+          prop = props[_k];
+          if (string.indexOf(prop) > -1) {
+            if (!all && props.length > 1) {
+              props.splice(1);
+            }
+            return true;
+          }
+        }
+        return false;
+      }).map(function(string) {
+        var prop, _k, _len2;
+        if (props) {
+          for (_k = 0, _len2 = props.length; _k < _len2; _k++) {
+            prop = props[_k];
+            prop = prop.replace(/([\[\]$])/g, '\\$1');
+            string = string.replace(new RegExp('\\>(' + prop + '[\\[\\"])', 'g'), ' mark>$1');
+          }
+        }
+        return string;
+      }).join('\n') : void 0;
+      if (props) {
+        this.panel.classList.add('filtered');
+      }
+      diff = element.offsetLeft + element.offsetWidth + 10 - this.panel.offsetWidth;
+      if (diff > 0) {
+        this.panel.style.left = diff + 'px';
+      } else {
+        this.panel.style.left = '';
+      }
+      return element.classList.add('active');
+    }
   };
 
   Inspector.prototype.onMouseMove = function(e) {
@@ -29664,13 +30289,11 @@ Inspector = (function() {
     for (index = _i = domains.length - 1; _i >= 0; index = _i += -1) {
       domain = domains[index];
       if (domain.constraints.length === 1) {
-        if (!singles) {
-          singles = {
-            constraints: [],
-            uid: 'singles',
-            displayName: 'Singles'
-          };
-        }
+        singles = this.singles || (this.singles = {
+          constraints: [],
+          uid: 'singles',
+          displayName: 'Singles'
+        });
         singles.constraints.push(domain.constraints[0]);
       } else {
         multiples.push(domain);
@@ -29855,7 +30478,8 @@ Inspector = (function() {
 module.exports = Inspector;
 
 });
-require.register("gss/vendor/gl-matrix.js", function(exports, require, module){
+
+require.register("gss/vendor/gl-matrix.js", function (exports, module) {
 /**
  * @fileoverview gl-matrix - High performance matrix and vector operations
  * @author Brandon Jones
@@ -33975,7 +34599,8 @@ if(typeof(exports) !== 'undefined') {
 })(this);
 
 });
-require.register("gss/vendor/weakmap.js", function(exports, require, module){
+
+require.register("gss/vendor/weakmap.js", function (exports, module) {
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
  * Use of this source code is governed by a BSD-style
@@ -34015,7 +34640,8 @@ if (typeof WeakMap === 'undefined') {
 }
 
 });
-require.register("gss/vendor/MutationObserver.js", function(exports, require, module){
+
+require.register("gss/vendor/MutationObserver.js", function (exports, module) {
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
  * Use of this source code is goverened by a BSD-style
@@ -34565,7 +35191,8 @@ if (typeof window != 'undefined')
 
 })(this);
 });
-require.register("gss/vendor/MutationObserver.attributes.js", function(exports, require, module){
+
+require.register("gss/vendor/MutationObserver.attributes.js", function (exports, module) {
 if (typeof window != 'undefined')
 
 (function() {
@@ -34639,7 +35266,8 @@ if (typeof window != 'undefined')
 
 }).call(this);
 });
-require.register("gss/vendor/MutationObserver.classList.js", function(exports, require, module){
+
+require.register("gss/vendor/MutationObserver.classList.js", function (exports, module) {
 
 if (typeof window != 'undefined')
 var attrModifiedWorks = false;
@@ -34832,70 +35460,8 @@ try {
 }
   
 });
-require.register("gss-error-reporter/component.json", function(exports, require, module){
-module.exports = {
-  "name": "error-reporter",
-  "description": "Provide source code context when reporting errors.",
-  "author": "Paul Young",
-  "repo": "gss/error-reporter",
-  "version": "0.1.4",
-  "json": [
-    "component.json"
-  ],
-  "scripts": [
-    "lib/error-reporter.js"
-  ],
-  "main": "lib/error-reporter.js"
-}
 
-});
-require.register("the-gss-error-reporter/component.json", function(exports, require, module){
-module.exports = {
-  "name": "error-reporter",
-  "description": "Provide source code context when reporting errors.",
-  "author": "Paul Young",
-  "repo": "gss/error-reporter",
-  "version": "0.1.4",
-  "json": [
-    "component.json"
-  ],
-  "scripts": [
-    "lib/error-reporter.js"
-  ],
-  "main": "lib/error-reporter.js"
-}
-
-});
-require.register("gss-ccss-compiler/component.json", function(exports, require, module){
-module.exports = {
-  "name": "ccss-compiler",
-  "description": "Constraint Cascading Style Sheets compiler",
-  "author": "Dan Tocchini <d4@thegrid.io>",
-  "repo": "gss/ccss-compiler",
-  "version": "1.1.2-beta",
-  "json": [
-    "component.json"
-  ],
-  "scripts": [
-    "lib/compiler.js",
-    "lib/grammar.js",
-    "lib/parser.js",
-    "lib/scoper.js"
-  ],
-  "dependencies": {
-    "gss/error-reporter": "*",
-    "gss/vfl-compiler": "*",
-    "gss/vgl-compiler": "*"
-  },
-  "main": "lib/compiler.js",
-  "license": "MIT"
-}
-
-});
-
-
-require.register("gss/component.json", function(exports, require, module){
-module.exports = {
+require.define("gss/component.json", {
   "name": "gss",
   "repo": "the-gss/engine",
   "description": "GSS runtime",
@@ -34912,14 +35478,16 @@ module.exports = {
     "lib/Command.js",
     "lib/Update.js",
     "lib/Query.js", 
+    "lib/Style.js", 
 
-    "lib/Condition.js", 
-    "lib/Constraint.js", 
-    "lib/Iterator.js", 
-    "lib/Selector.js", 
-    "lib/Style.js",
-    "lib/Stylesheet.js", 
-    "lib/Variable.js", 
+    "lib/commands/Condition.js", 
+    "lib/commands/Constraint.js", 
+    "lib/commands/Iterator.js", 
+    "lib/commands/Selector.js", 
+    "lib/commands/Style.js",
+    "lib/commands/Stylesheet.js", 
+    "lib/commands/Variable.js", 
+    "lib/commands/Unit.js", 
 
     "lib/domains/Numeric.js",
     "lib/domains/Abstract.js",
@@ -34929,12 +35497,16 @@ module.exports = {
     "lib/domains/Linear.js", 
     "lib/domains/Finite.js", 
 
-    "lib/properties/Axioms.js",
     "lib/properties/Dimensions.js",
+    "lib/properties/Getters.js",
     "lib/properties/Styles.js",
-    "lib/properties/Types.js",
-    "lib/properties/Units.js",
-    "lib/properties/Transformations.js",
+
+    "lib/types/Color.js",
+    "lib/types/Easing.js",
+    "lib/types/Matrix.js",
+    "lib/types/Measurement.js",
+    "lib/types/Primitive.js",
+    "lib/types/URL.js",
 
     "lib/utilities/Console.js",
     "lib/utilities/Exporter.js",
@@ -34952,70 +35524,15 @@ module.exports = {
     "slightlyoff/cassowary.js": "*"
   },
   "paths": ["/Users/invizko/Sites/the-gss"],
-  "locals": ["the-compiler", "ccss-compiler"],
   "main": "lib/Engine.js"
 }
+);
 
-});
-
-
-
-
-require.alias("gss-ccss-compiler/lib/compiler.js", "gss/deps/ccss-compiler/lib/compiler.js");
-require.alias("gss-ccss-compiler/lib/grammar.js", "gss/deps/ccss-compiler/lib/grammar.js");
-require.alias("gss-ccss-compiler/lib/parser.js", "gss/deps/ccss-compiler/lib/parser.js");
-require.alias("gss-ccss-compiler/lib/scoper.js", "gss/deps/ccss-compiler/lib/scoper.js");
-require.alias("gss-ccss-compiler/lib/compiler.js", "gss/deps/ccss-compiler/index.js");
-require.alias("gss-ccss-compiler/lib/compiler.js", "ccss-compiler/index.js");
-require.alias("gss-error-reporter/lib/error-reporter.js", "gss-ccss-compiler/deps/error-reporter/lib/error-reporter.js");
-require.alias("gss-error-reporter/lib/error-reporter.js", "gss-ccss-compiler/deps/error-reporter/index.js");
-require.alias("gss-error-reporter/lib/error-reporter.js", "gss-error-reporter/index.js");
-require.alias("gss-vfl-compiler/lib/compiler.js", "gss-ccss-compiler/deps/vfl-compiler/lib/compiler.js");
-require.alias("gss-vfl-compiler/lib/parser.js", "gss-ccss-compiler/deps/vfl-compiler/lib/parser.js");
-require.alias("gss-vfl-compiler/lib/compiler.js", "gss-ccss-compiler/deps/vfl-compiler/index.js");
-require.alias("gss-error-reporter/lib/error-reporter.js", "gss-vfl-compiler/deps/error-reporter/lib/error-reporter.js");
-require.alias("gss-error-reporter/lib/error-reporter.js", "gss-vfl-compiler/deps/error-reporter/index.js");
-require.alias("gss-error-reporter/lib/error-reporter.js", "gss-error-reporter/index.js");
-require.alias("gss-vfl-compiler/lib/compiler.js", "gss-vfl-compiler/index.js");
-require.alias("gss-vgl-compiler/lib/compiler.js", "gss-ccss-compiler/deps/vgl-compiler/lib/compiler.js");
-require.alias("gss-vgl-compiler/lib/parser.js", "gss-ccss-compiler/deps/vgl-compiler/lib/parser.js");
-require.alias("gss-vgl-compiler/lib/compiler.js", "gss-ccss-compiler/deps/vgl-compiler/index.js");
-require.alias("the-gss-error-reporter/lib/error-reporter.js", "gss-vgl-compiler/deps/error-reporter/lib/error-reporter.js");
-require.alias("the-gss-error-reporter/lib/error-reporter.js", "gss-vgl-compiler/deps/error-reporter/index.js");
-require.alias("the-gss-error-reporter/lib/error-reporter.js", "the-gss-error-reporter/index.js");
-require.alias("gss-vgl-compiler/lib/compiler.js", "gss-vgl-compiler/index.js");
-require.alias("gss-ccss-compiler/lib/compiler.js", "gss-ccss-compiler/index.js");
-require.alias("gss-vfl-compiler/lib/compiler.js", "gss/deps/vfl-compiler/lib/compiler.js");
-require.alias("gss-vfl-compiler/lib/parser.js", "gss/deps/vfl-compiler/lib/parser.js");
-require.alias("gss-vfl-compiler/lib/compiler.js", "gss/deps/vfl-compiler/index.js");
-require.alias("gss-vfl-compiler/lib/compiler.js", "vfl-compiler/index.js");
-require.alias("gss-error-reporter/lib/error-reporter.js", "gss-vfl-compiler/deps/error-reporter/lib/error-reporter.js");
-require.alias("gss-error-reporter/lib/error-reporter.js", "gss-vfl-compiler/deps/error-reporter/index.js");
-require.alias("gss-error-reporter/lib/error-reporter.js", "gss-error-reporter/index.js");
-require.alias("gss-vfl-compiler/lib/compiler.js", "gss-vfl-compiler/index.js");
-require.alias("slightlyoff-cassowary.js/index.js", "gss/deps/cassowary/index.js");
-require.alias("slightlyoff-cassowary.js/src/c.js", "gss/deps/cassowary/src/c.js");
-require.alias("slightlyoff-cassowary.js/src/HashTable.js", "gss/deps/cassowary/src/HashTable.js");
-require.alias("slightlyoff-cassowary.js/src/HashSet.js", "gss/deps/cassowary/src/HashSet.js");
-require.alias("slightlyoff-cassowary.js/src/Error.js", "gss/deps/cassowary/src/Error.js");
-require.alias("slightlyoff-cassowary.js/src/SymbolicWeight.js", "gss/deps/cassowary/src/SymbolicWeight.js");
-require.alias("slightlyoff-cassowary.js/src/Strength.js", "gss/deps/cassowary/src/Strength.js");
-require.alias("slightlyoff-cassowary.js/src/Variable.js", "gss/deps/cassowary/src/Variable.js");
-require.alias("slightlyoff-cassowary.js/src/Point.js", "gss/deps/cassowary/src/Point.js");
-require.alias("slightlyoff-cassowary.js/src/Expression.js", "gss/deps/cassowary/src/Expression.js");
-require.alias("slightlyoff-cassowary.js/src/Constraint.js", "gss/deps/cassowary/src/Constraint.js");
-require.alias("slightlyoff-cassowary.js/src/EditInfo.js", "gss/deps/cassowary/src/EditInfo.js");
-require.alias("slightlyoff-cassowary.js/src/Tableau.js", "gss/deps/cassowary/src/Tableau.js");
-require.alias("slightlyoff-cassowary.js/src/SimplexSolver.js", "gss/deps/cassowary/src/SimplexSolver.js");
-require.alias("slightlyoff-cassowary.js/src/Timer.js", "gss/deps/cassowary/src/Timer.js");
-require.alias("slightlyoff-cassowary.js/src/parser/parser.js", "gss/deps/cassowary/src/parser/parser.js");
-require.alias("slightlyoff-cassowary.js/src/parser/api.js", "gss/deps/cassowary/src/parser/api.js");
-require.alias("slightlyoff-cassowary.js/index.js", "cassowary/index.js");
-
-require.alias("gss/lib/Engine.js", "gss/index.js");if (typeof exports == "object") {
+if (typeof exports == "object") {
   module.exports = require("gss");
 } else if (typeof define == "function" && define.amd) {
-  define([], function(){ return require("gss"); });
+  define("gss", [], function(){ return require("gss"); });
 } else {
-  this["gss"] = require("gss");
-}})();
+  (this || window)["gss"] = require("gss");
+}
+})()

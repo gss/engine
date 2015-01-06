@@ -5,11 +5,11 @@ Combinators fetch new elements, while qualifiers filter them.
 
 ###
 
-Query   = require('./Query')
+Query   = require('../Query')
 
-require '../vendor/weakmap.js'
-require '../vendor/MutationObserver.js'
-require '../vendor/MutationObserver.attributes.js'
+require '../../vendor/weakmap.js'
+require '../../vendor/MutationObserver.js'
+require '../../vendor/MutationObserver.attributes.js'
 
 class Selector extends Query
   type: 'Selector'

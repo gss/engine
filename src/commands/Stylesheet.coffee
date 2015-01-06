@@ -1,6 +1,6 @@
-Parser = require('ccss-compiler')
-Query = require('./Query')
-Command = require('./Command')
+Parser  = require('ccss-compiler')
+Command = require('../Command')
+Query   = require('../Query')
 
 class Stylesheet extends Command.List
 
@@ -334,7 +334,8 @@ class Stylesheet extends Command.List
       return ''
     return @key
 
-  continue: Query::continue# + @DESCEND
+  continue: ->
+    Query::continue.apply(@, arguments)# + @DESCEND
 
 class Stylesheet.Import extends Query
   type: 'Import'

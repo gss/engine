@@ -1,12 +1,12 @@
 Domain     = require('../Domain')
 Command    = require('../Command')
-Variable   = require('../Variable')
-Constraint = require('../Constraint')
-
+Variable   = require('../commands/Variable')
+Constraint = require('../commands/Constraint')
+c = require('cassowary')
 class Linear extends Domain
   priority: 0
 
-  Solver:  require('cassowary')
+  Solver:  c
 
   setup: () ->
     super
@@ -155,9 +155,14 @@ Linear::Meta = Command.Meta.extend {},
         operation[1].command.add(constraint, engine, operation[1], operation[0].key)
 
     descend: (engine, operation) -> 
+
+      if meta = operation[0]
+        continuation = meta.key
+        scope = meta.scope && engine.identity[meta.scope] || engine.scope
+
       operation[1].parent = operation
       [
-        operation[1].command.solve(engine, operation[1], '', undefined, undefined, operation[0])
+        operation[1].command.solve(engine, operation[1], continuation, scope, undefined, operation[0])
         engine, 
         operation
       ]

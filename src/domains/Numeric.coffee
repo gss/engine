@@ -7,10 +7,11 @@ enables anonymous constraints on immutable values
 
 Domain   = require('../Domain')
 Command  = require('../Command')
-Variable = require('../Variable')
+Variable = require('../commands/Variable')
 
 class Numeric extends Domain
   priority: 200
+  Units: require('../commands/Unit')
 
   # Numeric domains usually dont use worker
   url: null

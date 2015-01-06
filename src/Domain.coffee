@@ -41,7 +41,7 @@ class Domain
     if @Properties
       @Property.compile @Properties::, @
       Properties = @Properties
-    @properties  = new (Properties || Object)
+    @properties  = new (Properties || Object)(@engine)
 
     if @url && @getWorkerURL
       if @url && (@url = @getWorkerURL?(@url))
@@ -209,7 +209,7 @@ class Domain
         break unless watcher
         # Propagate updated value
         if value?
-          watcher.command.ascend(@, watcher, watchers[index + 1], watchers[index + 2], value, true)
+          watcher.command.solve(@, watcher, watchers[index + 1], watchers[index + 2], true)
         # Remove propagated value and re-match expressions around it
         else
           watcher.command.patch(@, watcher, watchers[index + 1], watchers[index + 2])

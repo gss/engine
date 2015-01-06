@@ -1,4 +1,4 @@
-Command = require('./Command')
+Command = require('../Command')
 
 class Variable extends Command
   type: 'Variable'
@@ -14,6 +14,7 @@ class Variable extends Command
     
   before: (args, engine, operation, continuation, scope, ascender, ascending) ->
     if (value = ascending?.values?[args[0]])?
+      debugger
       return value
 
   # Declare variable within domain, initial value is zero
@@ -61,5 +62,11 @@ Variable.Expression.algebra =
 
   '/': (left, right) ->
     return left / right
+
+  'min': (left, right) ->
+    return Math.min(left, right)
+
+  'max': (left, right) ->
+    return Math.max(left, right)
   
 module.exports = Variable

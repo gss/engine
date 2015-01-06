@@ -1,4 +1,4 @@
-Query = require('./Query')
+Query = require('../Query')
 
 class Condition extends Query
   type: 'Condition'

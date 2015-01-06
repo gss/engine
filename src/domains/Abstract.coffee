@@ -2,17 +2,19 @@
 Domain      = require('../Domain')
 Command     = require('../Command')
    
-Variable    = require('../Variable')
-Constraint  = require('../Constraint')
+Variable    = require('../commands/Variable')
+Constraint  = require('../commands/Constraint')
 
 class Abstract extends Domain
   url: undefined
   helps: true
 
-  Iterator:   require('../Iterator')
-  Condition:  require('../Condition')
+  Iterator:   require('../commands/Iterator')
+  Condition:  require('../commands/Condition')
+  Unit:       require('../commands/Unit')
 
-  Properties: require('../properties/Axioms')  
+  Properties: require('../properties/Dimensions')  
+
 
 
 Abstract::Remove = Command.extend {
@@ -178,5 +180,7 @@ Abstract::Assignment.Style = Abstract::Assignment.extend {
     else
       engine.assumed.set object || scope, property, value
     return
+
+
 
 module.exports = Abstract

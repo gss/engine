@@ -92,6 +92,7 @@ class Engine
     @solved = new @Boolean
     @solved.displayName = 'Solved'
     @solved.priority = -200
+    @solved.finalized = true
     @solved.setup()
 
     @values = @solved.values
@@ -443,22 +444,18 @@ class Engine
     
     if @assumed.values.hasOwnProperty(path)
       return @assumed
-    else if property && (intrinsic = @intrinsic?.properties)
-      if (intrinsic[path]? || (intrinsic[property] && !intrinsic[property].matcher))
-        return @intrinsic
-    
+    else if property && intrinsic = @intrinsic
+      if props = intrinsic.properties
+        if (props[path]? || (props[property] && !props[property].matcher))
+          return intrinsic
+      if property.indexOf('computed-') == 0 || property.indexOf('intrinsic-') == 0
+        return intrinsic
+      
     if Default
       return Default
-      
-    if property && (index = property.indexOf('-')) > -1
-      prefix = property.substring(0, index)
-      if (domain = @[prefix])
-        if domain instanceof @Domain
-          return domain
 
     if op = @variables[path]?.constraints?[0]?.operations[0]?.domain
       return op
-
     
     if @domain.url
       return @domain

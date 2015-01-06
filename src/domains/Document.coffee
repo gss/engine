@@ -3,8 +3,8 @@ Abstract = require('./Abstract')
 class Document extends Abstract
   priority: Infinity
   
-  Selector:    require('../Selector')
-  Stylesheet:  require('../Stylesheet')
+  Selector:    require('../commands/Selector')
+  Stylesheet:  require('../commands/Stylesheet')
 
   constructor: () ->
     super
