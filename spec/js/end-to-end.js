@@ -191,7 +191,7 @@ describe('End - to - End', function() {
         });
       });
     });
-    return describe('imported', function() {
+    return xdescribe('imported', function() {
       return it('should dump', function(done) {
         container.innerHTML = "<div class=\"outer\">\n  <button></button>\n  <button></button>\n</div>\n<div class=\"outie\">\n  <button></button>\n  <button></button>\n</div>\n<style type=\"text/gss\" scoped>\n  .outer, .outie {\n    @import fixtures/external-file-css1.gss;\n  }\n</style>";
         return engine.once('solve', function() {
@@ -582,7 +582,6 @@ describe('End - to - End', function() {
           });
           b3 = engine.id('b3');
           b3.parentNode.removeChild(b3);
-          GSS.console.log(1);
           return engine.once('solve', function(e) {
             var b2;
             expect(engine.values).to.eql({
@@ -594,7 +593,6 @@ describe('End - to - End', function() {
             });
             b2 = engine.id('b2');
             b2.parentNode.removeChild(b2);
-            GSS.console.log(1);
             return engine.once('solve', function(e) {
               expect(engine.values).to.eql({
                 "x": 100,
@@ -613,7 +611,6 @@ describe('End - to - End', function() {
                 });
                 a1 = engine.id('a1');
                 a1.parentNode.removeChild(a1);
-                GSS.console.log(1);
                 return engine.once('solve', function(e) {
                   expect(engine.values).to.eql({
                     "x": 100,
@@ -1246,7 +1243,6 @@ describe('End - to - End', function() {
         external = null;
         listen = function(e) {
           counter++;
-          debugger;
           if (counter === 1) {
             expect(engine.values).to.eql({
               "external-file": 1000,
@@ -1349,7 +1345,7 @@ describe('End - to - End', function() {
       engine = window.$engine = GSS(container);
       container.style.width = '400px';
       container.style.height = '100px';
-      container.innerHTML = "\n    <div id=\"box\" class=\"box foo\" onclick=\"this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')\"></div>\n\n    <style type=\"text/gss\">\n      [col-gap] == 16;\n      $[size] == $[intrinsic-size];\n      $[left] == 0;\n    \n      @h |($\"col-1...8\")-[col-gap]-...| in($) !require {\n        width: == $[col-width] !require;\n      }\n      \n      .box {          \n        @v |(&)| in(::window);\n        &.bar {\n          @h |(&)| in($\"col-6\");\n        }\n        &.foo {\n          @h |(&)| in($\"col-3\");\n        }\n      }\n    </style>\n    ";
+      container.innerHTML = "\n    <button id=\"box\" class=\"box foo\" onclick=\"this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')\"></button>\n\n    <style type=\"text/gss\">\n      [col-gap] == 16;\n      $[size] == $[intrinsic-size];\n      $[left] == 0;\n    \n      @h |($\"col-1...8\")-[col-gap]-...| in($) !require {\n        width: == $[col-width] !require;\n      }\n      \n      .box {          \n        @v |(&)| in(::window);\n        &.bar {\n          @h |(&)| in($\"col-6\");\n        }\n        &.foo {\n          @h |(&)| in($\"col-3\");\n        }\n      }\n    </style>\n    ";
       return engine.then(function(solution) {
         expect(Math.floor(solution["col-width"])).to.eql((400 - 16 * 7) / 8);
         expect(Math.floor(solution["$box[width]"])).to.eql((400 - 16 * 7) / 8);
@@ -1439,7 +1435,7 @@ describe('End - to - End', function() {
     });
   });
   describe('VGL', function() {
-    describe('grid-template', function() {
+    xdescribe('grid-template', function() {
       engine = null;
       return it('vars', function(done) {
         var listener;
@@ -2075,7 +2071,6 @@ describe('End - to - End', function() {
     describe('Implicit VFL w/ containment', function() {
       return it('should compute', function(done) {
         engine.once('solve', function(e) {
-          GSS.console.log(JSON.stringify(engine.vars));
           expect(engine.values).to.eql({
             "$s1[x]": 10,
             "$container[x]": 0,
@@ -2207,9 +2202,7 @@ describe('End - to - End', function() {
     describe("new VFL output", function() {
       return it('should work', function(done) {
         container.innerHTML = "<div id=\"boxA\" class=\"box\"></div>\n<div id=\"boxB\" class=\"box\"></div>\n<div id=\"box2\" class=\"box\"></div>\n<div id=\"box3\"></div>\n<div id=\"container\"></div>\n\n<style type=\"text/gss\">\n  #container[width] == 300;\n  #container[left] == 0;\n  $gap >= 0;\n\n  .box, #box2, #box3 {\n    width: == :next[width];\n    top: == ::window[top];\n  }\n  \n  #container[left] + $gap == (.box:first)[left];\n   \n  .box {\n    &[right] + 10 == :next[left];\n  }\n\n  (.box:last)[right] + $gap == (#box2)[left];\n   \n  #box2[right] == #box3[left];\n  #box3[right] + $gap == #container[right];\n   \n</style>";
-        GSS.console.profile(1);
         return engine.once('solve', function(solution) {
-          GSS.console.profileEnd(1);
           expect(solution).to.eql({
             "::window[y]": 0,
             "$box2[width]": 70,

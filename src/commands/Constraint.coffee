@@ -2,14 +2,14 @@ Command = require('../Command')
 
 Constraint = Command.extend
   type: 'Constraint'
-  
+
   signature: [
-  	left:     ['Variable', 'Number'],
-  	right:    ['Variable', 'Number']
-  	[
-  		strength: ['String']
-  		weight:   ['Number']
-  	]
+    left:     ['Variable', 'Number'],
+    right:    ['Variable', 'Number']
+    [
+      strength: ['String']
+      weight:   ['Number']
+    ]
   ]
 
   # Provide logging for an action
@@ -26,7 +26,7 @@ Constraint = Command.extend
 
   # Shared interface:
 
-  # Find applied constraint by expression ignoring input variables 
+  # Find applied constraint by expression ignoring input variables
   fetch: (engine, operation) ->
     if operations = engine.operations?[operation.hash ||= @toExpression(operation)]
       for signature, constraint of operations
@@ -80,7 +80,7 @@ Constraint = Command.extend
         @unset engine, other
       @set engine, constraint
 
-    
+
     return
 
   reset: (engine) ->
@@ -100,7 +100,7 @@ Constraint = Command.extend
       engine.setup()
       if editing = engine.editing
         engine.editing = undefined
-        
+
         for property, constraint of editing
           engine.edit(engine.variables[property], engine.variables[property].value)
       if engine.constraints
@@ -174,7 +174,7 @@ Constraint = Command.extend
     for constraint in constraints
       groupped = undefined
       vars = constraint.variables
-      
+
       for group in groups by -1
         for other in group
           others = other.variables
@@ -225,5 +225,5 @@ Constraint = Command.extend
         if equal
           throw new Error 'Trying to separate what was just added. Means loop. '
       return engine.Command.orphanize commands
-      
+
 module.exports = Constraint

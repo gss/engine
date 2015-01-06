@@ -61,6 +61,8 @@ module.exports = ->
             level: 'ignore'
           'no_trailing_whitespace':
             level: 'ignore'
+          'no_backticks':
+            level: 'ignore'
       spec:
         files:
           src: ['spec/*.coffee']

@@ -8,7 +8,7 @@ remove = (el) ->
 
 fixtures = document.getElementById 'fixtures'
 
-describe 'Conditions', ->
+xdescribe 'Conditions', ->
   describe 'conditions that use', ->
     describe 'single selector', ->
       it 'should initialize condition once', ->

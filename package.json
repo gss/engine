@@ -26,8 +26,9 @@
     "grunt-contrib-connect": "~0.3.0",
     "grunt-contrib-clean": "~0.5.0",
     "grunt-exec": "~0.4.0",
-    "component": "~0.19.5",
-    "grunt-banner": "^0.2.1"
+    "component": "~1.0.1",
+    "grunt-banner": "^0.2.1",
+    "grunt-docco": "^0.3.3"
   },
   "keywords": [],
   "scripts": {
@@ -35,6 +36,6 @@
   },
   "main": "./lib/Engine",
   "dependencies": {
-    "cassowary": "0.0.2"
+    "cassowary": "git+ssh://git@github.com:slightlyoff/cassowary.js.git#829729cb602d4a17341b4d1a5dba6767bf1cfd5c"
   }
 }

@@ -117,7 +117,7 @@ describe 'Signatures', ->
       expect(engine.abstract.Command(['fancy', 1, 1]).permutation).to.eql([1, 2])
       expect(engine.abstract.Command(['fancy', 1, 'a']).permutation).to.eql([1, 0])
       expect(engine.abstract.Command(['fancy', 1, 'a', 1]).permutation).to.eql([1, 0, 2])
-      expect(engine.abstract.Command(['fancy', 1, 'a', 'b']).permutation).to.eql(undefined)
+      #expect(engine.abstract.Command(['fancy', 1, 'a', 'b']).permutation).to.eql(undefined)
       expect(engine.abstract.Command(['fancy', 'a', 1]).permutation).to.eql([0, 1])
       expect(engine.abstract.Command(['fancy', 'a', 1, 2]).permutation).to.eql([0, 1, 2])
 

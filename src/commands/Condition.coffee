@@ -2,13 +2,13 @@ Query = require('../Query')
 
 class Condition extends Query
   type: 'Condition'
-  
+
   signature: [
-  	if: ['Query', 'Selector', 'Variable', 'Constraint', 'Default'],
-  	then: ['Any'], 
-  	[
-  		else: ['Any']
-  	]
+    if: ['Query', 'Selector', 'Variable', 'Constraint', 'Default'],
+    then: ['Any'],
+    [
+      else: ['Any']
+    ]
   ]
 
   cleaning: true
@@ -39,9 +39,9 @@ class Condition extends Query
         engine.queries[path] = 0
         branch = operation[@conditional]
         branch.command.solve(engine, branch, continuation, scope)
-        
+
       @after([], engine.queries[path], engine, operation, continuation, scope)
-        
+
     return false
 
   execute: (value) ->
@@ -135,12 +135,12 @@ Condition.Global = Condition.extend
 
 # Detect condition that observes selectors
 Condition.Selector = Condition.extend
-  
+
   condition: (engine, operation, command) ->
     if command
       operation = operation[1]
-    if operation.command.type == 'Selector' && 
-        (operation.length > 1 || 
+    if operation.command.type == 'Selector' &&
+        (operation.length > 1 ||
           (operation.parent.command.type == 'Selector' &&
           operation.parent.command.type == 'Iterator'))
       return true
@@ -172,5 +172,5 @@ Condition.define 'elseif', {
 }
 Condition.define 'elsif', {
 }
- 
+
 module.exports = Condition

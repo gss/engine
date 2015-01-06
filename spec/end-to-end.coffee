@@ -325,7 +325,7 @@ describe 'End - to - End', ->
               done()
 
 
-    describe 'imported', ->
+    xdescribe 'imported', ->
       it 'should dump', (done) ->
         container.innerHTML =  """
           <div class="outer">
@@ -865,7 +865,6 @@ describe 'End - to - End', ->
             "$b3[x]": 100
           b3 = engine.id('b3')
           b3.parentNode.removeChild(b3)
-          GSS.console.log(1)
 
           engine.once 'solve', (e) ->
             expect(engine.values).to.eql 
@@ -877,7 +876,6 @@ describe 'End - to - End', ->
 
             b2 = engine.id('b2')
             b2.parentNode.removeChild(b2)
-            GSS.console.log(1)
             engine.once 'solve', (e) ->
               expect(engine.values).to.eql 
                 "x": 100
@@ -893,7 +891,6 @@ describe 'End - to - End', ->
                   "$b2[x]": 100
                 a1 = engine.id('a1')
                 a1.parentNode.removeChild(a1)
-                GSS.console.log(1)
                 engine.once 'solve', (e) ->
                   expect(engine.values).to.eql 
                     "x": 100
@@ -1571,7 +1568,6 @@ describe 'End - to - End', ->
         external = null
         listen = (e) ->
           counter++
-          debugger
           if counter == 1
             expect(engine.values).to.eql 
               "external-file": 1000
@@ -1723,7 +1719,7 @@ describe 'End - to - End', ->
       container.style.height = '100px'
       container.innerHTML = """
 
-        <div id="box" class="box foo" onclick="this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')"></div>
+        <button id="box" class="box foo" onclick="this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')"></button>
     
         <style type="text/gss">
           [col-gap] == 16;
@@ -1840,7 +1836,7 @@ describe 'End - to - End', ->
   
   describe 'VGL', ->  
     
-    describe 'grid-template', ->
+    xdescribe 'grid-template', ->
       engine = null
     
       it 'vars', (done) ->
@@ -2864,7 +2860,6 @@ describe 'End - to - End', ->
   
       it 'should compute', (done) ->
         engine.once 'solve', (e) ->
-          GSS.console.log JSON.stringify engine.vars
           expect(engine.values).to.eql      
             "$s1[x]": 10,
             "$container[x]": 0,
@@ -3128,9 +3123,7 @@ describe 'End - to - End', ->
            
         </style>
         """
-        GSS.console.profile(1)
         engine.once 'solve', (solution) ->
-          GSS.console.profileEnd(1)
           expect(solution).to.eql 
             "::window[y]": 0
             "$box2[width]": 70

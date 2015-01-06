@@ -1,6 +1,6 @@
 # Return command definition (or instance) for given operation
-# by arguments type signature. 
-class Command 
+# by arguments type signature.
+class Command
   type: 'Command'
 
   constructor: (operation, parent, index) ->
@@ -15,13 +15,13 @@ class Command
       operation.command = command
       unless parent
         command = Command.descend(command, @, operation)
-    
+
     return command
 
   # Evaluate operation arguments, execute command, propagate result
-  solve: (engine, operation, continuation, scope, ascender, ascending) -> 
+  solve: (engine, operation, continuation, scope, ascender, ascending) ->
     domain = operation.domain || engine
-    
+
     # Let engine modify continuation or return cached result
     switch typeof (result = @retrieve(domain, operation, continuation, scope, ascender, ascending))
       when 'undefined'
@@ -63,7 +63,7 @@ class Command
     for index in [1 ... operation.length] by 1
 
       # Use ascending value
-      
+
       if ascender == index
         argument = ascending
       else
@@ -73,20 +73,20 @@ class Command
           # Find a class that will execute the command
           command = argument.command || engine.Command(argument)
           argument.parent ||= operation
-            
+
           # Leave forking/pairing mark in a path when resolving next arguments
           if continuation && ascender && ascender != index
             contd = @connect(engine, operation, continuation, scope, args, ascender)
 
           # Evaluate argument
           argument = command.solve(operation.domain || engine, argument, contd || continuation, scope, undefined, ascending)
-            
+
           if argument == undefined
             return false
-          
+
       # Place argument at position enforced by signature
       (args || args = Array(operation.length - 1 + @padding))[@permutation[index - 1]] = argument
-    
+
     # Methods that accept more arguments than signature gets extra meta arguments
     extras = @extras ? @execute.length - index + 1
     if extras > 0
@@ -95,9 +95,9 @@ class Command
 
     return args
 
-  # Pass control to parent operation. 
+  # Pass control to parent operation.
   ascend: (engine, operation, continuation, scope, result, ascender, ascending) ->
-    
+
     if (parent = operation.parent)
 
       # Return partial solution to dispatch to parent command's domain
@@ -105,7 +105,7 @@ class Command
         if (wrapper = parent.domain) && wrapper != domain && wrapper != engine
           @transfer(operation.domain, parent, continuation, scope, ascender, ascending, parent.command)
           return
-        
+
       # Offer parent command to capture a value
       if top = parent.command
         if yielded = top.yield?(result, engine, operation, continuation, scope, ascender)
@@ -115,14 +115,14 @@ class Command
       # Recurse to execute parent expression with ascending query result
       if ascender?
         return top.solve(parent.domain || engine, parent, continuation, scope, parent.indexOf(operation), result)
-      
+
     return result
 
 
 
   @subtype: (engine, operation, types) ->
 
-  
+
   # Process arguments and match appropriate command
   @match: (engine, operation, parent, index) ->
     # Function call
@@ -163,8 +163,8 @@ class Command
       return command
     else
       throw new Error "Too few arguments in `" + operation[0] + '` for ' + engine.displayName + ' domain'
-  
-  # Choose a sub type for command    
+
+  # Choose a sub type for command
   @descend: (command, engine, operation) ->
     if advices = command.advices
       for type in advices
@@ -273,7 +273,7 @@ class Command
   # Computed automatically for each command by checking `.length` of `@execute` callback
   extras: undefined
 
-  # Serialize operation with infix syntax (useful for constraints) 
+  # Serialize operation with infix syntax (useful for constraints)
   toExpression: (operation) ->
     switch typeof operation
       when 'object'
@@ -287,7 +287,7 @@ class Command
       else
         return operation
 
-  # Forget command  
+  # Forget command
   sanitize: (engine, operation, ascend, replacement) ->
 
     # Clean sub-expressions with the same domain
@@ -314,7 +314,7 @@ class Command
 # ### Delimeters
 
 # **↑ Referencing**, e.g. to jump to results of dom query,
-# or to figure out which element in that collection 
+# or to figure out which element in that collection
 # called this function
   ASCEND: String.fromCharCode(8593)
 
@@ -326,7 +326,7 @@ class Command
   DESCEND: String.fromCharCode(8595)
 
   DELIMITERS: [8593, 8594, 8595]
-  
+
 
   # Update delimeter at the end of the path
   delimit: (path, delimeter = '') ->
@@ -346,7 +346,7 @@ class Command
 
   # Define command subclass, and its class and instance properties
   @extend: (definition, methods) ->
-    
+
     if (Constructor = @prototype.constructor) == Command || Constructor.length == 0
       Constructor = undefined
     Kommand = ->
@@ -358,18 +358,18 @@ class Command
     Prototype.prototype = @prototype
     Kommand.prototype = new Prototype
     Kommand.prototype.definition = Kommand
-    
+
     Kommand.extend   = Command.extend
     Kommand.define   = Command.define
 
     for property, value of definition
       Kommand::[property] = value
-      
+
     if methods
       Kommand.define(methods)
 
     return Kommand
-      
+
   # Define subclasses for given methods
   @define: (name, options) ->
     if !options
@@ -393,7 +393,7 @@ class Command
     if object.push
       return 'List'
     return 'Object'
-  
+
   # Unset domain and variable references from sub-tree
   @orphanize: (operation) ->
     if operation.domain
@@ -423,7 +423,7 @@ class Command
         if value?.prototype instanceof Command
           Types[property] = value
           @compile(engine, value)
-            
+
     for property, value of command
       if value != Command[property] && property != '__super__'
         if value?.prototype instanceof Command
@@ -435,26 +435,26 @@ class Command
                 for name in aliases
                   engine.engine[name] = engine.engine[property]
     @Types = Types
-      
+
     @
 
   # Compile command as an external helper on engine prototype
   @Helper: (engine, name) ->
-    signature = engine.signatures[name] 
+    signature = engine.signatures[name]
     base = [name]
     engine.engine[name] ||= ->
       args = Array.prototype.slice.call(arguments)
       command = Command.match(engine, base.concat(args)).prototype
       length = (command.hasOwnProperty('permutation') && command.permutation.length || 0) + command.padding
-      
+
       if length > args.length
         args.length = length
 
-      if extras = command.extras ? command.execute.length 
+      if extras = command.extras ? command.execute.length
         args.push(engine)
         if extras > 1
           args.push(args)
-          if extras > 2         
+          if extras > 2
             args.push('')
             if extras > 3
               args.push(engine.scope)
@@ -463,19 +463,19 @@ class Command
         unless command.ascend == command.constructor.__super__.ascend
           command.ascend(engine, args, '', engine.scope, result)
         return result
-  
 
-  ### 
+
+  ###
 
   Generate lookup structures to match methods by name and argument type signature
 
   Signature for `['==', ['get', 'a'], 10]` would be `engine.signatures['==']['Variable']['Number']`
 
-  A matched signature returns customized class for an operation that can further 
-  pick a sub-class dynamically. Signatures allows special case optimizations and 
+  A matched signature returns customized class for an operation that can further
+  pick a sub-class dynamically. Signatures allows special case optimizations and
   composition to be implemented structurally, instead of branching in runtime.
 
-  Signatures are shared between commands. Dispatcher support css-style 
+  Signatures are shared between commands. Dispatcher support css-style
   typed optional argument groups, but has no support for keywords or repeating groups yet
   ###
 
@@ -493,31 +493,31 @@ class Command
       for signature in signatures
         @get command, storage, signature
     return storage
-        
+
   # Reorder keys within optional group
   @permute: (arg, permutation) ->
     keys = Object.keys(arg)
     return keys unless permutation
     values = Object.keys(arg)
     group = []
-    
+
     # Put keys at their permuted places
     for position, index in permutation
       unless position == null
         group[position] = keys[index]
-    
-    # Fill blank spots with     
+
+    # Fill blank spots with
     for i in [permutation.length ... keys.length] by 1
       for j in [0 ... keys.length] by 1
         unless group[j]?
           group[j] = keys[i]
           break
-          
+
     # Validate that there're no holes
     for arg in group
       if arg == undefined
         return
-        
+
     return group
 
   # Return array of key names for current permutation
@@ -584,7 +584,7 @@ class Command
     return combinations
 
   # Create actual nested lookup tables for argument types
-  # When multiple commands share same output node, 
+  # When multiple commands share same output node,
   # they may register to choose type conditionally
   @write: (command, storage, combination)->
     for i in [0 ... combination.length]
@@ -595,10 +595,10 @@ class Command
         if arg != undefined && i < last
           storage = storage[arg] ||= {}
         else
-          variant = command.extend 
-              permutation: combination[last], 
-              padding: last - i
-              definition: command
+          variant = command.extend
+            permutation: combination[last],
+            padding: last - i
+            definition: command
 
           if resolved = storage.resolved
             proto = resolved::
@@ -624,10 +624,10 @@ class Command
     for type, subcommand of types
       if proto = command.prototype
         # Command has a handler for this subtype
-        if (execute = proto[type]) || 
-            # Subtype explicitly subscribes to command type handler 
-            ((kind = subcommand::kind) && 
-              ((kind == 'auto') || 
+        if (execute = proto[type]) ||
+            # Subtype explicitly subscribes to command type handler
+            ((kind = subcommand::kind) &&
+              ((kind == 'auto') ||
                 (execute = proto[kind])))
           Prototype = subcommand.extend()
           for own property, value of proto
@@ -638,7 +638,7 @@ class Command
           else if execute
             Prototype::execute = execute
 
-            
+
           for combination in @sign(subcommand, Prototype.prototype)
             @write Prototype, storage, combination
 
@@ -646,13 +646,13 @@ class Command
       @write command, storage, combination
 
     return
-    
+
   # Generate a lookup structure to find method definition by argument signature
   @get: (command, storage, signature, args, permutation) ->
 
     args ||= []
     i = args.length
-    
+
     # Find argument by index in definition
     `seeker: {`
     for arg in signature
@@ -677,23 +677,23 @@ class Command
             `break seeker`
           i--
     `}`
-    
+
     # End of signature
     unless argument
       @generate(storage, @getPositions(args), @getPermutation(args, @getProperties(signature)), undefined, args.length)
       return
-      
+
     # Permute optional argument within its group
     if keys && j?
       permutation ||= []
-      
+
       for i in [0 ... keys.length] by 1
         if permutation.indexOf(i) == -1
           @get command, storage, signature, args.concat(args.length - j + i), permutation.concat(i)
-  
+
       @get command, storage, signature, args.concat(null), permutation.concat(null)
       return
-        
+
     # Register all input types for given arguments
     @get command, storage, signature, args.concat(args.length)
 
@@ -701,7 +701,7 @@ class Command
 # A list of operations that doesnt return values
 class Command.List extends Command
   type: 'List'
-  
+
   constructor: ->
   extras: 0
   boundaries: true
@@ -753,4 +753,3 @@ class Command.Meta extends Command
     return data
 
 module.exports = Command
-

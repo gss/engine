@@ -2,7 +2,8 @@ Domain     = require('../Domain')
 Command    = require('../Command')
 Variable   = require('../commands/Variable')
 Constraint = require('../commands/Constraint')
-c = require('cassowary')
+c          = require('cassowary')
+
 class Linear extends Domain
   priority: 0
 
@@ -35,9 +36,9 @@ class Linear extends Domain
   unedit: (variable) ->
     if constraint = @editing?['%' + (variable.name || variable)]
       #@solver.removeConstraint(constraint)
-      cei = @solver._editVarMap.get(constraint.variable);
-      @solver.removeColumn(cei.editMinus);
-      @solver._editVarMap.delete(constraint.variable);
+      cei = @solver._editVarMap.get(constraint.variable)
+      @solver.removeColumn(cei.editMinus)
+      @solver._editVarMap.delete(constraint.variable)
       delete @editing[(variable.name || variable)]
 
       #@removeConstraint(constraint)
@@ -48,7 +49,7 @@ class Linear extends Domain
       constraint.variable = variable
       @Constraint::inject @, constraint
       (@editing ||= {})[variable.name] = constraint
-    
+
     return constraint
 
   nullify: (variable, full) ->
@@ -101,7 +102,7 @@ Linear::Constraint = Constraint.extend {
   # Get cached operation by expression and set of input variables
   get: (engine, operation, scope) ->
     return engine.linear.operations?[operation.hash ||= @toExpression(operation)]?[@toHash(scope)]
-  
+
   yield: Linear.Mixin.yield
 
   inject: (engine, constraint) ->
@@ -132,9 +133,9 @@ Linear::Variable = Variable.extend Linear.Mixin,
     variable = @declare(engine, path)
     engine.unedit(variable)
     return variable
-    
+
 Linear::Variable.Expression = Variable.Expression.extend Linear.Mixin,
-  
+
   '+': (left, right) ->
     return c.plus(left, right)
 
@@ -148,8 +149,8 @@ Linear::Variable.Expression = Variable.Expression.extend Linear.Mixin,
     return c.divide(left, right)
 
 # Handle constraints wrapped into meta constructs provided by Abstract
-Linear::Meta = Command.Meta.extend {}, 
-  'object': 
+Linear::Meta = Command.Meta.extend {},
+  'object':
     execute: (constraint, engine, operation) ->
       if constraint?.hashCode?
         operation[1].command.add(constraint, engine, operation[1], operation[0].key)
@@ -173,7 +174,7 @@ Linear::Stay = Command.extend {
   ]
 },
   stay: (value, engine, operation) ->
-    engine.suggested = true;
+    engine.suggested = true
     engine.solver.addStay(value)
     return
 
@@ -193,10 +194,10 @@ Linear::Remove = Command.extend {
 # The hack enforces arrays as base structure.
 Linear.hack = ->
   unless c.isUnordered?
-    obj = {9: 1, 10: 1}
+    obj = {10: 1, 9: 1}
     for property of obj
       break
-    if c.isUnordered = (property == 10)
+    if c.isUnordered = (property > 9)
       set = c.HashTable.prototype.set
       c.HashTable.prototype.set = ->
         if !@_store.push
