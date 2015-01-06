@@ -36,6 +36,6 @@
   },
   "main": "./lib/Engine",
   "dependencies": {
-    "cassowary": "0.0.2"
+    "cassowary": "git+ssh://git@github.com:slightlyoff/cassowary.js.git#829729cb602d4a17341b4d1a5dba6767bf1cfd5c"
   }
 }

@@ -50,9 +50,9 @@
     "vendor/MutationObserver.classList.js"
   ],
   "dependencies": {
-    "gss/ccss-compiler": "550e442f2c64992f3a8c7babdaf90b5c643c4465",
-    "gss/vfl-compiler": "*",
-    "slightlyoff/cassowary.js": "*"
+    "gss/ccss-compiler": "~1.1.2",
+    "gss/vfl-compiler": "~1.1.3",
+    "slightlyoff/cassowary.js": "829729cb602d4a17341b4d1a5dba6767bf1cfd5c"
   },
   "main": "lib/Engine.js"
 }
