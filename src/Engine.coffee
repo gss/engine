@@ -643,4 +643,4 @@ Engine.clone    = Engine::clone = (object) ->
     return object.map @clone, @
   return object
 
-module.exports = @GSS = Engine
+module.exports = Engine
