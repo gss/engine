@@ -17,6 +17,7 @@
     "component": "~0.19.5",
     "grunt": "~0.4.1",
     "grunt-banner": "^0.2.1",
+    "grunt-cli": "~0.1.13",
     "grunt-coffeelint": "0.0.6",
     "grunt-contrib-clean": "~0.5.0",
     "grunt-contrib-coffee": "~0.7.0",
@@ -31,7 +32,7 @@
   },
   "keywords": [],
   "scripts": {
-    "test": "grunt test"
+    "test": "node_modules/.bin/grunt test"
   },
   "main": "./lib/Engine",
   "dependencies": {
