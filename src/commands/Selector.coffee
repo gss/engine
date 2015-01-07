@@ -9,7 +9,6 @@ Query   = require('../Query')
 
 require '../../vendor/weakmap.js'
 require '../../vendor/MutationObserver.js'
-require '../../vendor/MutationObserver.attributes.js'
 
 class Selector extends Query
   type: 'Selector'

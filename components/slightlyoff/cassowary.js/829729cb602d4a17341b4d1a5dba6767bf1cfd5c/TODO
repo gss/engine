@@ -1,0 +1,11 @@
+- Port the quads demo to use worker-hosted solver
+- Update the Hashtable impl to use the built in Maps from harmony if available. Benchmark.
+- Write perf tests, get them running under JSPerf harness
+	- Port from C++ version:
+		http://cassowary.cvs.sourceforge.net/viewvc/cassowary/cassowary/c%2B%2B/ClTests.cc?revision=1.55&content-type=text%2Fplain
+- Increase complexity of demo to actually stress the solver in modern browser/hardware configs
+	- Output some performance info.
+- Define a JSON format for constraint loading
+- Document API (after improving/fixing it)	
+- Expose Cassowary as a NodeJS module
+- Improve the box model of panels.js to handle more real-world applications

@@ -11,12 +11,14 @@ module.exports = ->
       nuke_built:
         src: ['dist']
 
-    exec:
-      component_install:
-        command: 'node ./node_modules/component/bin/component install'
-      component_build:
-        command: 'node ./node_modules/component/bin/component build -o dist -n gss -s gss -c'
-
+    browserify:
+      dist:
+        files:
+          'dist/gss.js': ['src/gss.coffee']
+        options:
+          transform: ['coffeeify']
+          browserifyOptions:
+            extensions: ['.coffee']
 
     # JavaScript minification for the browser
     uglify:
@@ -41,12 +43,9 @@ module.exports = ->
 
     # Automated recompilation and testing when developing
     watch:
-      'build-fast':
-        files: ['spec/*.coffee','spec/**/*.coffee', 'src/*.coffee', 'src/**/*.coffee']
-        tasks: ['build-fast']
       build:
         files: ['spec/*.coffee','spec/**/*.coffee', 'src/*.coffee', 'src/**/*.coffee']
-        tasks: ['build']
+        tasks: ['build-fast']
       test:
         files: ['spec/*.coffee', 'src/*.coffee']
         tasks: ['test']
@@ -88,7 +87,7 @@ module.exports = ->
           bare: true
         expand: true
         cwd: 'src'
-        src: ['**.coffee', '**/*.coffee']
+        src: ['*.coffee', '**/*.coffee', '!gss.coffee']
         dest: 'lib'
         ext: '.js'
 
@@ -97,7 +96,7 @@ module.exports = ->
           bare: true
         expand: true
         cwd: 'spec'
-        src: ['**.coffee', '**/*.coffee']
+        src: ['*.coffee', '**/*.coffee']
         dest: 'spec/js'
         ext: '.js'
 
@@ -141,11 +140,10 @@ module.exports = ->
           concurrency: 6
 
   # Grunt plugins used for building
+  @loadNpmTasks 'grunt-browserify'
   @loadNpmTasks 'grunt-contrib-coffee'
-  @loadNpmTasks 'grunt-contrib-concat'
   @loadNpmTasks 'grunt-contrib-uglify'
   @loadNpmTasks 'grunt-contrib-clean'
-  @loadNpmTasks 'grunt-exec'
   @loadNpmTasks 'grunt-docco'
   @loadNpmTasks 'grunt-banner'
 
@@ -158,9 +156,11 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-connect'
   @loadNpmTasks 'grunt-saucelabs'
 
-  @registerTask 'build-fast', ['coffee', 'exec:component_build']
-  @registerTask 'build', ['coffee', 'exec', 'uglify:engine', 'usebanner']
-  @registerTask 'test', ['coffeelint', 'build', 'phantom']
+  @registerTask 'build:lib', ['coffee:src']
+  @registerTask 'build:dist', ['browserify:dist']
+  @registerTask 'build:js', ['build:lib', 'build:dist', 'coffee:spec']
+  @registerTask 'build', ['build:js', 'uglify:engine', 'usebanner']
+  @registerTask 'test', ['coffeelint', 'build:js', 'phantom']
   @registerTask 'phantom', ['connect', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['build', 'coffeelint', 'connect', 'mocha_phantomjs', 'saucelabs-mocha']
   @registerTask 'default', ['build']

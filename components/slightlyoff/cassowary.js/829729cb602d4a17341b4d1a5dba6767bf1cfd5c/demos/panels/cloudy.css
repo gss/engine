@@ -1,0 +1,190 @@
+/**
+ * Copyright (C) 2012, Alex Russell (slightlyoff@chromium.org)
+ * Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+ */
+
+::-webkit-scrollbar {
+    width: 14px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track-piece {
+    background-color: #f5f5f5;
+    background-clip: padding-box;
+    -webkit-background-clip: padding-box;
+    border: 3px solid #fff;
+    border-radius: 6px;
+    -webkit-border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #527dff;
+    background-clip: padding-box;
+    -webkit-background-clip: padding-box;
+    border: 3px solid #fff;
+    border-radius: 6px;
+    -webkit-border-radius: 6px;
+}
+
+#channels::-webkit-scrollbar-track-piece,
+#channels::-webkit-scrollbar-thumb {
+    border-color: #D9E7FF;
+}
+
+::-webkit-scrollbar-thumb:window-inactive {
+    background-color: #bbb;
+}
+
+#channels::-webkit-scrollbar-thumb:window-inactive {
+    background-color: #9CBAFF;
+}
+
+#channels,
+#contacts {
+  overflow: auto;
+  padding: 3px 10px 0px 10px;
+}
+
+#channels > ul,
+#contacts > ul {
+  list-style: none inside;
+  padding-left: 0px;
+}
+
+#contacts {
+  border-left: 1px solid #C0D2FF;
+  border-right: 2px solid #C0D2FF;
+  background-color: #EDF4FF;
+  font-size: 14px;
+}
+
+#masthead {
+  color: #527DFF;
+  padding: 13px;
+  font-size: 20px;
+  font-weight: bold;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#masthead .logo {
+  color: white;
+  background-color: #527DFF;
+  border-radius: 4px;
+  font-size: 25px;
+  padding: 4px 7px 4px 7px;
+}
+
+#submast {
+  border: 1px solid #C0D2FF;
+  background-color: #F2F7FC;
+  border-radius: 0px 7px 0px 0px;
+}
+
+#chatter,
+#bottomchatter {
+  font-weight: bold;
+  padding: 4px;
+  background-color: #527DFF;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#timeinfo {
+  font-size: 13px;
+  line-height: 26px;
+  text-align: center;
+  background-color: whiteSmoke;
+}
+
+#discussion {
+  overflow: auto;
+  background-color: white;
+}
+
+#discussion > ul {
+  list-style: lower-greek outside;
+}
+
+#discussion > ul > li {
+  padding-left: 2em;
+  color: #AFAFAF;
+  color: black;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+#discussion > ul > li:nth-child(5n),
+#discussion > ul > li:nth-child(17n) {
+  color: #AFAFAF;
+}
+
+#discussion > ul > li:nth-child(5n):before {
+  content: "thus spoke Zarthustra \2192";
+  font-weight: bold;
+  padding-right: 4px;
+  color: black;
+}
+
+#discussion > ul > li:nth-child(17n):before {
+  content: "Made you look \2192";
+  font-weight: bold;
+  padding-right: 4px;
+  color: black;
+}
+
+#input {
+  background-color: white;
+}
+
+#time {
+  padding-left: 1em;
+  padding-top: 1em;
+  color: #AAA;
+}
+
+#nickbox {
+}
+
+#nick {
+  padding: 7px 0px 7px 7px;
+  text-align: right;
+}
+
+#nick > div {
+  display: inline-block;
+  text-align: right;
+  line-height: 16px;
+  font-weight: bold;
+  padding: 4px 5px 4px 5px;
+  border-top: 1px solid #999;
+  border-left: 1px solid #999;
+  border-bottom: 1px solid #999;
+  border-right: 1px solid #DDD;
+  border-radius: 3px 0px 0px 3px;
+  background: #EEE;
+  background: -webkit-gradient(, left top, left bottom, from(#EEE), to(white));
+}
+
+#inputto {
+  /*
+  background-color: blue;
+  */
+  padding: 7px 7px 7px 0px;
+}
+
+#inputto > textarea {
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  font-size: 14px;
+  border-left: none;
+  border-top: 1px solid #999;
+  border-bottom: 1px solid #999;
+  border-right: 1px solid #999;
+  border-radius: 0px 3px 3px 0px;
+}

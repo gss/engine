@@ -1,0 +1,80 @@
+<!--
+
+Copyright (C) 1998-2000 Greg J. Badros
+Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+
+Parts Copyright (C) 2012, Alex Russell (slightlyoff@chromium.org)
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Cassowary Javascript Tests</title>
+    <script src="../node_modules/intern/node_modules/dojo/dojo.js"></script>
+    <script>
+      (function() {
+        "use strict";
+        // Utility code to log results to the page.
+        var printLog = [];
+
+        window.append = function (n, h) {
+          (h || document.body).appendChild(n);
+          return n;
+        };
+
+        window.t = function (text) {
+          return document.createTextNode(text);
+        };
+
+        window.el = function (type, html, text) {
+          var node = document.createElement(type);
+          if (html) { node.innerHTML = html; }
+          if (text) { node.appendChild(t(text)); }
+          return node;
+        };
+
+        window.domLog = function () {
+          var al = arguments.length;
+          var pre = append(el("pre"));
+          for(var x = 0; x < al; x++) {
+            append(t(arguments[x]), pre);
+            append(t("\n"), pre);
+          }
+        };
+
+        window.print = function (s) {
+          printLog.push(s);
+        };
+
+        window.addEventListener("load", function() {
+          append(el("h2", "In-page perf test results:"));
+          append(el("pre", printLog.join("\n")));
+          printLog.length = 0;
+        }, false);
+
+        // Basic AMD config for Intern. Normally, we could just use Intern's
+        // included browser runner instead of doing this manually, but we want
+        // to include extra information on this page, such as perf tests.
+        require({
+          baseUrl: '../',
+          packages: [{ name: 'intern', location: 'node_modules/intern' }],
+          map: {
+            intern: {
+              dojo: 'intern/node_modules/dojo',
+              chai: 'intern/node_modules/chai/chai'
+            }
+          }
+        // Load cassowary deps
+        }, [ 'tests/deps' ], function () {
+          // Load Intern's client runner, kicking off the unit tests, and also
+          // load performance tests
+          require(['intern/client', 'tests/PerfTest', 'tests/WorkerPerfTest']);
+        });
+      })(this);
+    </script>
+  </head>
+  <body>
+    <h1>Cassowary Unit + Perf Tests</h1>
+  </body>
+</html>

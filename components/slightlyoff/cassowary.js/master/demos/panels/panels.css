@@ -1,0 +1,65 @@
+/**
+ * Copyright (C) 2012, Alex Russell (slightlyoff@chromium.org)
+ * Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+ */
+
+/* We're an app, so lay ourselves out like one. Just the basics, ma'am. */
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font: normal 95%/1 "Helvetica Neue", "Arial", sans-serif;
+  color: #222;
+  background-color: #D9E7FF;
+}
+
+body {
+  overflow-y: hidden;
+  overflow-x: hidden;
+  position: absolute;
+  font: normal 95%/1 "Helvetica Neue", "Arial", sans-serif;
+}
+
+/* Ensure that we are always in a layout mode that doesn't suck eggs */
+* {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+.panel {
+  /* Turn off system constraint layouts for panels */
+  position:   absolute;
+  margin:     none;
+  padding:    none;
+  border:     none;
+
+  /* FIXME(slightlyoff): need to make the panel constraints savy to padding */
+  /* padding: 10px; */
+}
+
+.panel[movable="true"] {
+  -webkit-user-select: none;
+          user-select: none;
+}
+
+.debugShadow {
+  position:   absolute;
+  margin:     none;
+  padding:    1em;
+  border:     none;
+  overflow:   hidden;
+  background: rgba(159,196,84, 0.5);
+  width:      0px;
+  height:     0px;
+  left:       0px;
+  top:        0px;
+  z-index:    100;
+  outline:    1px solid blue;
+  pointer-events: none;
+  font:       normal 85%/1 "Consolas", "Courier New", "Courier", monospace;
+  text-align: right;
+  color:      black;
+  opacity:    0.5;
+}

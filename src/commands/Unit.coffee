@@ -63,7 +63,4 @@ class Unit extends Variable
     vmax: (value, engine, operation, continuation, scope) ->
       return ['*', ['/', ['px', value], 100] , ['max', ['get', '::window[height]'], ['get', '::window[width]']]]
 
-    vmax: (value, engine, operation, continuation, scope) ->
-      return ['*', ['/', ['px', value], 100] , ['max', ['get', '::window[height]'], ['get', '::window[width]']]]
-
 module.exports = Unit

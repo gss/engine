@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+
+<h2>Table modes</h2>
+
+<h3>20% fat pony, unsized text, unsized table</h3>
+<table>
+  <tr>
+    <td width="20%"><img src="FAT_PONY.gif">
+    <td width="">i have text
+</table>
+
+
+<h3>10% fat pony, 20% fat pony, unsized text, unsized table</h3>
+<table>
+  <tr>
+    <td width="10%"><img src="FAT_PONY.gif">
+    <td width="15%"><img src="FAT_PONY.gif">
+    <td width="">i have text
+</table>
+
+<h3>20% fat pony, *-sized text, unsized table</h3>
+<table>
+  <tr>
+    <td width="20%"><img src="FAT_PONY.gif">
+    <td width="*">* width
+</table>
+
+<h3>20% fat pony, *-sized text, 500px table</h3>
+<table width="500px">
+  <tr>
+    <td width="20%"><img src="FAT_PONY.gif">
+    <td width="*">* width
+</table>
+
+<h3>10% fat pony, 50% text, *-sized text, 500px table</h3>
+<table width="500px">
+  <tr>
+    <td width="10%"><img src="FAT_PONY.gif">
+    <td width="50%">howdy!
+    <td width="*">* width
+</table>
+
+<h3>10% fat pony, 50% text, *-sized text, 500px table with cell overflow hidden</h3>
+<table width="500px" class="hidden-overflow">
+  <tr>
+    <td width="10%"><img src="FAT_PONY.gif">
+    <td width="50%">howdy!
+    <td width="*">* width
+</table>
+
+<h3>10% fat pony, *-sized text, 500px fixed table with cell overflow hidden</h3>
+<table width="500px" class="hidden-overflow" style="table-layout: fixed;">
+  <tr>
+    <td width="10%"><img src="FAT_PONY.gif">
+    <td width="*">* width
+</table>
+
+<h3>natural-size fat pony, natural-size text, 500px fixed table with cell overflow hidden</h3>
+<table width="500px" class="hidden-overflow" style="table-layout: fixed;">
+  <tr>
+    <td><img src="FAT_PONY.gif">
+    <td>* width
+</table>
+
+<h3>10% fat pony, 50% text, *-sized text, 500px fixed table with cell overflow hidden</h3>
+<table width="500px" class="hidden-overflow" style="table-layout: fixed;">
+  <tr>
+    <td width="10%"><img src="FAT_PONY.gif">
+    <td width="50%">howdy!
+    <td width="*">* width
+</table>
+
+<style>
+  html { margin: 1em; }
+  table {
+    border-collapse: collapse;
+  }
+
+  table, tr, td {
+    border: 1px dotted;
+  }
+
+  .hidden-overflow td {
+    overflow: hidden;
+  }
+</style>
+

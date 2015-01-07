@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+  <!--
+    Copyright (C) 2012, Alex Russell (slightlyoff@chromium.org)
+    Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+  -->
+  <head>
+    <title>Bork bork bork</title>
+
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link href="panels.css" rel="stylesheet" type="text/css">
+
+    <script defer="defer" src="../../src/c.js"></script>
+    <script defer="defer" src="../../src/HashTable.js"></script>
+    <script defer="defer" src="../../src/HashSet.js"></script>
+    <script defer="defer" src="../../src/Error.js"></script>
+    <script defer="defer" src="../../src/SymbolicWeight.js"></script>
+    <script defer="defer" src="../../src/Strength.js"></script>
+    <script defer="defer" src="../../src/Variable.js"></script>
+    <script defer="defer" src="../../src/Point.js"></script>
+    <script defer="defer" src="../../src/Expression.js"></script>
+    <script defer="defer" src="../../src/Constraint.js"></script>
+    <script defer="defer" src="../../src/Constraint.js"></script>
+    <script defer="defer" src="../../src/EditInfo.js"></script>
+    <script defer="defer" src="../../src/Tableau.js"></script>
+    <script defer="defer" src="../../src/SimplexSolver.js"></script>
+    <script defer="defer" src="../../src/Timer.js"></script>
+
+    <script defer="defer" src="../../third_party/mutation-summary/mutation_summary.js"></script>
+    <script defer="defer" src="domutil.js"></script>
+    <script defer="defer" src="panels.js"></script>
+
+    <script defer="defer">
+      window.addEventListener("DOMContentLoaded", function(e) {
+        "use strict";
+
+        // c.debug = true;
+        // c.trace = true;
+
+        // Aliases & helpers, copied from panels.js
+        var weak = c.Strength.weak;
+        var medium = c.Strength.medium;
+        var strong = c.Strength.strong;
+        var required = c.Strength.required;
+
+        var eq  = function(a1, a2, strength, w) {
+          return new c.Equation(a1, a2, strength || weak, w||0);
+        };
+        var neq = function(a1, a2, a3) { return new c.Inequality(a1, a2, a3); };
+        var geq = function(a1, a2, str, w) { return new c.Inequality(a1, c.GEQ, a2, str, w); };
+        var leq = function(a1, a2, str, w) { return new c.Inequality(a1, c.LEQ, a2, str, w); };
+
+        var stay = function(v, strength, weight) {
+          return new c.StayConstraint(v, strength || weak, weight || 1.0);
+        };
+
+        // Put a button in the center of the page
+
+        var menu = $("#menu"),
+            sub = $("#submenu"),
+            root = $("#root"),
+            button = $("#button"),
+            menus = $$(".menu");
+
+        // button.centeredIn = root;
+        button.left = 100;
+        button.top = 10;
+        // button.add(stay(button.v.width), stay(button.v.height));
+
+        var displayAround = function(popup, ref, preferY, preferX) {
+          // Default to drop-down placement
+          popup.add(
+            // top to bottom
+            eq(),
+            // left edges aligned
+            eq(),
+            // bottom to top
+            eq(),
+            // right edges aligned
+            eq(),
+
+          /*
+          preferY = preferY || "bottom";
+          preferX = preferX || "left";
+
+          var y = ["bottom", "top"];
+          var x = ["left", "right"]
+
+          var xs = x.indexOf(preferX),
+              xhead = x.slice(0, xs);
+          x = x.slice(xs);
+          xhead.forEach(function(v){ x.push(v); });
+
+          var ys = y.indexOf(preferY),
+              yhead = y.slice(0, ys);
+          y = y.slice(ys);
+          yhead.forEach(function(v){ y.push(v); });
+
+          x.forEach(function(xv, xi) {
+            var xopp = x[x.length - 1 - xi];
+            y.forEach(function(yv, yi) {
+              var yopp = y[y.length - 1 - yi];
+              var strength = (xi * x.length) + yi + 1;
+
+              console.log(xv, xopp, yv, yopp);
+              popup.add(
+                eq(popup.v[yv], ref.v[yopp], weak, strength),
+                eq(popup.v[xv], ref.v[xopp], weak, strength)
+              );
+            });
+          });
+          */
+
+        };
+
+        displayAround(menu, button);
+
+        menus.forEach(function(m) {
+          // Descending strengths of constraints:
+          //  - Menus should always be inside the page
+          //  - Menus should not overlap their parent menu if possible.
+          //  - Menus should maintain their width
+          //  - Menus should maintain their height
+
+          m.add(
+            // leq(m.v.bottom, root.v.bottom, weak)
+            leq(m.v.top, c.minus(root.v.bottom, m.v.height), weak)
+
+            // geq(m.v.top, root.v.top, weak, 1),
+            // geq(m.v.left, root.v.left, weak, 1),
+            // leq(m.v.right, root.v.right, weak, 1)
+          );
+        });
+      }, false);
+    </script>
+
+    <style>
+      #button {
+        color: white;
+        background-color: #527DFF;
+        border-radius: 4px;
+        font-size: 13px;
+        line-height: 30px;
+        text-align: center;
+        vertical-align: center;
+        font-family: "Helvetica Neue";
+      }
+
+      /* FIXME(slightlyoff) */
+      .menu {
+        background-color: #527DFF;
+        border-radius: 4px;
+        font-size: 13px;
+        line-height: 30px;
+        font-family: "Helvetica Neue";
+        letter-spacing: 1px;
+        box-shadow: 0px 6px 20px rgba(54,54,54,0.7);
+      }
+
+      .menu > * {
+        line-height: 30px;
+        color: white;
+        border-bottom: 1px solid white;
+        padding-left: 1em;
+        padding-right: 1em;
+      }
+
+      .menu > :last-child {
+        border-bottom: none;
+      }
+    </style>
+  </head>
+  <body debug="false" id="root">
+
+    <x-panel id="button" preferredWidth="100" preferredHeight="30">
+      Howdy! &#9660;
+    </x-panel>
+
+    <x-panel id="menu"
+      minWidth="200" maxWidth="200" minHeight="300" maxHeight="300"
+      class="menu">
+      <!--
+      left="#button.v.left" top="#button.v.bottom"
+      below="#button" -->
+      <x-panel preferredHeight="30"
+        preferredWidth="#menu.v.width" left="inherit" top="#menu.v.top" id="i1">
+        Item 1
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#i1.v.bottom" id="i2">
+        Item 2
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#i2.v.bottom" id="i3">
+        Item 3
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#i3.v.bottom" id="i4">
+        Item 4 <span style="float: right;">&#9654;</span>
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#i4.v.bottom" id="i5">
+        Item 5
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#i5.v.bottom" id="i6">
+        Item 6
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#i6.v.bottom" id="i7">
+        Item 7
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#i7.v.bottom" id="i8">
+        Item 8
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#i8.v.bottom" id="i9">
+        Item 9
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#i9.v.bottom" id="i10">
+        Item 10
+      </x-panel>
+    </x-panel>
+
+    <x-panel id="submenu"
+      minWidth="200" maxWidth="200"
+      maxHeight="300"
+      top="#i4.v.top" rightOf="#i4" class="menu">
+      <x-panel preferredHeight="30"
+        preferredWidth="#submenu.v.width" left="#submenu.v.left" top="#submenu.v.top" id="si1">
+        Sub-Item 1
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#si1.v.bottom" id="si2">
+        Sub-Item 2
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#si2.v.bottom" id="si3">
+        Sub-Item 3
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#si3.v.bottom" id="si4">
+        Sub-Item 4
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#si4.v.bottom" id="si5">
+        Sub-Item 5
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#si5.v.bottom" id="si6">
+        Sub-Item 6
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#si6.v.bottom" id="si7">
+        Sub-Item 7
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#si7.v.bottom" id="si8">
+        Sub-Item 8
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#si8.v.bottom" id="si9">
+        Sub-Item 9
+      </x-panel>
+      <x-panel preferredHeight="30" left="inherit" right="inherit" top="#si9.v.bottom" id="si10">
+        Sub-Item 10
+      </x-panel>
+    </x-panel>
+
+  </body>
+</html>

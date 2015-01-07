@@ -1,0 +1,16 @@
+.d8_history
+v8.log
+tmp
+out
+.svn
+*.swp
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+perf/v8.log
+out.prof
+/node_modules/*
+/dist/*
+lcov.info
+sauce_connect.log*
+/build/

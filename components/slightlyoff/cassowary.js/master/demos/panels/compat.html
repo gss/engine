@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <!--
+    Copyright (C) 2012, Alex Russell (slightlyoff@chromium.org)
+    Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+  -->
+  <head>
+    <title>Compat Testing</title>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link href="panels.css" rel="stylesheet" type="text/css">
+
+    <!-- Compat testing -->
+    <script src="../../src/c.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/mootools-core-1.3.2-server.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/jshashtable-2.1-gjb.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/jshashset-gjb.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/ExCLError.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/ClSymbolicWeight.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/ClStrength.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/ClVariable.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/ClPoint.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/ClExpression.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/ClConstraint.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/ClConstraint.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/ClEditInfo.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/ClTableau.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/ClSimplexSolver.js"></script>
+    <script src="http://www.badros.com/greg/cassowary/js/CL.js"></script>
+    <script>
+      c.SimplexSolver = ClSimplexSolver;
+      c.Inequality = ClInequality;
+      c.GEQ = CL.GEQ;
+      c.LEQ = CL.LEQ;
+      c.Equation = ClEquation;
+      c.Strength = ClStrength;
+      c.StayConstraint = ClStayConstraint;
+      c.Expression = ClExpression;
+      c.Variable = ClVariable;
+      c.plus = CL.Plus;
+    </script>
+    <script src="../../third_party/mutation-summary/mutation_summary.js"></script>
+    <script src="domutil.js"></script>
+    <script src="panels.js"></script>
+    <script>
+      window.addEventListener("load", function() {
+        "use strict";
+
+        var root = window.root = document.rootPanel;
+        root.debug = true;
+
+        var p = window.p = new Panel();
+        root.appendChild(p);
+
+        p.maxWidth = 300;
+        p.minWidth = 200;
+        p.top = root.v.top;
+        p.right = root.v.right;
+        p.height = root.v.height;
+        p.innerHTML = "howdy!";
+        p.debug = true;
+
+        var p2 = window.p2 = new Panel();
+        root.appendChild(p2);
+
+        p2.left = 200;
+        p2.top = 150;
+        p2.width = 100;
+        p2.height = 100;
+        p2.leftOf = p;
+      }, false);
+    </script>
+  </head>
+  <body>
+  </body>
+</html>

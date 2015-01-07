@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <!--
+    Copyright (C) 2012, Alex Russell (slightlyoff@chromium.org)
+    Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+  -->
+  <head>
+    <title>Bork bork bork</title>
+
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <style>
+      /* We're an app, so lay ourselves out like one. Just the basics, ma'am. */
+      html, body {
+        font: normal 95%/1 "Helvetica Neue", "Arial", sans-serif;
+        color: #222;
+        background-color: #D9E7FF;
+      }
+
+      p {
+        outline: 1px dotted rgba(173,173,173,1);
+        margin-top: 0px;
+        margin-bottom: 0px;
+        /*
+        */
+      }
+
+      #button {
+        color: white;
+        width: 100px;
+        position: absolute;
+        left: 45%;
+        top: 45%;
+        background-color: #527DFF;
+        border-radius: 4px;
+        font-size: 13px;
+        line-height: 30px;
+        text-align: center;
+        vertical-align: center;
+        font-family: "Helvetica Neue";
+        border: 5px solid blue;
+        /*
+        padding: 10px;
+        */
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+    -->
+    <p class="hidden">Bespoke you probably haven't heard of them odd future vinyl organic fanny pack post-ironic.
+    <p>High       life mcsweeney's fixie seitan, williamsburg vinyl bicycle rights hella authentic hoodie 3 wolf moon squid beard occupy.
+    <p class="hidden">Brunch pork belly whatever, portland keytar kogi retro authentic mlkshk jean shorts PBR.
+    <p>Tofu retro put a bird on it brooklyn blog skateboard pop-up umami sartorial.
+    <p class="hidden">Keytar craft beer selvage, squid scenester pickled vegan terry richardson Austin tumblr butcher bushwick sartorial.
+    <p style="display: inline-block;">Keytar craft beer selvage, squid scenester pickled vegan terry richardson Austin tumblr butcher bushwick sartorial.
+      <span style="color: white; background: black; display: block; width: 50%;">
+        I'm a block!
+      </span>
+    </p>
+    <p style="display: inline-block; width: 100px;">
+      <span style="color: blue; display: block;">
+        I'm a block!
+      </span>
+    </p>
+    <div id="button">
+      Howdy! &#9660;
+    </div>
+    <p style="background-color: gray; position: fixed; right: 10px; bottom: 10px; padding: 20px; width: 100px; height: 40px;">
+      I'm fixed to the bottom-right
+    </p>
+  </body>
+</html>
+

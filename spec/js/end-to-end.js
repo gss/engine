@@ -1074,7 +1074,7 @@ describe('End - to - End', function() {
         });
       });
     });
-    xdescribe('complex selectors', function() {
+    xdescribe(':not selector', function() {
       return xit('should compute values', function(done) {
         container.innerHTML = "<section class=\"section\">\n  <div id=\"a1\" class=\"a\"></div>\n  <div id=\"a2\" class=\"a\"></div>\n  <div id=\"a3\" class=\"a\"></div>            \n  <div id=\"b1\" class=\"b\"></div>\n  <div id=\"b2\" class=\"b\"></div>\n  <div id=\"b3\" class=\"b\"></div>\n</section>\n<style type=\"text/gss\">                            \n  [x] == 100;\n  (section.section div:not(.b))[x] == (section.section div:not(.a))[x] == [x];              \n</style>";
         return engine.once('display', function(e) {

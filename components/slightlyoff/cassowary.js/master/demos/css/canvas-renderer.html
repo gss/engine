@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <!--
+    Copyright (C) 2012, Alex Russell (slightlyoff@chromium.org)
+    Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+  -->
+  <head>
+    <title>CSS Layout and Rendering -- JS Edition</title>
+    <!--
+      Notes:
+        This demo does not do its own CSS parsing and/or style resolution.
+        Instead, it takes an existing DOM and inspects it on a per-box basis,
+        generates constratraints for each, and invokes a <canvas>-based
+        renderer when layout is calculated.
+
+        The basic idea is that all box elements in the iframe are
+
+      Open issues:
+        * How to demonstrate that we're doing what we say?
+        * Tables and flexbox are still TODO
+        * %-based widths aren't correctly resolved yet
+        * Is there an HTML/CSS parser written in JS that does style resolution
+          already? Could I go full-stack that way?
+        * Would be slick to have a JSON serialization format for the render
+          boxes
+    -->
+
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <style>
+      body, html {
+        width: 100%;
+        height: 100%;
+      }
+
+      #c {
+        border: 1px solid black;
+      }
+
+      #f {
+        border: 1px solid black;
+      }
+    </style>
+
+
+    <script src="../../src/c.js"></script>
+    <script src="../../src/HashTable.js"></script>
+    <script src="../../src/HashSet.js"></script>
+    <script src="../../src/Error.js"></script>
+    <script src="../../src/SymbolicWeight.js"></script>
+    <script src="../../src/Strength.js"></script>
+    <script src="../../src/Variable.js"></script>
+    <script src="../../src/Point.js"></script>
+    <script src="../../src/Expression.js"></script>
+    <script src="../../src/Constraint.js"></script>
+    <script src="../../src/Constraint.js"></script>
+    <script src="../../src/EditInfo.js"></script>
+    <script src="../../src/Tableau.js"></script>
+    <script src="../../src/SimplexSolver.js"></script>
+
+    <!--
+    <script defer="defer" src="../../third_party/mutation-summary/mutation_summary.js"></script>
+    -->
+
+    <script src="util.js"></script>
+    <!--
+      Emits CSS box rules to a solver and returns an array of variables which
+      contain "box objects" that are used to render their contents
+    -->
+    <script defer="defer" src="layout.js"></script>
+
+    <!--
+      Takes box objects and draws them to an HTML5 2d canvas.
+    -->
+    <script defer="defer" src="renderer.js"></script>
+
+    <script>
+      "use strict";
+      this.renderDebug = true;
+      this.doLayout = function() {
+        console.time("layout");
+        layoutFor("f", function(boxes) {
+          console.timeEnd("layout");
+          console.time("render");
+          renderTo("c", boxes);
+          console.timeEnd("render");
+        });
+      };
+
+      this.ready(function() { setTimeout(doLayout, 10); });
+    </script>
+
+  </head>
+  <body>
+    <h2>Browser rendering</h2>
+    <iframe id="f" width="740" height="140" src="content.html" style="margin: 30px;"></iframe>
+
+    <h2>Constraint rendering to a <code>&lt;canvas&gt;</code></h2>
+    <canvas id="c" width="800" height="200" style="background-color: lightgray"></canvas>
+    <br>
+    <button onclick="doLayout();">Do layout.</button>
+  </body>
+</html>

@@ -261,7 +261,6 @@ class Intrinsic extends Numeric
               @set id, prop, node.offsetHeight
             else
               style = prop.replace(/^(?:computed|intrinsic)-/, '')
-              console.error(style, prop)
               if @properties[style]?.matcher
                 @set id, prop, @getStyle(node, style)
               else

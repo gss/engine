@@ -1341,7 +1341,7 @@ describe 'End - to - End', ->
                       expect(engine.values).to.eql 
                         "x": 100
                       done()
-    xdescribe 'complex selectors', -> 
+    xdescribe ':not selector', -> 
       xit 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <section class="section">

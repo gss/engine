@@ -196,6 +196,7 @@ describe 'Domain', ->
 
   describe 'solvers in worker', ->
     it 'should receieve measurements from document to make substitutions', (done) ->
+      debugger
       root = document.createElement('div')
       root.innerHTML = """
         <div id="box0" style="width: 20px"></div>

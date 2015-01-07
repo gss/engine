@@ -1,4 +1,5 @@
 expect = chai.expect
+c = GSS.prototype.Domains.Linear.prototype.Solver
 
 describe 'Cassowary', ->
   it 'should be available', ->

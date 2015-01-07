@@ -1,0 +1,38 @@
+{
+  "name" : "cassowary",
+  "description": "A fast, modern JavaScript version of the Cassowary hierarchial linear constraint solver",
+  "author": "Alex Russell <slightlyoff@chromium.org>",
+  "version" : "0.0.2",
+  "licenses": [
+    {
+      "type": "Apache-2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0"
+    }
+  ],
+  "main": "./bin/c.js",
+  "url": "https://github.com/slightlyoff/cassowary-js-refactor",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/slightlyoff/cassowary-js-refactor.git"
+  },
+  "contributors": [
+    {
+      "name": "Alex Russell",
+      "email": "slightlyoff@chromium.org",
+      "url": "http://infrequently.org"
+    },
+    {
+      "name": "Greg J. Badros",
+      "url": "http://www.badros.com/greg/"
+    }
+  ],
+  "scripts": {
+    "test": "node node_modules/intern/client.js config=tests/intern"
+  },
+  "dependencies": { },
+  "devDependencies": {
+    "pegjs" : "*",
+	  "intern": "1.2.1"
+  },
+  "engines" : { "node" : ">=0.8.x" }
+}

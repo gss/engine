@@ -1,0 +1,14 @@
+{
+  "name": "vgl-compiler",
+  "description": "Visual Grid Language compiler",
+  "version": "0.0.6",
+  "scripts": [
+    "lib/compiler.js",
+    "lib/parser.js"
+  ],
+  "dependencies": {
+    "gss/error-reporter": "~0.1.0"
+  },
+  "main": "lib/compiler.js",
+  "repository": "gss/vgl-compiler"
+}

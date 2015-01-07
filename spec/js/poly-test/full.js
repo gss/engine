@@ -261,6 +261,7 @@ describe('Full page tests', function() {
             roughAssert(solution['flex-gap'], 40);
             container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0');
             return engine.then(function(solution) {
+              console.log(1, JSON.stringify(solution));
               roughAssert(solution['$follow[x]'], 435);
               roughAssert(solution['$follow[y]'], 537);
               container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0');
@@ -270,6 +271,7 @@ describe('Full page tests', function() {
                 roughAssert(solution['$follow[x]'], 240);
                 container.setAttribute('style', 'height: 1280px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0');
                 return engine.then(function(solution) {
+                  console.log(1);
                   roughAssert(solution['$follow[y]'], 668);
                   roughAssert(solution['$follow[x]'], 329.5);
                   roughAssert(solution['flex-gap'], 158);

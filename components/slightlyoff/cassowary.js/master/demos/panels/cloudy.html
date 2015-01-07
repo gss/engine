@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+  <!--
+    Copyright (C) 2012, Alex Russell (slightlyoff@chromium.org)
+    Use of this source code is governed by http://www.apache.org/licenses/LICENSE-2.0
+  -->
+  <head>
+    <title>Cloudy Chat</title>
+
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link href="panels.css" rel="stylesheet" type="text/css">
+    <link href="cloudy.css" rel="stylesheet" type="text/css">
+
+    <!--
+    <script defer="defer" src="../../bin/c.js"></script>
+    -->
+
+    <script defer="defer" src="../../src/c.js"></script>
+    <script defer="defer" src="../../src/HashTable.js"></script>
+    <script defer="defer" src="../../src/HashSet.js"></script>
+    <script defer="defer" src="../../src/Error.js"></script>
+    <script defer="defer" src="../../src/SymbolicWeight.js"></script>
+    <script defer="defer" src="../../src/Strength.js"></script>
+    <script defer="defer" src="../../src/Variable.js"></script>
+    <script defer="defer" src="../../src/Point.js"></script>
+    <script defer="defer" src="../../src/Expression.js"></script>
+    <script defer="defer" src="../../src/Constraint.js"></script>
+    <script defer="defer" src="../../src/EditInfo.js"></script>
+    <script defer="defer" src="../../src/Tableau.js"></script>
+    <script defer="defer" src="../../src/SimplexSolver.js"></script>
+    <script defer="defer" src="../../src/Timer.js"></script>
+
+    <script defer="defer" src="../../third_party/mutation-summary/mutation_summary.js"></script>
+    <script defer="defer" src="domutil.js"></script>
+    <script defer="defer" src="panels.js"></script>
+
+    <script defer="defer">
+      window.addEventListener("DOMContentLoaded", function(e) {
+        "use strict";
+
+        var randomizeChildren = function(el) {
+          var num = el.children.length;
+          var c;
+          for (var x = 0; x < num; x++) {
+            c = el.children[parseInt(Math.random() * x, 10)];
+            el.appendChild(c);
+          }
+        };
+
+        // [ "discussion", "channels", "contacts" ].forEach(function(id) {
+        [ "channels" ].forEach(function(id) {
+          var ipsum = document.getElementById("ipsum").cloneNode(true);
+          ipsum.id = "";
+          randomizeChildren(ipsum);
+          document.getElementById(id).appendChild(ipsum);
+        });
+        /*
+        */
+      }, false);
+    </script>
+  </head>
+  <body debug="false" id="root" class="cloudy">
+    <!--
+      Layout is roughly:
+
+      +================================================+
+      | Masthead                               |      +|
+      |========================================|  C   ||
+      | Submast                                |  h   ||
+      |========================================|  a   ||
+      | Chatter                      x |      +|  n   ||
+      |================================|  C   ||  n   ||
+      |           TimeInfo             |  o   ||  e   ||
+      |================================|  n   ||  l   ||
+      | ............................. +|  t   ||  s   ||
+      | ............................. ||  a   ||      ||
+      | ............................. ||  C   ||      ||
+      | ............................. ||  t   ||      ||
+      | ............................. +|  s   ||      ||
+      |================================|      ||      ||
+      | Input                          |      +|      +|
+      +================================================+
+    -->
+
+    <x-panel id="channels"
+      right="inherit" top="inherit" bottom="inherit"
+      preferredWidth="200"
+      minWidth="100" maxWidth="300"
+      debug="false">
+    </x-panel>
+
+    <x-panel id="masthead"
+      left="inherit"
+      right="#channels.v.left"
+      top="inherit"
+      minHeight="50" height="50" maxHeight="100"
+      debug="false">
+      <div>
+        <span class="logo">&#9729;</span>
+          Cloudy<span style="color: rgb(24,63,141);">Chat</span>
+          <span style="font-size: 30px; line-height: 20px;">&#736;</span>
+          <span style="font-size: 0.8em;">Very Probably The <em>Best</em> Way To Waste Time</span>
+      </div>
+    </x-panel>
+
+    <x-panel id="submast"
+      left="inherit"
+      right="#channels.v.left"
+      top="#masthead.v.bottom"
+      minHeight="50" height="50" maxHeight="100"
+      debug="false">
+      </x-panel>
+
+    <x-panel id="contacts"
+      right="#channels.v.left"
+      below="previous"
+      bottom="inherit"
+      maxWidth="200" minWidth="100"
+      debug="false">
+    </x-panel>
+
+    <x-panel id="chatter"
+      left="inherit"
+      right="#contacts.v.left"
+      top="#submast.v.bottom"
+      minHeight="0" height="25" maxHeight="25"
+      debug="false">
+      &uarr; ~4.5 billion years
+    </x-panel>
+
+    <x-panel id="timeinfo"
+      left="inherit"
+      right="#contacts.v.left"
+      top="#chatter.v.bottom"
+      minHeight="0" maxHeight="26"
+      debug="false">
+      Friday, March 30th, 2012
+        ...
+        <!--
+        <span style="line-height: 1em; font-size: 2em;">&#9202;</span>
+        -->
+      about forever ago
+    </x-panel>
+
+    <x-panel id="input"
+      left="inherit"
+      right="#contacts.v.left"
+      bottom="inherit"
+      minHeight="40"
+      maxHeight="40"
+      debug="false">
+      <x-panel id="time"
+        width="70"
+        top="#input.v.top"
+        left="#input.v.left"
+        height="#input.v.height"
+        debug="false">
+          now
+        </x-panel>
+      <x-panel id="nickbox"
+        top="#input.v.top"
+        height="#input.v.height"
+        right="#input.v.right"
+        left="#time.v.right"
+        debug="false">
+
+        <x-panel id="nick"
+          top="#nickbox.v.top"
+          bottom="#nickbox.v.bottom"
+          left="#nickbox.v.left"
+          maxWidth="100"
+          debug="false">
+          <div>
+            slightlyoff
+          </div>
+        </x-panel>
+
+        <x-panel id="inputto"
+          top="#nickbox.v.top"
+          bottom="#nickbox.v.bottom"
+          left="#nick.v.right"
+          right="#nickbox.v.right"
+          debug="false">
+          <textarea></textarea>
+        </x-panel>
+
+      </x-panel>
+    </x-panel>
+
+    <x-panel id="bottomchatter"
+      left="inherit"
+      right="#contacts.v.left"
+      bottom="#input.v.top"
+      minHeight="0" height="25" maxHeight="25"
+      debug="false">
+      &darr; Stuff you should feel anxious about <em>just</em> missing
+    </x-panel>
+
+    <x-panel id="discussion"
+      left="inherit"
+      right="#contacts.v.left"
+      bottom="#bottomchatter.v.top"
+      top="#timeinfo.v.bottom"
+      minHeight="50" minWidth="200"
+      debug="false"></x-panel>
+
+    <div style="display: none;">
+    <ul id="ipsum">
+      <li>Bespoke you probably haven't heard of them odd future vinyl organic fanny pack post-ironic.
+      <li>High life mcsweeney's fixie seitan, williamsburg vinyl bicycle rights hella authentic hoodie 3 wolf moon squid beard occupy.
+      <li>Brunch pork belly whatever, portland keytar kogi retro authentic mlkshk jean shorts PBR.
+      <li>Tofu retro put a bird on it brooklyn blog skateboard pop-up umami sartorial.
+      <li>Keytar craft beer selvage, squid scenester pickled vegan terry richardson Austin tumblr butcher bushwick sartorial.
+      <li>Chambray vegan cray, cliche sustainable pickled keffiyeh locavore ennui polaroid brooklyn.
+      <li>Shoreditch gentrify sustainable viral.
+
+      <li>HS blog sartorial, typewriter portland shoreditch bushwick salvia pork belly tumblr put a bird on it.
+      <li>Mustache sriracha williamsburg +1
+      terr richardson, godard pickled truffaut wes anderson dreamcatcher ethical.
+      <li>Odd future terry richardson cosby sweater farm-to-table wayfarers.
+      <li>Lomo keytar brunch, yr etsy +1 street art high life quinoa salvia organic gluten-free.
+      <li>Trust fund bushwick farm-to-table, 8-bit aesthetic vegan pork belly twee ethical.
+      <li>Odd future stumptown freegan, mlkshk high life +1 bicycle rights biodiesel organic PBR.
+      <li>Direct trade scenester banksy wes anderson.
+
+      <li>Retro terry richardson master cleanse lo-fi.
+      <li>Pour-over semiotics biodiesel mumblecore sartorial cred letterpress yr, squid wayfarers narwhal.
+      <li>PBR tofu vegan brooklyn master cleanse sustainable, wes anderson umami.
+      <li>Raw denim etsy butcher, mcsweeney's yr bushwick typewriter scenester shoreditch carles keytar twee keffiyeh.
+      <li>Forage godard, tattooed scenester letterpress next level odd future post-ironic small batch biodiesel blog chillwave echo park lo-fi.
+      <li>Kale chips readymade mcsweeney's keffiyeh shoreditch beard.
+      <li>Austin 8-bit brooklyn, truffaut whatever you probably haven't heard of them craft beer next level bespoke ethnic.
+      <li>Four loko lo-fi lomo banh mi trust fund, artisan bicycle rights kale chips.
+      <li>Cosby sweater next level fixie, odd future VHS kale chips aesthetic fanny pack.
+      <li>Pour-over butcher tumblr fingerstache, pitchfork occupy twee freegan wayfarers quinoa you probably haven't heard of them dreamcatcher flexitarian kogi keytar.
+      <li>Chambray wes anderson mustache vice.
+      <li>VHS farm-to-table lomo tofu locavore.
+      <li>Four loko whatever brunch 3 wolf moon fingerstache marfa.
+      <li>Put a bird on it bushwick keytar whatever, pop-up lomo odd future wolf next level.
+      <li>Post-ironic sriracha swag, pitchfork 8-bit food truck tumblr keytar ethnic echo park artisan cliche chambray biodiesel jean shorts.
+      <li>Carles put a bird on it mustache, forage organic irony single-origin coffee DIY lo-fi vegan semiotics hoodie vinyl.
+      <li>Synth shoreditch selvage chambray.
+      <li>Austin etsy, skateboard yr polaroid selvage butcher freegan.
+      <li>Iphone williamsburg echo park seitan.
+      <li>+1 food truck scenester, authentic locavore bicycle rights single-origin coffee tofu portland 8-bit beard terry richardson.
+      <li>VHS semiotics whatever, pork belly synth fanny pack thundercats tumblr echo park.
+      <li>Raw denim pickled food truck sartorial authentic, ennui trust fund scenester cosby sweater.
+      <li>Cray dreamcatcher helvetica, gluten-free bespoke etsy salvia wayfarers bicycle rights.
+      <li>Salvia forage swag vinyl.
+      <li>Ennui next level salvia sustainable, aesthetic selvage mixtape sartorial mcsweeney's.
+      <li>Mustache helvetica artisan stumptown.
+      <li>Sriracha ethnic butcher, bicycle rights bespoke terry richardson scenester.
+      <li>Small batch iphone banh mi, godard flexitarian direct trade helvetica selvage dreamcatcher tattooed shoreditch carles.
+      <li>Tattooed terry richardson twee williamsburg.
+      <li>Cred squid truffaut, trust fund wes anderson hoodie cosby sweater PBR raw denim vegan.
+      <li>Forage dreamcatcher you probably haven't heard of them vinyl, truffaut lomo bushwick readymade ethical lo-fi mustache chillwave yr.
+      <li>Lomo single-origin coffee kogi Austin.
+      <li>Letterpress portland brunch pork belly tumblr mlkshk.
+      <li>Bicycle rights bushwick twee odd future, shoreditch food truck jean shorts.
+      <li>Authentic brooklyn stumptown, DIY semiotics swag williamsburg odd future master cleanse blog synth quinoa pitchfork.
+      <li>Sriracha salvia retro +1, bespoke high life ennui godard chambray DIY echo park small batch.
+      <li>Wolf hella synth chambray, bushwick etsy vice vegan seitan sriracha cardigan bicycle rights thundercats cosby sweater gluten-free.
+      <li>Pickled chambray polaroid, DIY 3 wolf moon mcsweeney's pitchfork post-ironic sustainable direct trade etsy hella skateboard tumblr.
+      <li>Iphone flexitarian messenger bag, helvetica viral street art williamsburg before they sold out retro mustache fanny pack next level narwhal.
+      <li>Aesthetic hella wayfarers high life.
+      <li>Terry richardson locavore photo booth, pitchfork VHS ennui yr four loko 3 wolf moon.
+      <li>VHS salvia organic put a bird on it, beard bicycle rights stumptown vice shoreditch echo park synth +1 cardigan biodiesel twee.
+      <li>Cardigan artisan fingerstache, banh mi PBR tumblr mixtape williamsburg godard sartorial bushwick raw denim DIY.
+      <li>Hella portland quinoa, fanny pack cardigan mcsweeney's 3 wolf moon bushwick craft beer Austin hoodie farm-to-table viral.
+      <li>Cliche typewriter occupy marfa, +1 dreamcatcher DIY bushwick pickled readymade.
+      <li>Pork belly occupy fanny pack wayfarers banksy.
+      <li>Swag pour-over tumblr ethnic.
+      <li>Fanny pack lomo occupy pork belly gluten-free.
+      <li>DIY narwhal ethical mlkshk ennui.
+      <li>Pork belly pop-up typewriter skateboard mcsweeney's pickled, truffaut blog sriracha williamsburg fingerstache farm-to-table echo park VHS trust fund.
+      <li>Retro williamsburg messenger bag pinterest yr wes anderson authentic helvetica, semiotics mcsweeney's squid bespoke pickled kogi.
+      <li>Truffaut mcsweeney's viral, organic small batch swag pop-up banh mi vice single-origin coffee.
+      <li>Pitchfork ethical bespoke skateboard, authentic pop-up mixtape bushwick quinoa leggings lomo 8-bit.
+      <li>Artisan high life DIY direct trade wes anderson semiotics.
+      <li>Fanny pack tofu occupy vice, craft beer ethical kale chips cliche selvage portland.
+      <li>Chillwave trust fund artisan helvetica jean shorts umami truffaut, tofu hella tattooed williamsburg wolf.
+      <li>Thundercats trust fund iphone, 8-bit gastropub scenester beard fanny pack kogi williamsburg shoreditch mustache.
+      <li>Locavore put a bird on it pitchfork bicycle rights, sartorial ethnic pork belly mlkshk post-ironic next level fanny pack VHS gentrify vinyl typewriter.
+      <li>Pitchfork pour-over letterpress pickled cardigan.
+      <li>Letterpress banh mi messenger bag dreamcatcher.
+      <li>Tattooed forage bespoke you probably haven't heard of them, portland sartorial williamsburg whatever.
+      <li>Stumptown Austin gastropub direct trade viral, odd future freegan polaroid farm-to-table PBR.
+      <li>Brooklyn lomo mlkshk biodiesel, vegan cred ethical organic authentic truffaut.
+      <li>Swag brooklyn DIY, cardigan vice banh mi hoodie mixtape ennui fingerstache gastropub.
+      <li>Marfa post-ironic thundercats, bicycle rights you probably haven't heard of them bushwick pitchfork direct trade williamsburg messenger bag 3 wolf moon dreamcatcher kale chips tattooed.
+      <li>Cray post-ironic art party iphone, stumptown mixtape kogi pop-up odd future lo-fi fanny pack direct trade butcher you probably haven't heard of them hella.
+      <li>Salvia sustainable mustache messenger bag, 3 wolf moon skateboard farm-to-table.
+      <li>Pour-over keffiyeh sartorial lo-fi, freegan portland skateboard bicycle rights small batch trust fund cliche.
+      <li>Wayfarers 8-bit messenger bag etsy.
+      <li>Godard gluten-free sriracha fap.
+      <li>Leggings tofu synth Austin truffaut pop-up pickled, odd future whatever blog.
+      <li>8-bit brunch sustainable mcsweeney's ethical, yr sriracha PBR.
+      <li>Sartorial yr salvia, truffaut bespoke brunch trust fund banksy food truck irony.
+      <li>Sriracha irony wayfarers tumblr wolf kale chips cliche, williamsburg VHS before they sold out.
+      <li>Helvetica irony organic echo park tattooed, banksy artisan forage put a bird on it.
+      <li>Narwhal vinyl, organic you probably haven't heard of them art party gluten-free williamsburg post-ironic pitchfork gastropub authentic irony thundercats.
+      <li>Flexitarian cosby sweater wes anderson, viral fixie sustainable cardigan bicycle rights aesthetic thundercats 8-bit four loko skateboard trust fund.
+      <li>Marfa chillwave skateboard, mumblecore 3 wolf moon bespoke gastropub wolfbrooklyn ethical post-ironic.
+      <li>Food truck ennui beard marfa, sustainable cred occupy umami letterpress dreamcatcher put a bird on it typewriter trust fund craft beer.
+      <li>Williamsburg wes anderson stumptown organic, irony street art Austin banh mi bushwick chambray semiotics.
+      <li>Mlkshk jean shorts kale chips seitan small batch.
+      <li>Fixie banh mi letterpress direct trade.
+      <li>Butcher dreamcatcher gluten-free before they sold out.
+      <li>Mustache PBR squid ethical gluten-free, post-ironic portland put a bird on it brooklyn aesthetic whatever before they sold out craft beer viral.
+      <li>Locavore keytar scenester, banksy forage ethnic butcher pop-up carles post-ironic skateboard occupy cosby sweater jean shorts etsy.
+      <li>Locavore you probably haven't heard of them letterpress, helvetica vice sriracha banksy bushwick bicycle rights.
+      <li>Wayfarers gluten-free mcsweeney's, godard sustainable vegan DIY locavore wolf Austin skateboard helvetica pop-up.
+      <li>Echo park stumptown chambray, viral pour-over retro blog vinyl pitchfork master cleanse.
+      <li>Wayfarers sartorial polaroid squid.
+      <li>Authentic semiotics cliche wolf.
+      <li>Viral sustainable post-ironic, williamsburg DIY vinyl lomo tattooed organic butcher bespoke cred.
+      <li>Direct trade 3 wolf moon irony, cred occupy blog twee shoreditch VHS
+      farm-to-table organic semiotics viral biodiesel trust fund.
+      <li>Craft beer pitchfork american apparel wayfarers tumblr.
+      <li>Pickled craft beer swag tattooed sustainable pop-up dreamcatcher, leggings farm-to-table truffaut raw denim art party wolf food truck.
+      <li>Tofu cray food truck put a bird on it art party cred.
+      <li>Wayfarers tattooed cred cliche street art.
+      <li>Jean shorts brunch +1, tumblr chambray pinterest fixie.
+      <li>Salvia cray occupy VHS, master cleanse ethnic vice dreamcatcher.
+      <li>Mcsweeney's beard bicycle rights, locavore next level pour-over put a bird on it photo booth terry richardson gluten-free cliche fanny pack fixie.
+      <li>Art party farm-to-table umami, kale chips etsy tattooed post-ironic leggings selvage american apparel pour-over aesthetic synth vinyl +1.
+      <li>Post-ironic 8-bit godard, authentic ethnic kale chips hella flexitarian.
+      <li>Tofu kale chips cosby sweater, shoreditch wayfarers pork belly bespoke organic direct trade cardigan vinyl.
+      <li>Irony pork belly yr seitan mumblecore keffiyeh.
+      <li>Pop-up occupy single-origin coffee, locavore before they sold out artisan narwhal iphone bicycle rights mcsweeney's bushwick lo-fi kogi master cleanse.
+      <li>Pork belly pickled cardigan viral salvia portland.
+      <li>Lo-fi raw denim semiotics art party, helvetica hella tofu small batch wayfarers terry richardson 8-bit.
+      <li>Hoodie tofu post-ironic cray terry richardson, tattooed dreamcatcher narwhal kogi you probably haven't heard of them american apparel.
+      <li>Gastropub vinyl keytar you probably haven't heard of them mcsweeney's, jean shorts butcher art party carles etsy cosby sweater authentic 8-bit brooklyn shoreditch.
+      <li>Gentrify +1 squid cray letterpress typewriter, food truck pinterest fixie gastropub.
+      <li>Freegan thundercats keffiyeh flexitarian mcsweeney's, ethical squid skateboard.
+      <li>Cred you probably haven't heard of them terry richardson flexitarian polaroid echo park.
+      <li>3 wolf moon chambray godard tofu, swag shoreditch mustache aesthetic brunch next level whatever cray keffiyeh PBR mcsweeney's.
+      <li>Do you need some text for your website or whatever? *sigh* <a href="http://hipsteripsum.me/">Okay...</a>
+      </ul>
+    </div>
+  </body>
+</html>
+
