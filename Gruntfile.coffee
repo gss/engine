@@ -14,11 +14,23 @@ module.exports = ->
     browserify:
       dist:
         files:
-          'dist/gss.js': ['src/gss.coffee']
+          'dist/gss.js':   ['src/gss.coffee']
+          'dist/specs.js': ['spec/all.coffee']
         options:
           transform: ['coffeeify']
           browserifyOptions:
+            debug: true
             extensions: ['.coffee']
+        debug:
+          options:
+            debug: true
+
+    # Automated recompilation and testing when developing
+    watch:
+      'specs':
+        files: ['src/*.coffee','spec/**/*.coffee']
+        tasks: ['browserify:dist:debug']
+
 
     # JavaScript minification for the browser
     uglify:
@@ -40,15 +52,6 @@ module.exports = ->
             'dist/gss.js'
             'dist/gss.min.js'
           ]
-
-    # Automated recompilation and testing when developing
-    watch:
-      build:
-        files: ['spec/*.coffee','spec/**/*.coffee', 'src/*.coffee', 'src/**/*.coffee']
-        tasks: ['build-fast']
-      test:
-        files: ['spec/*.coffee', 'src/*.coffee']
-        tasks: ['test']
 
     # Syntax checking
     coffeelint:
@@ -79,26 +82,6 @@ module.exports = ->
         options:
           output: 'docs/'
           css: 'vendor/docs.css'
-
-    # CoffeeScript compilation
-    coffee:
-      src:
-        options:
-          bare: true
-        expand: true
-        cwd: 'src'
-        src: ['*.coffee', '**/*.coffee', '!gss.coffee']
-        dest: 'lib'
-        ext: '.js'
-
-      spec:
-        options:
-          bare: true
-        expand: true
-        cwd: 'spec'
-        src: ['*.coffee', '**/*.coffee']
-        dest: 'spec/js'
-        ext: '.js'
 
     # Cross-browser testing
     connect:
@@ -141,11 +124,11 @@ module.exports = ->
 
   # Grunt plugins used for building
   @loadNpmTasks 'grunt-browserify'
-  @loadNpmTasks 'grunt-contrib-coffee'
   @loadNpmTasks 'grunt-contrib-uglify'
   @loadNpmTasks 'grunt-contrib-clean'
   @loadNpmTasks 'grunt-docco'
   @loadNpmTasks 'grunt-banner'
+  @loadNpmTasks 'grunt-watchify'
 
   # Grunt plugins used for testing
   @loadNpmTasks 'grunt-coffeelint'
@@ -156,10 +139,7 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-connect'
   @loadNpmTasks 'grunt-saucelabs'
 
-  @registerTask 'build:lib', ['coffee:src']
-  @registerTask 'build:dist', ['browserify:dist']
-  @registerTask 'build:js', ['build:lib', 'build:dist', 'coffee:spec']
-  @registerTask 'build', ['build:js', 'uglify:engine', 'usebanner']
+  @registerTask 'build', ['browserify', 'uglify:engine', 'usebanner']
   @registerTask 'test', ['coffeelint', 'build:js', 'phantom']
   @registerTask 'phantom', ['connect', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['build', 'coffeelint', 'connect', 'mocha_phantomjs', 'saucelabs-mocha']

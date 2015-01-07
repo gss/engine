@@ -1,0 +1,65 @@
+{
+  "name": "gss",
+  "repo": "the-gss/engine",
+  "description": "GSS runtime",
+  "version": "1.0.4-beta",
+  "author": "Dan Tocchini <d4@thegrid.io>",
+  "repo": "the-gss/engine",
+  "json": [
+    "component.json"
+  ],
+  
+  "scripts": [
+    "lib/Engine.js",
+    "lib/Domain.js",
+    "lib/Command.js",
+    "lib/Update.js",
+    "lib/Query.js", 
+    "lib/Style.js", 
+
+    "lib/commands/Condition.js", 
+    "lib/commands/Constraint.js", 
+    "lib/commands/Iterator.js", 
+    "lib/commands/Selector.js", 
+    "lib/commands/Stylesheet.js", 
+    "lib/commands/Variable.js", 
+    "lib/commands/Unit.js", 
+
+    "lib/domains/Numeric.js",
+    "lib/domains/Abstract.js",
+    "lib/domains/Boolean.js",
+    "lib/domains/Intrinsic.js",
+    "lib/domains/Document.js",
+    "lib/domains/Linear.js", 
+    "lib/domains/Finite.js", 
+
+    "lib/properties/Dimensions.js",
+    "lib/properties/Getters.js",
+    "lib/properties/Styles.js",
+
+    "lib/types/Color.js",
+    "lib/types/Easing.js",
+    "lib/types/Matrix.js",
+    "lib/types/Measurement.js",
+    "lib/types/Primitive.js",
+    "lib/types/URL.js",
+    "lib/types/Color.js",
+    "lib/types/Gradient.js",
+
+    "lib/utilities/Console.js",
+    "lib/utilities/Exporter.js",
+    "lib/utilities/Inspector.js",
+
+    "vendor/gl-matrix.js",
+    "vendor/weakmap.js",
+    "vendor/MutationObserver.js",
+    "vendor/MutationObserver.attributes.js",
+    "vendor/MutationObserver.classList.js"
+  ],
+  "dependencies": {
+    "gss/ccss-compiler": "~1.1.2",
+    "gss/vfl-compiler": "~1.1.3",
+    "slightlyoff/cassowary.js": "829729cb602d4a17341b4d1a5dba6767bf1cfd5c"
+  },
+  "main": "lib/Engine.js"
+}

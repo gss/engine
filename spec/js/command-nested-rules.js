@@ -162,7 +162,6 @@ describe('Nested Rules', function() {
         box1 = container.getElementsByClassName('box')[1];
         box2 = container.getElementsByClassName('box')[2];
         vessel0 = container.getElementsByClassName('vessel')[0];
-        console.log(1);
         engine.once('solve', function() {
           expect(stringify(engine.updated.getProblems())).to.eql(stringify([
             [
@@ -181,8 +180,6 @@ describe('Nested Rules', function() {
               ]
             ]
           ]));
-          console.log(box1.setAttribute.toString());
-          console.log(HTMLElement.prototype.setAttribute.toString());
           expect(stringify(engine.values)).to.eql(stringify({
             "$box1[x]": 100,
             "$box2[x]": 100
@@ -191,7 +188,6 @@ describe('Nested Rules', function() {
           expect(box2.style.left).to.eql('100px');
           box1.setAttribute('class', '');
           return engine.once('solve', function() {
-            console.log(1);
             expect(stringify(engine.updated.getProblems())).to.eql(stringify([[['remove', '.vessel$vessel0↓ .box$box1']], [['remove', '.vessel$vessel0↓ .box$box1']]]));
             expect(stringify(engine.values)).to.eql(stringify({
               "$box2[x]": 100
@@ -200,7 +196,6 @@ describe('Nested Rules', function() {
             expect(box2.style.left).to.eql('100px');
             box1.setAttribute('class', 'box');
             return engine.once('solve', function() {
-              console.log(1);
               expect(stringify(engine.updated.getProblems())).to.eql(stringify([
                 [
                   [
@@ -219,13 +214,11 @@ describe('Nested Rules', function() {
               expect(box2.style.left).to.eql('100px');
               vessel0.setAttribute('class', '');
               return engine.once('solve', function() {
-                console.log(1);
                 expect(stringify(engine.updated.getProblems())).to.eql(stringify([[["remove", ".vessel$vessel0↓ .box$box1"], ["remove", ".vessel$vessel0↓ .box$box2"], ["remove", ".vessel$vessel0"]], [["remove", ".vessel$vessel0↓ .box$box2"]], [["remove", ".vessel$vessel0↓ .box$box1"]]]));
                 expect(box1.style.left).to.eql('');
                 expect(box2.style.left).to.eql('');
                 vessel0.setAttribute('class', 'vessel');
                 return engine.once('solve', function() {
-                  console.log(1);
                   expect(stringify(engine.updated.getProblems())).to.eql(stringify([
                     [
                       [
