@@ -48,7 +48,8 @@ class Unit extends Variable
       return ['*', ['px', value] , ['get', path]]
     
     rem: (value, engine, operation, continuation, scope) ->
-      return ['*', ['px', value] , ['get', @engine.getPath(engine.scope._gss_id, 'font-size')]]
+      path = @engine.getPath(engine.scope._gss_id, 'computed-font-size')
+      return ['*', ['px', value] , ['get', path]]
 
     vw: (value, engine, operation, continuation, scope) ->
       return ['*', ['/', ['px', value], 100] , ['get', '::window[width]']]

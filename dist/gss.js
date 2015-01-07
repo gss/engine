@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2015-01-07) - http://gridstylesheets.org */
 
 ;(function(){
 
@@ -26737,7 +26738,9 @@ Unit = (function(_super) {
       return ['*', ['px', value], ['get', path]];
     },
     rem: function(value, engine, operation, continuation, scope) {
-      return ['*', ['px', value], ['get', this.engine.getPath(engine.scope._gss_id, 'font-size')]];
+      var path;
+      path = this.engine.getPath(engine.scope._gss_id, 'computed-font-size');
+      return ['*', ['px', value], ['get', path]];
     },
     vw: function(value, engine, operation, continuation, scope) {
       return ['*', ['/', ['px', value], 100], ['get', '::window[width]']];
@@ -28198,10 +28201,10 @@ Getters = (function() {
 
   Getters.prototype['::window'] = {
     width: function() {
-      return document.documentElement.clientWidth;
+      return Math.min(window.innerWidth, document.documentElement.clientWidth);
     },
     height: function() {
-      return Math.min(window.innerHeight, document.documentElement.clientHeight);
+      return document.documentElement.clientHeight;
     },
     x: 0,
     y: 0

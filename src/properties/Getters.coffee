@@ -5,10 +5,10 @@ class Getters
   '::window':
       
     width: ->
-      return document.documentElement.clientWidth
+      return Math.min(window.innerWidth, document.documentElement.clientWidth)
 
     height: ->
-      return Math.min(window.innerHeight, document.documentElement.clientHeight)
+      return document.documentElement.clientHeight
     x: 0
     y: 0
 
