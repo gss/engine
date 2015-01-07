@@ -14,8 +14,14 @@ module.exports = ->
     browserify:
       dist:
         files:
-          'dist/gss.js':   ['src/gss.coffee']
-          'dist/specs.js': ['spec/all.coffee']
+          'dist/gss.js': ['src/gss.coffee']
+        options:
+          transform: ['coffeeify']
+          browserifyOptions:
+            extensions: ['.coffee']
+      spec:
+        files:
+          'spec/js/specs.js': ['spec/all.coffee']
         options:
           transform: ['coffeeify']
           browserifyOptions:
@@ -27,9 +33,12 @@ module.exports = ->
 
     # Automated recompilation and testing when developing
     watch:
-      'specs':
-        files: ['src/*.coffee','spec/**/*.coffee']
-        tasks: ['browserify:dist:debug']
+      specs:
+        files: ['spec/**/*.coffee']
+        tasks: ['browserify:spec']
+      src:
+        files: ['src/**/*.coffee']
+        tasks: ['browserify:dist']
 
 
     # JavaScript minification for the browser
