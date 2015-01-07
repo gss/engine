@@ -5,12 +5,6 @@ stringify = (o) ->
   return o
   return JSON.stringify o, 1, 1
 
-$  = () ->
-  return document.querySelector arguments...
-  
-$$ = () -> 
-  return document.querySelectorAll arguments...
-
 remove = (el) ->
   el?.parentNode?.removeChild(el)
 
@@ -23,7 +17,7 @@ describe 'End - to - End', ->
   
   beforeEach ->
     container = document.createElement 'div'
-    $('#fixtures').appendChild container
+    document.getElementById('fixtures').appendChild container
     window.$engine = engine = new GSS(container)
     
   afterEach ->
@@ -664,6 +658,7 @@ describe 'End - to - End', ->
             engine.once 'solve', (e) ->
               expect(stringify engine.values).to.eql stringify
                 "$b1[z-index]": 3
+                "$a1[intrinsic-z-index]": 2
               done()
             container.innerHTML =  """
                 <style>
@@ -683,6 +678,7 @@ describe 'End - to - End', ->
             engine.once 'solve', (e) ->
               expect(stringify engine.values).to.eql stringify
                 "$b1[z-index]": 3
+                "$a1[intrinsic-z-index]": 2
               done()
             container.innerHTML =  """
                 <style type="text/gss"> 
@@ -697,6 +693,7 @@ describe 'End - to - End', ->
             engine.once 'solve', (e) ->
               expect(stringify engine.values).to.eql stringify
                 "$b1[border-left-width]": -2
+                "$a1[intrinsic-border-top-width]": 2
               done()
             container.innerHTML =  """
                 <style>

@@ -1,4 +1,7 @@
 
+expect = chai.expect
+assert = chai.assert
+
 describe 'Selectors', ->
   engine = null
   before ->

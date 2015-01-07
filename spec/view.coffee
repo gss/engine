@@ -1,13 +1,6 @@
 assert = chai.assert
 expect = chai.expect
 
-
-$  = () ->
-  return document.querySelector arguments...
-  
-$$ = () -> 
-  return document.querySelectorAll arguments...
-
 remove = (el) ->
   el?.parentNode?.removeChild(el)
 
@@ -19,7 +12,7 @@ describe "GSS.View", ->
   beforeEach ->
     container = document.createElement 'div'
     engine = new GSS(container)
-    $('#fixtures').appendChild container
+    document.getElementById('fixtures').appendChild container
     
   afterEach ->
     remove(container)

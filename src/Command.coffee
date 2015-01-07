@@ -126,44 +126,69 @@ class Command
   # Process arguments and match appropriate command
   @match: (engine, operation, parent, index) ->
     # Function call
-    first = operation[0]
     i = -1
-    switch typeof first
-      when 'string'
-        unless signature = engine.signatures[first]
-          unless Default = engine.Default
-            throw new Error '`' + first + '` is not defined in ' + engine.displayName + ' domain'
-        i = 0
-      when 'object'
-        type = @typeOfObject(first)
-        unless signature = engine.signatures[type.toLowerCase()]
-          unless Default = engine[type] || Command[type]
-            throw new Error '`' + type + '` can\'t be invoked in ' + engine.displayName + ' domain'
-        else
-          i = 0
-
     j = operation.length
+
     while ++i < j
       argument = operation[i]
-      if argument?.push
-        argument.parent ?= operation
-        type = (argument.domain || engine).Command(argument, operation, i).type
-      else
-        type = @types[typeof argument]
-        if type == 'Object'
+      typed = typeof argument
+      if typed == 'object'
+        if argument.push
+          argument.parent ?= operation
+          command = (argument.domain || engine).Command(argument, operation, i)
+          
+          unless i
+            if command.sequence
+              Default = engine.Sequence || Command.Sequence
+            else
+              Default = engine.List || Command.List
+
+          type = command.type
+        else if i
           type = @typeOfObject(argument)
+        else
+          kind = @typeOfObject(argument)
+          unless signature = engine.signatures[kind.toLowerCase()]
+            return @uncallable(kind.toLowerCase(), engine)
+          continue
+      else if i
+        type = @types[typed]
+      else
+        if typed == 'number'
+          unless signature = engine.signatures.number
+            return @uncallable('number', engine)
+        else
+          unless signature = engine.signatures[argument]
+            unless Default = engine.Default
+              return @uncallable(argument, engine)
+        continue
+
       if signature
         if match = signature[type] || signature.Any
           signature = match
         else unless (Default ||= signature.Default || engine.Default)
-          throw new Error "Unexpected `" + type + "` in `" + operation[0] + '` of ' + engine.displayName + ' domain'
+          return @unexpected(type, operation, signature, engine)
 
 
     if command = Default || signature?.resolved || engine.Default
       return command
     else
-      throw new Error "Too few arguments in `" + operation[0] + '` for ' + engine.displayName + ' domain'
+      return @unexpected('end of arguments', operation, signature, engine)
 
+  @uncallable: (type, engine) ->
+    throw new Error "`" + type + "` is not defined in `" + operation[0] + '` of ' + engine.displayName + ' domain - expected ' + expected.join(',')
+    
+
+  @unexpected: (type, operation, signature, engine) ->
+    expected = []
+    for property of signature
+      if property != 'resolved'
+        expected.push(property)
+    if expected.length
+      throw new Error "Unexpected `" + type + "` in `" + operation[0] + '` of ' + engine.displayName + ' domain - expected ' + expected.join(',')
+    else
+      throw new Error "Unexpected `" + type + "` in `" + operation[0] + '` of ' + engine.displayName + ' domain - too many arguments'
+        
   # Choose a sub type for command
   @descend: (command, engine, operation) ->
     if advices = command.advices

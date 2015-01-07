@@ -11,7 +11,7 @@ describe 'Units', ->
   engine = container = null
   beforeEach ->
     container = document.createElement 'div'
-    $('#fixtures').appendChild container
+    document.getElementById('fixtures').appendChild container
     window.$engine = engine = new GSS(container)
     
   afterEach ->

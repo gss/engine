@@ -19,18 +19,21 @@ module.exports = ->
         options:
           transform: ['coffeeify']
           browserifyOptions:
-            debug: true
             extensions: ['.coffee']
         debug:
           options:
-            debug: true
+            browserifyOptions:
+              debug: true
 
     # Automated recompilation and testing when developing
     watch:
-      'specs':
-        files: ['src/*.coffee','spec/**/*.coffee']
+      'debug':
+        files: ['src/**/*.coffee','spec/**/*.coffee']
         tasks: ['browserify:dist:debug']
 
+      'everything':
+        files: ['src/**/*.coffee','spec/**/*.coffee']
+        tasks: ['browserify:dist']
 
     # JavaScript minification for the browser
     uglify:
