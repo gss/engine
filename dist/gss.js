@@ -18996,8 +18996,6 @@ require('../vendor/weakmap.js');
 
 require('../vendor/MutationObserver.js');
 
-require('../vendor/MutationObserver.attributes.js');
-
 Selector = (function(_super) {
   __extends(Selector, _super);
 
@@ -20059,7 +20057,7 @@ module.exports = Selector;
 
 
 
-},{"../vendor/MutationObserver.attributes.js":41,"../vendor/MutationObserver.js":42,"../vendor/weakmap.js":44,"./Query":18}],20:[function(require,module,exports){
+},{"../vendor/MutationObserver.js":41,"../vendor/weakmap.js":43,"./Query":18}],20:[function(require,module,exports){
 var Matcher, Shorthand, Style;
 
 Style = function(definition, name, styles, keywords, types, keys, properties, required, optional, depth) {
@@ -23628,7 +23626,7 @@ Transformation = (function(_super) {
 
 
 
-},{"../../vendor/gl-matrix":43,"../Command":12}],36:[function(require,module,exports){
+},{"../../vendor/gl-matrix":42,"../Command":12}],36:[function(require,module,exports){
 var Types;
 
 Types = (function() {
@@ -24916,80 +24914,6 @@ module.exports = Inspector;
 
 
 },{}],41:[function(require,module,exports){
-
-if (typeof window != 'undefined')
-
-(function() {
-
-  // MO is fired, revert overrided methods
-  var listener = function(e){ 
-    if (e[0].attributeName != '___test___') return
-    delete HTMLElement.prototype.removeAttribute
-    delete HTMLElement.prototype.__removeAttribute
-    delete HTMLElement.prototype.setAttribute
-    delete HTMLElement.prototype.__setAttribute
-  };
-
-  var observer = new MutationObserver(listener);
-  var dummy = document.createElement('div')
-  observer.observe(dummy, {
-      attributes:    true
-  });
-  dummy.setAttribute("___test___", true);
-  setTimeout(function() {
-    
-
-    observer.disconnect()
-    dummy.removeAttribute('___test___')
-  }, 10);
-
-  HTMLElement.prototype.__removeAttribute = HTMLElement.prototype.removeAttribute;
-  HTMLElement.prototype.removeAttribute = function(attrName)
-  {
-    var prevVal = this.getAttribute(attrName);
-    this.__removeAttribute(attrName);
-    var evt = document.createEvent("MutationEvent");
-    evt.initMutationEvent(
-      "DOMAttrModified",
-      true,
-      false,
-      this,
-      prevVal,
-      "",
-      attrName,
-      evt.REMOVAL
-    );
-    this.dispatchEvent(evt);
-  }
-
-  HTMLElement.prototype.__setAttribute = HTMLElement.prototype.setAttribute
-
-  HTMLElement.prototype.setAttribute = function(attrName, newVal)
-  {
-    var prevVal = this.getAttribute(attrName);
-    this.__setAttribute(attrName, newVal);
-    newVal = this.getAttribute(attrName);
-    if (newVal !== prevVal)
-    {
-      var evt = document.createEvent("MutationEvent");
-      evt.initMutationEvent(
-        "DOMAttrModified",
-        true,
-        false,
-        this,
-        prevVal || "",
-        newVal || "",
-        attrName,
-        (prevVal == null) ? evt.ADDITION : evt.MODIFICATION
-      );
-      evt.prevValue = prevVal
-      evt.attrName = attrName
-      this.dispatchEvent(evt);
-    }
-  }
-
-}).call(this);
-},{}],42:[function(require,module,exports){
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
  * Use of this source code is goverened by a BSD-style
@@ -25538,7 +25462,7 @@ if (typeof window != 'undefined')
 
 
 })(this);
-},{}],43:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 /**
  * @fileoverview gl-matrix - High performance matrix and vector operations
  * @author Brandon Jones
@@ -29657,7 +29581,7 @@ if(typeof(exports) !== 'undefined') {
   })(shim.exports);
 })(this);
 
-},{}],44:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
  * Use of this source code is governed by a BSD-style
