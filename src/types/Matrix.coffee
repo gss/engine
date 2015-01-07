@@ -47,14 +47,14 @@ class Matrix.Transformation1 extends Matrix
     translate:   (matrix, x) ->
       @mat3       matrix, 'translate', [x, x]
 
-    rotateX:     (matrix, x) ->
-      @mat3       matrix, 'rotateX', x * 360
+    rotateX:     (matrix, angle) ->
+      @mat4       matrix, 'rotateX', angle * 360 * (Math.PI / 180)
     
-    rotateY:     (matrix, y) ->
-      @mat3       matrix, 'rotateY', y * 360
+    rotateY:     (matrix, angle) ->
+      @mat4       matrix, 'rotateY', angle * 360 * (Math.PI / 180)
     
-    rotateZ:     (matrix, z) ->
-      @mat4       matrix, 'rotateZ', z * 360
+    rotateZ:     (matrix, angle) ->
+      @mat4       matrix, 'rotateZ', angle * 360 * (Math.PI / 180)
     
     scaleX:      (matrix, x) ->
       @mat3       matrix, 'scale',  [x, 1, 1]
@@ -69,7 +69,7 @@ class Matrix.Transformation1 extends Matrix
       @mat4       matrix, 'scale',  [x, x, 1]
     
     rotate:      (matrix, angle) ->
-      @mat3       matrix, 'rotate', [1, 1], angle * 360
+      @mat3       matrix, 'rotate', angle * 360 * (Math.PI / 180), [0, 0, 1]
 
 # 2 axis transforms
 class Matrix.Transformation2 extends Matrix

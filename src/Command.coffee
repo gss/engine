@@ -58,24 +58,31 @@ class Command
     if result?
       return @ascend(engine, operation, continuation, scope, result, ascender, ascending)
 
+  getArguments: (engine, operation, continuation, scope, ascender, ascending) ->
+    array = Array(operation.length - 1 + @padding)
+    if ascender == -1
+      array[0] = ascending
+    return array
+
+
   # Evaluate operation arguments in order, break on undefined
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
+    args = @getArguments(engine, operation, continuation, scope, ascender, ascending)
     for index in [1 ... operation.length] by 1
-
       # Use ascending value
 
       if ascender == index
         argument = ascending
-      else
-        argument = operation[index]
 
+      else 
+        argument = operation[index]
         if argument instanceof Array
           # Find a class that will execute the command
           command = argument.command || engine.Command(argument)
           argument.parent ||= operation
 
           # Leave forking/pairing mark in a path when resolving next arguments
-          if continuation && ascender && ascender != index
+          if continuation && ascender
             contd = @connect(engine, operation, continuation, scope, args, ascender)
 
           # Evaluate argument
@@ -85,13 +92,12 @@ class Command
             return false
 
       # Place argument at position enforced by signature
-      (args || args = Array(operation.length - 1 + @padding))[@permutation[index - 1]] = argument
+      args[@permutation[index - 1]] = argument
 
-    # Methods that accept more arguments than signature gets extra meta arguments
-    extras = @extras ? @execute.length - index + 1
+    extras = @extras ? @execute.length - args.length
     if extras > 0
       for i in [0 ... extras] by 1
-        (args ||= Array(operation.length - 1 + @padding)).push arguments[i]
+        args.push arguments[i]
 
     return args
 
@@ -324,7 +330,7 @@ class Command
         return str + ')'
       # Binary operation
       else
-        return @toExpression(operation[1] ? '') + name + @toExpression(operation[2] ? '')
+        return @toExpression(operation[1] ? '') + str + @toExpression(operation[2] ? '')
     
     # List
     str = ''

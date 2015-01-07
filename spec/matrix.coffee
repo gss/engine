@@ -24,12 +24,31 @@ describe 'Matrix', ->
         throw(/Unexpected argument/)
 
   describe 'when executed', ->
-    it 'should compute matrix', ->
-      rotated = engine.intrinsic.Matrix::_mat4.create()
-      rotated = engine.intrinsic.Matrix::_mat4.rotateZ(rotated, rotated, 180)
-      rotate = ['rotateZ', 0.5]
-      expect(engine.intrinsic.Command(rotate).solve(engine.intrinsic, rotate)).
-        to.eql rotated
+    describe 'independently', ->
+      it 'should initialize matrix', ->
+        rotated = engine.intrinsic.Matrix::_mat4.create()
+        rotated = engine.intrinsic.Matrix::_mat4.rotateZ(rotated, rotated, 180 * (Math.PI / 180))
+        rotate = ['rotateZ', 0.5]
+        expect(engine.intrinsic.Command(rotate).solve(engine.intrinsic, rotate)).
+          to.eql rotated
+
+    describe 'as nested commands', ->
+      it 'should return final matrix', ->
+        rotated = engine.intrinsic.Matrix::_mat4.create()
+        rotated = engine.intrinsic.Matrix::_mat4.rotateY(rotated, rotated, - 18 * (Math.PI / 180))
+        rotated = engine.intrinsic.Matrix::_mat4.rotateZ(rotated, rotated, 180 * (Math.PI / 180))
+        rotate = ['rotateZ', ['rotateY', -0.05], 0.5]
+        expect(engine.intrinsic.Command(rotate).solve(engine.intrinsic, rotate)).
+          to.eql rotated
+
+    describe 'as flat commands', ->
+      it 'should return final matrix', ->
+        rotated = engine.intrinsic.Matrix::_mat4.create()
+        rotated = engine.intrinsic.Matrix::_mat4.rotateY(rotated, rotated, - 18 * (Math.PI / 180))
+        rotated = engine.intrinsic.Matrix::_mat4.rotateZ(rotated, rotated, 180 * (Math.PI / 180))
+        rotate = [['rotateY', -0.05], ['rotateZ', 0.5]]
+        expect(engine.intrinsic.Command(rotate).solve(engine.intrinsic, rotate)).
+          to.eql rotated
 
   describe 'defined as a sequence of matrix operations', ->
     it 'should group together', ->

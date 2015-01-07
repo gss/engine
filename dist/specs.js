@@ -5496,12 +5496,34 @@ describe('Matrix', function() {
     });
   });
   describe('when executed', function() {
-    return it('should compute matrix', function() {
-      var rotate, rotated;
-      rotated = engine.intrinsic.Matrix.prototype._mat4.create();
-      rotated = engine.intrinsic.Matrix.prototype._mat4.rotateZ(rotated, rotated, 180);
-      rotate = ['rotateZ', 0.5];
-      return expect(engine.intrinsic.Command(rotate).solve(engine.intrinsic, rotate)).to.eql(rotated);
+    describe('independently', function() {
+      return it('should initialize matrix', function() {
+        var rotate, rotated;
+        rotated = engine.intrinsic.Matrix.prototype._mat4.create();
+        rotated = engine.intrinsic.Matrix.prototype._mat4.rotateZ(rotated, rotated, 180 * (Math.PI / 180));
+        rotate = ['rotateZ', 0.5];
+        return expect(engine.intrinsic.Command(rotate).solve(engine.intrinsic, rotate)).to.eql(rotated);
+      });
+    });
+    describe('as nested commands', function() {
+      return it('should return final matrix', function() {
+        var rotate, rotated;
+        rotated = engine.intrinsic.Matrix.prototype._mat4.create();
+        rotated = engine.intrinsic.Matrix.prototype._mat4.rotateY(rotated, rotated, -18 * (Math.PI / 180));
+        rotated = engine.intrinsic.Matrix.prototype._mat4.rotateZ(rotated, rotated, 180 * (Math.PI / 180));
+        rotate = ['rotateZ', ['rotateY', -0.05], 0.5];
+        return expect(engine.intrinsic.Command(rotate).solve(engine.intrinsic, rotate)).to.eql(rotated);
+      });
+    });
+    return describe('as flat commands', function() {
+      return it('should return final matrix', function() {
+        var rotate, rotated;
+        rotated = engine.intrinsic.Matrix.prototype._mat4.create();
+        rotated = engine.intrinsic.Matrix.prototype._mat4.rotateY(rotated, rotated, -18 * (Math.PI / 180));
+        rotated = engine.intrinsic.Matrix.prototype._mat4.rotateZ(rotated, rotated, 180 * (Math.PI / 180));
+        rotate = [['rotateY', -0.05], ['rotateZ', 0.5]];
+        return expect(engine.intrinsic.Command(rotate).solve(engine.intrinsic, rotate)).to.eql(rotated);
+      });
     });
   });
   return describe('defined as a sequence of matrix operations', function() {

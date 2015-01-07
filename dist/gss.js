@@ -14879,8 +14879,18 @@ Command = (function() {
     }
   };
 
+  Command.prototype.getArguments = function(engine, operation, continuation, scope, ascender, ascending) {
+    var array;
+    array = Array(operation.length - 1 + this.padding);
+    if (ascender === -1) {
+      array[0] = ascending;
+    }
+    return array;
+  };
+
   Command.prototype.descend = function(engine, operation, continuation, scope, ascender, ascending) {
     var args, argument, command, contd, extras, i, index, _i, _j, _ref, _ref1;
+    args = this.getArguments(engine, operation, continuation, scope, ascender, ascending);
     for (index = _i = 1, _ref = operation.length; _i < _ref; index = _i += 1) {
       if (ascender === index) {
         argument = ascending;
@@ -14889,7 +14899,7 @@ Command = (function() {
         if (argument instanceof Array) {
           command = argument.command || engine.Command(argument);
           argument.parent || (argument.parent = operation);
-          if (continuation && ascender && ascender !== index) {
+          if (continuation && ascender) {
             contd = this.connect(engine, operation, continuation, scope, args, ascender);
           }
           argument = command.solve(operation.domain || engine, argument, contd || continuation, scope, void 0, ascending);
@@ -14898,12 +14908,12 @@ Command = (function() {
           }
         }
       }
-      (args || (args = Array(operation.length - 1 + this.padding)))[this.permutation[index - 1]] = argument;
+      args[this.permutation[index - 1]] = argument;
     }
-    extras = (_ref1 = this.extras) != null ? _ref1 : this.execute.length - index + 1;
+    extras = (_ref1 = this.extras) != null ? _ref1 : this.execute.length - args.length;
     if (extras > 0) {
       for (i = _j = 0; _j < extras; i = _j += 1) {
-        (args || (args = Array(operation.length - 1 + this.padding))).push(arguments[i]);
+        args.push(arguments[i]);
       }
     }
     return args;
@@ -15170,7 +15180,7 @@ Command = (function() {
         }
         return str + ')';
       } else {
-        return this.toExpression((_ref2 = operation[1]) != null ? _ref2 : '') + name + this.toExpression((_ref3 = operation[2]) != null ? _ref3 : '');
+        return this.toExpression((_ref2 = operation[1]) != null ? _ref2 : '') + str + this.toExpression((_ref3 = operation[2]) != null ? _ref3 : '');
       }
     }
     str = '';
@@ -24027,14 +24037,14 @@ Matrix.Transformation1 = (function(_super) {
     translate: function(matrix, x) {
       return this.mat3(matrix, 'translate', [x, x]);
     },
-    rotateX: function(matrix, x) {
-      return this.mat3(matrix, 'rotateX', x * 360);
+    rotateX: function(matrix, angle) {
+      return this.mat4(matrix, 'rotateX', angle * 360 * (Math.PI / 180));
     },
-    rotateY: function(matrix, y) {
-      return this.mat3(matrix, 'rotateY', y * 360);
+    rotateY: function(matrix, angle) {
+      return this.mat4(matrix, 'rotateY', angle * 360 * (Math.PI / 180));
     },
-    rotateZ: function(matrix, z) {
-      return this.mat4(matrix, 'rotateZ', z * 360);
+    rotateZ: function(matrix, angle) {
+      return this.mat4(matrix, 'rotateZ', angle * 360 * (Math.PI / 180));
     },
     scaleX: function(matrix, x) {
       return this.mat3(matrix, 'scale', [x, 1, 1]);
@@ -24049,7 +24059,7 @@ Matrix.Transformation1 = (function(_super) {
       return this.mat4(matrix, 'scale', [x, x, 1]);
     },
     rotate: function(matrix, angle) {
-      return this.mat3(matrix, 'rotate', [1, 1], angle * 360);
+      return this.mat3(matrix, 'rotate', angle * 360 * (Math.PI / 180), [0, 0, 1]);
     }
   });
 
