@@ -1,12 +1,3 @@
-/node_modules/
 .DS_Store
-/spec/js/*.js
-sauce_connect.log*
-spec/*.xml
-npm-debug.log
-components/
-components
-components/*
-/components/
-/components
-/components/*
+node_modules/
+/spec/js/**/*.js
