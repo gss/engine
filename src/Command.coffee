@@ -3,9 +3,9 @@
 class Command
   type: 'Command'
 
-  constructor: (operation, parent, index) ->
+  constructor: (operation, parent, index, context) ->
     unless command = operation.command
-      match = Command.match(@, operation, parent, index)
+      match = Command.match(@, operation, parent, index, context)
       unless command = match.instance
         command = new match(operation, @)
       if command.key?
@@ -124,7 +124,7 @@ class Command
 
 
   # Process arguments and match appropriate command
-  @match: (engine, operation, parent, index) ->
+  @match: (engine, operation, parent, index, context) ->
     # Function call
     i = -1
     j = operation.length
@@ -135,33 +135,34 @@ class Command
       if typed == 'object'
         if argument.push
           argument.parent ?= operation
-          command = (argument.domain || engine).Command(argument, operation, i)
-          
+          command = (argument.domain || engine).Command(argument, operation, i, implicit)
+          type = command.type
           unless i
-            if command.sequence
-              Default = engine.Sequence || Command.Sequence
+            if Default = command.Sequence
+              implicit = type
             else
               Default = engine.List || Command.List
 
-          type = command.type
         else if i
           type = @typeOfObject(argument)
         else
           kind = @typeOfObject(argument)
           unless signature = engine.signatures[kind.toLowerCase()]
-            return @uncallable(kind.toLowerCase(), engine)
-          continue
+            return @uncallable(kind.toLowerCase(), operation, engine)
+          unless type = context
+            continue
       else if i
         type = @types[typed]
       else
         if typed == 'number'
           unless signature = engine.signatures.number
-            return @uncallable('number', engine)
+            return @uncallable('number', operation, engine)
         else
           unless signature = engine.signatures[argument]
             unless Default = engine.Default
-              return @uncallable(argument, engine)
-        continue
+              return @uncallable(argument, operation, engine)
+        unless type = context
+          continue
 
       if signature
         if match = signature[type] || signature.Any
@@ -175,8 +176,8 @@ class Command
     else
       return @unexpected('end of arguments', operation, signature, engine)
 
-  @uncallable: (type, engine) ->
-    throw new Error "`" + type + "` is not defined in `" + operation[0] + '` of ' + engine.displayName + ' domain - expected ' + expected.join(',')
+  @uncallable: (type, operation, engine) ->
+    throw new Error "[" + engine.displayName + "] Undefined command: `" + type + "` called as `" + @prototype.toExpression(operation) + '`'
     
 
   @unexpected: (type, operation, signature, engine) ->
@@ -185,9 +186,9 @@ class Command
       if property != 'resolved'
         expected.push(property)
     if expected.length
-      throw new Error "Unexpected `" + type + "` in `" + operation[0] + '` of ' + engine.displayName + ' domain - expected ' + expected.join(',')
+      throw new Error "[" + engine.displayName + "] Unexpected argument: `" + type + "` in `" + @prototype.toExpression(operation) + '` expected ' + expected.join(', ')
     else
-      throw new Error "Unexpected `" + type + "` in `" + operation[0] + '` of ' + engine.displayName + ' domain - too many arguments'
+      throw new Error "[" + engine.displayName + "] Too many arguments: got `" + type + "` in `" + @prototype.toExpression(operation) + "`"
         
   # Choose a sub type for command
   @descend: (command, engine, operation) ->
@@ -301,16 +302,37 @@ class Command
   # Serialize operation with infix syntax (useful for constraints)
   toExpression: (operation) ->
     switch typeof operation
-      when 'object'
-        if operation[0] == 'get'
-          if operation.length == 2
-            return operation[1]
-          else
-            return operation[1].command.path + '[' + operation[2] + ']'
-        str = @toExpression(operation[1] ? '') + operation[0] + @toExpression(operation[2] ? '')
-        return str
-      else
+      when 'number'
         return operation
+      when 'string'
+        return '"' + operation + '"'
+
+    if typeof (str = operation[0]) == 'string'
+      # Variable
+      if str == 'get'
+        if operation.length == 2
+          return operation[1]
+        else
+          return operation[1].command.path + '[' + operation[2] + ']'
+      # Function call
+      else if str.match(/^[a-zA-Z]/)
+        str += '('
+        for i in [1 ... operation.length] by 1
+          if i > 1
+            str += ', '
+          str += @toExpression(operation[i] ? '')
+        return str + ')'
+      # Binary operation
+      else
+        return @toExpression(operation[1] ? '') + name + @toExpression(operation[2] ? '')
+    
+    # List
+    str = ''
+    for i in [0 ... operation.length] by 1
+      if i
+        str += ', '
+      str += @toExpression(operation[i] ? '')
+    return str
 
   # Forget command
   sanitize: (engine, operation, ascend, replacement) ->
@@ -722,6 +744,8 @@ class Command
     # Register all input types for given arguments
     @get command, storage, signature, args.concat(args.length)
 
+class Command.Sequence extends Command
+  constructor: ->
 
 # A list of operations that doesnt return values
 class Command.List extends Command

@@ -3,22 +3,28 @@ Command = require ('../Command')
 class Matrix extends Command
   type: 'Matrix'
   
-  @Matrix: require('../../vendor/gl-matrix')
+  Library: require('../../vendor/gl-matrix')
 
   matrix: ->
 
   matrix3d: ->
 
-  mat3: (matrix, method, a, b, c) ->
+  mat3: (matrix = @_mat3.create(), method, a, b, c) ->
     if matrix.length == 9
-      return mat3[method](matrix, matrix, a, b, c)
+      return @_mat3[method](matrix, matrix, a, b, c)
     else
-      return mat4[method](matrix, matrix, a, b, c)
+      return @_mat4[method](matrix, matrix, a, b, c)
 
-  mat4: (matrix, method, a, b, c) ->
+  mat4: (matrix = @_mat4.create(), method, a, b, c) ->
     if matrix.length == 9
-      matrix = mat4.fromMat3(matrix)
-    return mat4[method](matrix, matrix, a, b, c)
+      matrix = @_mat4.fromMat3(matrix)
+    return @_mat4[method](matrix, matrix, a, b, c)
+
+  for property, method of Matrix::Library
+    Matrix::['_' + property] = method
+
+class Matrix::Sequence extends Command.Sequence
+
 
 # 1-axis transform
 class Matrix.Transformation1 extends Matrix
@@ -42,13 +48,13 @@ class Matrix.Transformation1 extends Matrix
       @mat3       matrix, 'translate', [x, x]
 
     rotateX:     (matrix, x) ->
-      @mat3       matrix, 'rotateX', x
+      @mat3       matrix, 'rotateX', x * 360
     
     rotateY:     (matrix, y) ->
-      @mat3       matrix, 'rotateY', y
+      @mat3       matrix, 'rotateY', y * 360
     
     rotateZ:     (matrix, z) ->
-      @mat4       matrix, 'rotateZ', z
+      @mat4       matrix, 'rotateZ', z * 360
     
     scaleX:      (matrix, x) ->
       @mat3       matrix, 'scale',  [x, 1, 1]
@@ -59,11 +65,11 @@ class Matrix.Transformation1 extends Matrix
     scaleZ:      (matrix, z) ->
       @mat4       matrix, 'scale',  [1, 1, z]
     
-    scale:  (    matrix,  x) ->
+    scale:       (matrix, x) ->
       @mat4       matrix, 'scale',  [x, x, 1]
     
     rotate:      (matrix, angle) ->
-      @mat3       matrix, 'rotate', [1, 1], angle
+      @mat3       matrix, 'rotate', [1, 1], angle * 360
 
 # 2 axis transforms
 class Matrix.Transformation2 extends Matrix
@@ -90,13 +96,13 @@ class Matrix.Transformation3 extends Matrix
   ]
 
   @define
-    translate3d: (matrix, x, y = x, z = 0) ->
+    translate3d: (matrix, x, y, z) ->
       if z == 0
         @mat3     matrix, 'translate', [x, y]
       else
         @mat4     matrix, 'translate', [x, y, z]
 
-    scale3d:     (matrix, x, y = x, z = 1) ->
+    scale3d:     (matrix, x, y, z) ->
       if z == 1
         @mat3     matrix, 'scale', [x, y]
       else
@@ -115,8 +121,8 @@ class Matrix.Transformation3A extends Matrix
   @define
     rotate3d:    (matrix, x, y = x, z = 0, angle) ->
       if z == 0
-        @mat3     matrix, 'rotate', [x, y],    angle
+        @mat3     matrix, 'rotate', [x, y],    angle * 360
       else
-        @mat4     matrix, 'rotate', [x, y, z], angle
+        @mat4     matrix, 'rotate', [x, y, z], angle * 360
 
 module.exports = Matrix

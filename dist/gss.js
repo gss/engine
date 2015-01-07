@@ -14819,10 +14819,10 @@ Command = (function() {
 
   Command.prototype.type = 'Command';
 
-  function Command(operation, parent, index) {
+  function Command(operation, parent, index, context) {
     var command, match;
     if (!(command = operation.command)) {
-      match = Command.match(this, operation, parent, index);
+      match = Command.match(this, operation, parent, index, context);
       if (!(command = match.instance)) {
         command = new match(operation, this);
       }
@@ -14935,8 +14935,8 @@ Command = (function() {
 
   Command.subtype = function(engine, operation, types) {};
 
-  Command.match = function(engine, operation, parent, index) {
-    var Default, argument, command, i, j, kind, match, signature, type, typed;
+  Command.match = function(engine, operation, parent, index, context) {
+    var Default, argument, command, i, implicit, j, kind, match, signature, type, typed;
     i = -1;
     j = operation.length;
     while (++i < j) {
@@ -14947,39 +14947,43 @@ Command = (function() {
           if (argument.parent == null) {
             argument.parent = operation;
           }
-          command = (argument.domain || engine).Command(argument, operation, i);
+          command = (argument.domain || engine).Command(argument, operation, i, implicit);
+          type = command.type;
           if (!i) {
-            if (command.sequence) {
-              Default = engine.Sequence || Command.Sequence;
+            if (Default = command.Sequence) {
+              implicit = type;
             } else {
               Default = engine.List || Command.List;
             }
           }
-          type = command.type;
         } else if (i) {
           type = this.typeOfObject(argument);
         } else {
           kind = this.typeOfObject(argument);
           if (!(signature = engine.signatures[kind.toLowerCase()])) {
-            return this.uncallable(kind.toLowerCase(), engine);
+            return this.uncallable(kind.toLowerCase(), operation, engine);
           }
-          continue;
+          if (!(type = context)) {
+            continue;
+          }
         }
       } else if (i) {
         type = this.types[typed];
       } else {
         if (typed === 'number') {
           if (!(signature = engine.signatures.number)) {
-            return this.uncallable('number', engine);
+            return this.uncallable('number', operation, engine);
           }
         } else {
           if (!(signature = engine.signatures[argument])) {
             if (!(Default = engine.Default)) {
-              return this.uncallable(argument, engine);
+              return this.uncallable(argument, operation, engine);
             }
           }
         }
-        continue;
+        if (!(type = context)) {
+          continue;
+        }
       }
       if (signature) {
         if (match = signature[type] || signature.Any) {
@@ -14996,8 +15000,8 @@ Command = (function() {
     }
   };
 
-  Command.uncallable = function(type, engine) {
-    throw new Error("`" + type + "` is not defined in `" + operation[0] + '` of ' + engine.displayName + ' domain - expected ' + expected.join(','));
+  Command.uncallable = function(type, operation, engine) {
+    throw new Error("[" + engine.displayName + "] Undefined command: `" + type + "` called as `" + this.prototype.toExpression(operation) + '`');
   };
 
   Command.unexpected = function(type, operation, signature, engine) {
@@ -15009,9 +15013,9 @@ Command = (function() {
       }
     }
     if (expected.length) {
-      throw new Error("Unexpected `" + type + "` in `" + operation[0] + '` of ' + engine.displayName + ' domain - expected ' + expected.join(','));
+      throw new Error("[" + engine.displayName + "] Unexpected argument: `" + type + "` in `" + this.prototype.toExpression(operation) + '` expected ' + expected.join(', '));
     } else {
-      throw new Error("Unexpected `" + type + "` in `" + operation[0] + '` of ' + engine.displayName + ' domain - too many arguments');
+      throw new Error("[" + engine.displayName + "] Too many arguments: got `" + type + "` in `" + this.prototype.toExpression(operation) + "`");
     }
   };
 
@@ -15142,21 +15146,41 @@ Command = (function() {
   Command.prototype.extras = void 0;
 
   Command.prototype.toExpression = function(operation) {
-    var str, _ref, _ref1;
+    var i, str, _j, _k, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
     switch (typeof operation) {
-      case 'object':
-        if (operation[0] === 'get') {
-          if (operation.length === 2) {
-            return operation[1];
-          } else {
-            return operation[1].command.path + '[' + operation[2] + ']';
-          }
-        }
-        str = this.toExpression((_ref = operation[1]) != null ? _ref : '') + operation[0] + this.toExpression((_ref1 = operation[2]) != null ? _ref1 : '');
-        return str;
-      default:
+      case 'number':
         return operation;
+      case 'string':
+        return '"' + operation + '"';
     }
+    if (typeof (str = operation[0]) === 'string') {
+      if (str === 'get') {
+        if (operation.length === 2) {
+          return operation[1];
+        } else {
+          return operation[1].command.path + '[' + operation[2] + ']';
+        }
+      } else if (str.match(/^[a-zA-Z]/)) {
+        str += '(';
+        for (i = _j = 1, _ref = operation.length; _j < _ref; i = _j += 1) {
+          if (i > 1) {
+            str += ', ';
+          }
+          str += this.toExpression((_ref1 = operation[i]) != null ? _ref1 : '');
+        }
+        return str + ')';
+      } else {
+        return this.toExpression((_ref2 = operation[1]) != null ? _ref2 : '') + name + this.toExpression((_ref3 = operation[2]) != null ? _ref3 : '');
+      }
+    }
+    str = '';
+    for (i = _k = 0, _ref4 = operation.length; _k < _ref4; i = _k += 1) {
+      if (i) {
+        str += ', ';
+      }
+      str += this.toExpression((_ref5 = operation[i]) != null ? _ref5 : '');
+    }
+    return str;
   };
 
   Command.prototype.sanitize = function(engine, operation, ascend, replacement) {
@@ -15668,6 +15692,15 @@ Command = (function() {
   return Command;
 
 })();
+
+Command.Sequence = (function(_super) {
+  __extends(Sequence, _super);
+
+  function Sequence() {}
+
+  return Sequence;
+
+})(Command);
 
 Command.List = (function(_super) {
   __extends(List, _super);
@@ -23906,6 +23939,8 @@ var Command, Matrix,
 Command = require('../Command');
 
 Matrix = (function(_super) {
+  var method, property, _ref;
+
   __extends(Matrix, _super);
 
   function Matrix() {
@@ -23914,30 +23949,53 @@ Matrix = (function(_super) {
 
   Matrix.prototype.type = 'Matrix';
 
-  Matrix.Matrix = require('../../vendor/gl-matrix');
+  Matrix.prototype.Library = require('../../vendor/gl-matrix');
 
   Matrix.prototype.matrix = function() {};
 
   Matrix.prototype.matrix3d = function() {};
 
   Matrix.prototype.mat3 = function(matrix, method, a, b, c) {
+    if (matrix == null) {
+      matrix = this._mat3.create();
+    }
     if (matrix.length === 9) {
-      return mat3[method](matrix, matrix, a, b, c);
+      return this._mat3[method](matrix, matrix, a, b, c);
     } else {
-      return mat4[method](matrix, matrix, a, b, c);
+      return this._mat4[method](matrix, matrix, a, b, c);
     }
   };
 
   Matrix.prototype.mat4 = function(matrix, method, a, b, c) {
-    if (matrix.length === 9) {
-      matrix = mat4.fromMat3(matrix);
+    if (matrix == null) {
+      matrix = this._mat4.create();
     }
-    return mat4[method](matrix, matrix, a, b, c);
+    if (matrix.length === 9) {
+      matrix = this._mat4.fromMat3(matrix);
+    }
+    return this._mat4[method](matrix, matrix, a, b, c);
   };
+
+  _ref = Matrix.prototype.Library;
+  for (property in _ref) {
+    method = _ref[property];
+    Matrix.prototype['_' + property] = method;
+  }
 
   return Matrix;
 
 })(Command);
+
+Matrix.prototype.Sequence = (function(_super) {
+  __extends(Sequence, _super);
+
+  function Sequence() {
+    return Sequence.__super__.constructor.apply(this, arguments);
+  }
+
+  return Sequence;
+
+})(Command.Sequence);
 
 Matrix.Transformation1 = (function(_super) {
   __extends(Transformation1, _super);
@@ -23970,13 +24028,13 @@ Matrix.Transformation1 = (function(_super) {
       return this.mat3(matrix, 'translate', [x, x]);
     },
     rotateX: function(matrix, x) {
-      return this.mat3(matrix, 'rotateX', x);
+      return this.mat3(matrix, 'rotateX', x * 360);
     },
     rotateY: function(matrix, y) {
-      return this.mat3(matrix, 'rotateY', y);
+      return this.mat3(matrix, 'rotateY', y * 360);
     },
     rotateZ: function(matrix, z) {
-      return this.mat4(matrix, 'rotateZ', z);
+      return this.mat4(matrix, 'rotateZ', z * 360);
     },
     scaleX: function(matrix, x) {
       return this.mat3(matrix, 'scale', [x, 1, 1]);
@@ -23991,7 +24049,7 @@ Matrix.Transformation1 = (function(_super) {
       return this.mat4(matrix, 'scale', [x, x, 1]);
     },
     rotate: function(matrix, angle) {
-      return this.mat3(matrix, 'rotate', [1, 1], angle);
+      return this.mat3(matrix, 'rotate', [1, 1], angle * 360);
     }
   });
 
@@ -24051,12 +24109,6 @@ Matrix.Transformation3 = (function(_super) {
 
   Transformation3.define({
     translate3d: function(matrix, x, y, z) {
-      if (y == null) {
-        y = x;
-      }
-      if (z == null) {
-        z = 0;
-      }
       if (z === 0) {
         return this.mat3(matrix, 'translate', [x, y]);
       } else {
@@ -24064,12 +24116,6 @@ Matrix.Transformation3 = (function(_super) {
       }
     },
     scale3d: function(matrix, x, y, z) {
-      if (y == null) {
-        y = x;
-      }
-      if (z == null) {
-        z = 1;
-      }
       if (z === 1) {
         return this.mat3(matrix, 'scale', [x, y]);
       } else {
@@ -24111,9 +24157,9 @@ Matrix.Transformation3A = (function(_super) {
         z = 0;
       }
       if (z === 0) {
-        return this.mat3(matrix, 'rotate', [x, y], angle);
+        return this.mat3(matrix, 'rotate', [x, y], angle * 360);
       } else {
-        return this.mat4(matrix, 'rotate', [x, y, z], angle);
+        return this.mat4(matrix, 'rotate', [x, y, z], angle * 360);
       }
     }
   });
@@ -24224,15 +24270,15 @@ Measurement.Angle = (function(_super) {
 
   Angle.define({
     deg: function(value) {
-      return value * (Math.PI / 180);
+      return value * 360;
     },
     grad: function(value) {
-      return value * (Math.PI / 180) / (360 / 400);
-    },
-    turn: function(value) {
-      return value * (Math.PI / 180) * 360;
+      return value / (360 / 400);
     },
     rad: function(value) {
+      return value * (Math.PI / 180);
+    },
+    turn: function(value) {
       return value;
     }
   });

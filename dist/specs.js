@@ -5483,13 +5483,39 @@ describe('Matrix', function() {
     engine = new GSS(container);
     return engine.compile();
   });
-  return describe('dispatched by argument types', function() {
-    return it('should create command instance for each operation', function() {
+  describe('dispatched by argument types', function() {
+    return it('should properly recognize matrix operations', function() {
       expect(engine.intrinsic.Command(['translateX', 3])).to.be.an["instanceof"](engine.intrinsic.Matrix.Transformation1);
       expect(engine.intrinsic.Command(['translateX', 3])).to.be.an["instanceof"](engine.intrinsic.Matrix);
-      return expect(function() {
+      expect(function() {
         return engine.intrinsic.Command(['translateX', 3, 3]);
-      }).to["throw"]();
+      }).to["throw"](/Too many/);
+      return expect(function() {
+        return engine.intrinsic.Command(['translateX', 'a']);
+      }).to["throw"](/Unexpected argument/);
+    });
+  });
+  describe('when executed', function() {
+    return it('should compute matrix', function() {
+      var rotate, rotated;
+      rotated = engine.intrinsic.Matrix.prototype._mat4.create();
+      rotated = engine.intrinsic.Matrix.prototype._mat4.rotateZ(rotated, rotated, 180);
+      rotate = ['rotateZ', 0.5];
+      return expect(engine.intrinsic.Command(rotate).solve(engine.intrinsic, rotate)).to.eql(rotated);
+    });
+  });
+  return describe('defined as a sequence of matrix operations', function() {
+    return it('should group together', function() {
+      var sequence;
+      sequence = [['translateX', 3], ['rotateZ', 2]];
+      expect(engine.intrinsic.Command(sequence)).to.be.an["instanceof"](engine.intrinsic.Matrix.prototype.Sequence);
+      expect(engine.intrinsic.Command(['translateX', 3])).to.eql(sequence[0].command);
+      expect(engine.intrinsic.Command(['rotateZ', 3])).to.not.eql(sequence[1].command);
+      expect(engine.intrinsic.Command(['rotateZ', 3])).to.not.eql(sequence[1].command);
+      expect(engine.intrinsic.Command(['rotateZ', ['translateX', 3], 3])).to.eql(sequence[1].command);
+      return expect(function() {
+        return engine.intrinsic.Command([1, ['rotateZ', 2]]);
+      }).to["throw"](/Undefined/);
     });
   });
 });
