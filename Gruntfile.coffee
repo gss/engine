@@ -128,7 +128,6 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-clean'
   @loadNpmTasks 'grunt-docco'
   @loadNpmTasks 'grunt-banner'
-  @loadNpmTasks 'grunt-watchify'
 
   # Grunt plugins used for testing
   @loadNpmTasks 'grunt-coffeelint'
