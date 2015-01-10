@@ -8,11 +8,13 @@ class Command
       match = Command.match(@, operation, parent, index, context)
       unless command = match.instance
         command = new match(operation, @)
+      operation.command = command
       if command.key?
-        command.push(operation)
+        if context
+          command.context = context
+        command.push(operation, context)
       else
         (command.definition || match).instance = command
-      operation.command = command
       unless parent
         command = Command.descend(command, @, operation)
 
@@ -58,17 +60,15 @@ class Command
     if result?
       return @ascend(engine, operation, continuation, scope, result, ascender, ascending)
 
-  getArguments: (engine, operation, continuation, scope, ascender, ascending) ->
-    array = Array(operation.length - 1 + @padding)
-    if ascender == -1
-      array[0] = ascending
-    return array
-
 
   # Evaluate operation arguments in order, break on undefined
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
-    args = @getArguments(engine, operation, continuation, scope, ascender, ascending)
-    for index in [1 ... operation.length] by 1
+    length = operation.length - 1 + @padding
+    args = Array(length)
+    index = 0
+    shift = @contextualize(args, engine, operation, continuation, scope, ascender, ascending)
+
+    while ++index < operation.length
       # Use ascending value
 
       if ascender == index
@@ -77,6 +77,7 @@ class Command
       else 
         argument = operation[index]
         if argument instanceof Array
+
           # Find a class that will execute the command
           command = argument.command || engine.Command(argument)
           argument.parent ||= operation
@@ -92,9 +93,9 @@ class Command
             return false
 
       # Place argument at position enforced by signature
-      args[@permutation[index - 1]] = argument
+      args[@permutation[index - 1] + shift] = argument
 
-    extras = @extras ? @execute.length - args.length
+    extras = @extras ? @execute.length - length
     if extras > 0
       for i in [0 ... extras] by 1
         args.push arguments[i]
@@ -116,18 +117,27 @@ class Command
       if top = parent.command
         if yielded = top.yield?(result, engine, operation, continuation, scope, ascender)
           return if yielded == true
+          if yielded.command
+            return yielded.command.solve(yielded.domain || engine, yielded, continuation, scope, -1, result)
           return yielded
 
       # Recurse to execute parent expression with ascending query result
-      if ascender?
+      if ascender > -1
         return top.solve(parent.domain || engine, parent, continuation, scope, parent.indexOf(operation), result)
 
     return result
 
-
-
-  @subtype: (engine, operation, types) ->
-
+  # Get implicit context
+  contextualize: (args, engine, operation, continuation, scope, ascender, ascending) ->
+    # Stateless commands recieve context as ascending value
+    if ascender == -1 && ascending?
+      args[0] = ascending
+      return 1
+    # Stateful commands have link to previous op so they can fetch value
+    else if context = @context
+      args[0] = context.command.retrieve(context.domain || engine, context, continuation, scope)
+      return 1
+    return 0
 
   # Process arguments and match appropriate command
   @match: (engine, operation, parent, index, context) ->
@@ -143,9 +153,12 @@ class Command
           argument.parent ?= operation
           command = (argument.domain || engine).Command(argument, operation, i, implicit)
           type = command.type
-          unless i
+          if i
+            if implicit
+              implicit = argument
+          else
             if Default = command.Sequence
-              implicit = type
+              implicit = argument
             else
               Default = engine.List || Command.List
 
@@ -155,7 +168,7 @@ class Command
           kind = @typeOfObject(argument)
           unless signature = engine.signatures[kind.toLowerCase()]
             return @uncallable(kind.toLowerCase(), operation, engine)
-          unless type = context
+          unless (type = context && context.command.type)
             continue
       else if i
         type = @types[typed]
@@ -167,7 +180,7 @@ class Command
           unless signature = engine.signatures[argument]
             unless Default = engine.Default
               return @uncallable(argument, operation, engine)
-        unless type = context
+        unless (type = context && context.command.type)
           continue
 
       if signature
@@ -305,8 +318,9 @@ class Command
   # Computed automatically for each command by checking `.length` of `@execute` callback
   extras: undefined
 
-  # Serialize operation with infix syntax (useful for constraints)
+  # Serialize operations, try to guess infix ops
   toExpression: (operation) ->
+    # Primitive
     switch typeof operation
       when 'number'
         return operation
@@ -320,6 +334,7 @@ class Command
           return operation[1]
         else
           return operation[1].command.path + '[' + operation[2] + ']'
+      
       # Function call
       else if str.match(/^[a-zA-Z]/)
         str += '('
@@ -328,6 +343,7 @@ class Command
             str += ', '
           str += @toExpression(operation[i] ? '')
         return str + ')'
+
       # Binary operation
       else
         return @toExpression(operation[1] ? '') + str + @toExpression(operation[2] ? '')
@@ -750,9 +766,6 @@ class Command
     # Register all input types for given arguments
     @get command, storage, signature, args.concat(args.length)
 
-class Command.Sequence extends Command
-  constructor: ->
-
 # A list of operations that doesnt return values
 class Command.List extends Command
   type: 'List'
@@ -806,5 +819,39 @@ class Command.Meta extends Command
 
   execute: (data)->
     return data
+
+# Operation iterator where result is passed as a first argument to next command
+class Command.Sequence extends Command
+  constructor: ->
+
+  descend: (engine, operation, continuation, scope, ascender, ascending) ->
+    for argument, index in operation
+      if argument?.push
+        argument.parent ||= operation
+        if command = argument.command || engine.Command(argument)
+          result = command.solve(engine, argument, continuation, scope, -1, result)
+          return if result == undefined
+    return [result, engine, operation, continuation, scope]
+
+  execute: (result) ->
+    console.log(result)
+    return result
+
+  yield: (result, engine, operation, continuation, scope, ascender, ascending) ->
+    parent = operation.parent
+
+    # Recurse to the next operation in sequence when stateful op yielded
+    if next = parent[parent.indexOf(operation) + 1]
+      if operation.command.key?
+        return next
+    else
+      # Recurse to sequence parent 
+      parent = operation.parent
+      if parent.parent
+        @ascend(engine, parent, continuation, scope, result, parent.parent.indexOf(parent), ascending)
+        return true
+      else
+        return result
+      
 
 module.exports = Command

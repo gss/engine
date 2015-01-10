@@ -8,17 +8,20 @@ class Query extends Command
 
   # Pass control to parent operation (possibly multiple times)
   # For each node in collection, fork continuation with element id
-  ascend: (engine, operation, continuation, scope, result, ascender) ->
+  ascend: (engine, operation, continuation, scope, result, ascender, ascending) ->
     if parent = operation.parent
       if @isCollection(result)
         for node in result
           contd = @fork(engine, continuation, node)
-          unless parent.command.yield?(node, engine, operation, contd, scope, ascender)
+          if yielded = parent.command.yield?(node, engine, operation, contd, scope, ascender, ascending)
+            yielded.command?.solve(yielded.domain || engine, yielded, contd, scope, -1, node)
+          else
             parent.command.solve(engine, parent, contd, scope, parent.indexOf(operation), node)
         return
       else
-        unless parent.command.yield?(result, engine, operation, continuation, scope, ascender)
-          if ascender? || !@hidden || !@reference
+        if yielded = parent.command.yield?(result, engine, operation, continuation, scope, ascender, ascending)
+          yielded.command?.solve(yielded.domain || engine, yielded, continuation, scope, -1, result)
+        else if ascender? || !@hidden || !@reference
             return parent.command.solve(engine, parent, continuation, scope, parent.indexOf(operation), result)
           else
             return result
@@ -45,7 +48,10 @@ class Query extends Command
 
     return string
 
-  push: (operation) ->
+  push: (operation, context) ->
+    if context
+      @inherit(context.command, inherited)
+
     for index in [1 ... operation.length]
       if cmd = operation[index]?.command
         inherited = @inherit(cmd, inherited)
@@ -53,6 +59,11 @@ class Query extends Command
 
     if tags = @tags
       for tag, i in tags
+        if context
+          if cmd = context.command
+            if (cmd.tags?.indexOf(tag) > -1) && @checkers[tag](@, cmd, operation, context, inherited)
+              inherited = @mergers[tag](@, cmd, operation, context)
+
         match = true
         # Check if all args match the tag
         for index in [1 ... operation.length]

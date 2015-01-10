@@ -36,17 +36,10 @@ class Selector extends Query
   perform: (engine, operation, continuation, scope, ascender, ascending) ->
     command = operation.command
     selector = command.selector
-    args = [
-      if ascender?
-        ascending
-      else
-        scope
-
-      selector
-    ]
+    node = ascender? && ascending || scope
+    args = [node, selector]
     command.log(args, engine, operation, continuation, scope, command.selecting && 'select' || 'match')
     result  = command.before(args, engine, operation, continuation, scope)
-    node = args[0]
     if command.selecting
       result ?= node.querySelectorAll(args[1])
     else if (result != node) && node.matches(args[1])
@@ -322,6 +315,10 @@ class Selector extends Query
     else
       update[type] = []
     update[type].push(value)
+
+class Selector::Sequence extends Query.Sequence
+  type: 'Selector'
+
 
 Selector::checkers.selector = (command, other, parent, operation) ->
   if !other.head

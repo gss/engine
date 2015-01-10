@@ -44,6 +44,49 @@ describe 'Nested Rules', ->
         
         engine.solve(rules)
 
+    describe 'sequential selectors', ->
+      it 'should support mixed selectors', (done) ->
+        rules = [
+          ['==', 
+            ["get",
+              [
+                ['tag', 'div']
+                [' ']
+                ['.', 'gizoogle']
+                ['!>']
+                ['!>']
+                ['.', 'd']
+              ],
+              'width']
+            100
+          ]
+        ]
+        container.innerHTML =  """
+          <section id="s">
+            <div id="d" class="d">
+              <header id="h">
+                <h2 class='gizoogle' id="h2">
+                </h2>
+              </header>
+            </div>
+          </section>
+        """
+        GSS.console.log(container.innerHTML)
+        GSS.console.info("(header > h2.gizoogle ! section div:get('parentNode'))[target-size] == 100")
+          
+        engine.once 'solve', ->      
+          expect(engine.updated.getProblems()).to.eql [[[
+            key: "div .gizoogle$h2↑!>!>.d"
+            ['==', 
+              ["get", "$d[width]"]
+              , 100
+            ]
+          ]]]
+          engine.id('d').setAttribute('class', '')
+          #done()
+
+        engine.solve(rules)
+
     describe 'mixed selectors', ->
       it 'should support mixed selectors', (done) ->
         rules = [

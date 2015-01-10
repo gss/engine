@@ -230,6 +230,28 @@ describe('Nested Rules', function() {
         return engine.solve(rules);
       });
     });
+    describe('sequential selectors', function() {
+      return it('should support mixed selectors', function(done) {
+        var rules;
+        rules = [['==', ["get", [['tag', 'div'], [' '], ['.', 'gizoogle'], ['!>'], ['!>'], ['.', 'd']], 'width'], 100]];
+        container.innerHTML = "<section id=\"s\">\n  <div id=\"d\" class=\"d\">\n    <header id=\"h\">\n      <h2 class='gizoogle' id=\"h2\">\n      </h2>\n    </header>\n  </div>\n</section>";
+        GSS.console.log(container.innerHTML);
+        GSS.console.info("(header > h2.gizoogle ! section div:get('parentNode'))[target-size] == 100");
+        engine.once('solve', function() {
+          expect(engine.updated.getProblems()).to.eql([
+            [
+              [
+                {
+                  key: "div .gizoogle$h2↑!>!>.d"
+                }, ['==', ["get", "$d[width]"], 100]
+              ]
+            ]
+          ]);
+          return engine.id('d').setAttribute('class', '');
+        });
+        return engine.solve(rules);
+      });
+    });
     describe('mixed selectors', function() {
       return it('should support mixed selectors', function(done) {
         var rules;
@@ -5526,7 +5548,7 @@ describe('Matrix', function() {
       });
     });
   });
-  return describe('defined as a sequence of matrix operations', function() {
+  describe('defined as a sequence of matrix operations', function() {
     return it('should group together', function() {
       var sequence;
       sequence = [['translateX', 3], ['rotateZ', 2]];
@@ -5538,6 +5560,11 @@ describe('Matrix', function() {
       return expect(function() {
         return engine.intrinsic.Command([1, ['rotateZ', 2]]);
       }).to["throw"](/Undefined/);
+    });
+  });
+  return describe('when used with variables', function() {
+    return it('should update and recompute matrix', function() {
+      return expect(engine.solve([['translateX', 3], ['rotateZ', ['get', 'a']]])).to.eql(1);
     });
   });
 });
