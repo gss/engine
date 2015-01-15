@@ -1,3 +1,4 @@
+{expect} = chai
 
 describe 'Selectors', ->
   engine = null
