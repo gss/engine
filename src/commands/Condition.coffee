@@ -11,13 +11,15 @@ class Condition extends Query
     ]
   ]
 
+  List: true
+
   
   cleaning: true
 
   conditional: 1
   boundaries: true
-  domains:
-    1: 'solved'
+  #domains:
+  #  1: 'solved'
 
   constructor: (operation, engine) ->
     @path = @key = @serialize(operation, engine)

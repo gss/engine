@@ -9,9 +9,9 @@ class Command
       unless command = match.instance
         command = new match(operation, @)
       operation.command = command
+      if context
+        operation.context = context
       if command.key?
-        if context
-          command.context = context
         command.push(operation, context)
       else
         (command.definition || match).instance = command
@@ -130,12 +130,15 @@ class Command
   # Get implicit context
   contextualize: (args, engine, operation, continuation, scope, ascender, ascending) ->
     # Stateless commands recieve context as ascending value
+    debugger
     if ascender == -1 && ascending?
       args[0] = ascending
       return 1
     # Stateful commands have link to previous op so they can fetch value
-    else if context = @context
-      args[0] = context.command.retrieve(context.domain || engine, context, continuation, scope)
+    else if context = operation.context
+      # Quickly restore stateful value
+      method = (command = context.command).key && 'retrieve' || 'solve'
+      args[0] = command[method](context.domain || engine, context, continuation, scope)
       return 1
     return 0
 
@@ -160,7 +163,7 @@ class Command
             if Default = command.Sequence
               implicit = argument
             else
-              Default = engine.List || Command.List
+              Default = Command.Sequence
 
         else if i
           type = @typeOfObject(argument)
@@ -180,7 +183,7 @@ class Command
           unless signature = engine.signatures[argument]
             unless Default = engine.Default
               return @uncallable(argument, operation, engine)
-        unless (type = context && context.command.type)
+        unless type = context?.command.type
           continue
 
       if signature
@@ -214,7 +217,10 @@ class Command
     if advices = command.advices
       for type in advices
         if (proto = type::).condition
-          continue unless proto.condition(engine, operation, command)
+          unless result = proto.condition(engine, operation, command)
+            continue 
+          if result != true
+            type = result
         else
           type(engine, operation, command)
           continue
@@ -766,18 +772,59 @@ class Command
     # Register all input types for given arguments
     @get command, storage, signature, args.concat(args.length)
 
-# A list of operations that doesnt return values
-class Command.List extends Command
-  type: 'List'
-
+# Operation iterator where result is passed as a first argument to next command
+class Command.Sequence extends Command
   constructor: ->
-  extras: 0
-  boundaries: true
 
-  execute: ->
+  descend: (engine, operation, continuation, scope, ascender, ascending) ->
+    for argument, index in operation by 1
+      argument.parent ||= operation
+      if command = argument.command || engine.Command(argument)
+        result = command.solve(engine, argument, continuation, scope, -1, result)
+        return if result == undefined
+    return [result, engine, operation, continuation, scope]
 
   log: ->
   unlog: ->
+
+  execute: (result) ->
+    console.log(result)
+    return result
+
+  yield: (result, engine, operation, continuation, scope, ascender, ascending) ->
+    parent = operation.parent
+
+    # Recurse to the next operation in sequence when stateful op yielded
+    if next = parent[parent.indexOf(operation) + 1]
+      if operation.command.key?
+        return next
+    else
+      # Recurse to sequence parent 
+      parent = operation.parent
+      if parent.parent
+        @ascend(engine, parent, continuation, scope, result, parent.parent.indexOf(parent), ascending)
+        return true
+      else
+        return result
+
+# A list of operations that doesnt return values
+class Command.List extends Command.Sequence
+  type: 'List'
+
+  condition: (engine, operation) ->
+    if operation.parent
+      return operation.parent?.command.List
+    #else
+    #   return !operation[0].command.Sequence
+
+  constructor: ->
+
+  extras: 0
+  boundaries: true
+
+  
+  execute: ->
+
 
   # Capture results and do nothing with them to stop propagation
   yield: ->
@@ -791,6 +838,8 @@ class Command.List extends Command
         if command = argument.command || engine.Command(argument)
           command.solve(engine, argument, continuation, scope)
     return
+
+Command.Sequence::advices = [Command.List]
 
 
 # An optional command for unmatched operation
@@ -820,38 +869,6 @@ class Command.Meta extends Command
   execute: (data)->
     return data
 
-# Operation iterator where result is passed as a first argument to next command
-class Command.Sequence extends Command
-  constructor: ->
-
-  descend: (engine, operation, continuation, scope, ascender, ascending) ->
-    for argument, index in operation
-      if argument?.push
-        argument.parent ||= operation
-        if command = argument.command || engine.Command(argument)
-          result = command.solve(engine, argument, continuation, scope, -1, result)
-          return if result == undefined
-    return [result, engine, operation, continuation, scope]
-
-  execute: (result) ->
-    console.log(result)
-    return result
-
-  yield: (result, engine, operation, continuation, scope, ascender, ascending) ->
-    parent = operation.parent
-
-    # Recurse to the next operation in sequence when stateful op yielded
-    if next = parent[parent.indexOf(operation) + 1]
-      if operation.command.key?
-        return next
-    else
-      # Recurse to sequence parent 
-      parent = operation.parent
-      if parent.parent
-        @ascend(engine, parent, continuation, scope, result, parent.parent.indexOf(parent), ascending)
-        return true
-      else
-        return result
       
 
 module.exports = Command

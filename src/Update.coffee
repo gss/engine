@@ -14,6 +14,8 @@ Updater = (engine) ->
     if typeof problem[0] == 'string'
       unless engine.domain.signatures[problem[0]]
         Domain = problem.domain = engine.solved
+        unless Domain.signatures[problem[0]]
+          problem.domain = engine.intrinsic
 
     # Process arguments
     for arg, index in problem
@@ -464,8 +466,11 @@ Update.prototype =
     return GSS.prototype.clone @problems
     
   finish: ->
-    @time = @engine.console.getTime(@start)
-    @start = undefined
+    @time = @engine.console.getTime(@started)
+    @started = undefined
+
+  start: ->
+    @started ?= @engine.console.getTime()
 
   isDone: ->
     return (@domains.length == @index + 1) && @isDocumentDone()

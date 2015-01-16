@@ -12,7 +12,7 @@ class Abstract extends Domain
   Iterator:   require('../commands/Iterator')
   Condition:  require('../commands/Condition')
   Unit:       require('../commands/Unit')
-
+  
   Properties: require('../properties/Dimensions')  
 
 
@@ -67,8 +67,8 @@ Top = Abstract::Default.extend
       wrapper.parent = operation.parent
       wrapper.domain ||= domain
 
-    engine.update wrapper, undefined, undefined, domain
-    return
+    if engine.update(wrapper, undefined, undefined, domain) == undefined
+      return engine.intrinsic.solve(args)
 
   produce: (meta, args)->
     return [meta, args]

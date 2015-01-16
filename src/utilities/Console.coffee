@@ -7,9 +7,13 @@ class Console
       @level = 0
     @stack = []
     @buffer = []
+    window.addEventListener 'error', @onError, true
 
   methods: ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd']
   groups: 0
+
+  onError: (e) =>
+    true while @pop(e)
 
   compile: (engine) ->
     @DESCEND = engine.Command.prototype.DESCEND
@@ -23,14 +27,15 @@ class Console
       @stack.push(index - 5)
 
   pop: (d, type = @row, update) ->
-    if @level > 0.5 || type != @row
+    if (@level > 0.5 || type != @row) && @stack.length
       index = @stack.pop()
       @buffer[index + 3] = d
       if type != @row
         @buffer[index + 2] = @getTime(@buffer[index + 2])
       unless @stack.length
         @flush()
-      return
+      return true
+    return false
 
   flush: ->
     if @level > 1

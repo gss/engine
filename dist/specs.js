@@ -5563,8 +5563,10 @@ describe('Matrix', function() {
     });
   });
   return describe('when used with variables', function() {
-    return it('should update and recompute matrix', function() {
-      return expect(engine.solve([['translateX', 3], ['rotateZ', ['get', 'a']]])).to.eql(1);
+    return it('should update and recompute matrix', function(done) {
+      return setTimeout(function() {
+        return expect(engine.solve([['translateX', 3], ['rotateZ', ['get', 'a']]])).to.eql(1);
+      }, 1);
     });
   });
 });

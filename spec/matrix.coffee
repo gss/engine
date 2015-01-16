@@ -70,8 +70,12 @@ describe 'Matrix', ->
       ).to.throw(/Undefined/)
 
   describe 'when used with variables', ->
-    it 'should update and recompute matrix', ->
-      expect(engine.solve([
-          ['translateX', 3]
-          ['rotateZ', ['get', 'a']]
-      ])).to.eql(1)
+    it 'should update and recompute matrix', (done) ->
+      setTimeout ->
+        expect(engine.solve([
+            #['set', 'transform', [
+              ['translateX', 3]
+              ['rotateZ', ['get', 'a']]
+            #]]
+        ])).to.eql(1)
+      , 1
