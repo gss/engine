@@ -158,8 +158,9 @@ class Selector extends Query
           when "characterData"
             @updating.restyled ?= true
             Selector.mutateCharacterData(@, mutation.target, mutation)
-
-        @intrinsic.validate(mutation.target)
+        
+        if @intrinsic.subscribers
+          @updating.reflown ||= @scope
       return
 
     if !@scope.parentNode && @scope.nodeType == 1
@@ -701,17 +702,8 @@ Selector.define
     Combinator: (node) ->
       return node unless node.nextElementSibling
       
-  ':visible': ->
-    Combinator: (node = scope, engine, operation, continuation, scope) ->
-      ey = @intrinsic.watch(node,         'computed-y',      operation, continuation)
-      eh = @intrinsic.watch(node,         'computed-height', operation, continuation)
-      wh = @intrinsic.watch(engine.scope, 'height',          operation, continuation)
-      wy = @intrinsic.watch(engine.scope, 'scroll-top',      operation, continuation)
-      if (ey >= wy && ey + eh < wy + wh)
-        return node
-      
-
-
+# Collection combinators
+Selector.define
   ':next':
     relative: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
@@ -746,6 +738,44 @@ Selector.define
       return if !index?
       return node if index == 0
   
+# Viewport visibility pseudos
+Selector.define
+      
+  ':visible':
+    singular: true
+    Combinator: (node = scope, engine, operation, continuation, scope) ->
+      debugger
+      return Selector[':visible-y']::Combinator.apply(@, arguments) && 
+             Selector[':visible-x']::Combinator.apply(@, arguments)
+    
+  ':visible-y': 
+    singular: true
+    Combinator: (node = scope, engine, operation, continuation, scope) ->
+      ey = engine.intrinsic.watch(node,         'computed-y',      operation, continuation, scope)
+      eh = engine.intrinsic.watch(node,         'computed-height', operation, continuation, scope)
+      sy = engine.intrinsic.watch(engine.scope, 'scroll-top',      operation, continuation, scope)
+      sh = engine.intrinsic.watch(engine.scope, 'computed-height', operation, continuation, scope)
+        
+      if (ey <= sy && ey + eh > sy + sh)  || # mid
+         (ey > sy && ey < sy + sh)        || # top
+         (ey + eh > sy && ey + eh < sy + sh) # bottom
+        return node
+        
+   ':visible-x':
+     singular: true
+     Combinator: (node = scope, engine, operation, continuation, scope) ->
+       ex = engine.intrinsic.watch(node,         'computed-x',     operation, continuation, scope)
+       ew = engine.intrinsic.watch(node,         'computed-width', operation, continuation, scope)
+       sx = engine.intrinsic.watch(engine.scope, 'scroll-left',    operation, continuation, scope)
+       sw = engine.intrinsic.watch(engine.scope, 'computed-width', operation, continuation, scope)
+       
+       if (ex <= sx && ex + ew > sx + sw) || # mid
+          (ex > sx && ex < sx + sw)     || # left
+          (ex + ew > sx && ex < sx + sw)   # right
+         return node
+  
+
+Selector.define
   # Comma combines results of multiple selectors without duplicates
   ',':
     # If all sub-selectors are selector, make a single comma separated selector

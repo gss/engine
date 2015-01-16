@@ -1,8 +1,3 @@
-Engine = GSS #require 'gss-engine/lib/Engine.js'
-
-assert = chai.assert
-expect = chai.expect
-
 stringify = (o) ->
   return o
   return JSON.stringify o, 1, 1

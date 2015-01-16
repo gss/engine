@@ -92,34 +92,34 @@ class Document extends Abstract
           @intrinsic.verify(id, "height")
           @intrinsic.verify(@scope, "width")
           @intrinsic.verify(@scope, "height")
-          return
-      
+          return @intrinsic.commit()
+          
     scroll: (e = '::window') ->
       id = e.target && @identify(e.target) || e
       @solve 'Scroll', id, ->
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")
-        return
+        return @intrinsic.commit()
 
     # Fire as early as possible
     DOMContentLoaded: ->
       document.removeEventListener 'DOMContentLoaded', @
       @compile()
       @solve 'Ready', ->
-        #@intrinsic.solve()
+        #@intrinsic.commit()
 
     # Wait for web fonts
     readystatechange: ->
       if @running && document.readyState == 'complete'
         @solve 'Statechange', ->
-          #@intrinsic.solve()
+          #@intrinsic.commit()
 
     # Remeasure when images are loaded
     load: ->
       window.removeEventListener 'load', @
       document.removeEventListener 'DOMContentLoaded', @
       @solve 'Loaded', ->
-        #@intrinsic.solve()
+        @intrinsic.commit()
 
     # Unsubscribe events and observers
     destroy: ->

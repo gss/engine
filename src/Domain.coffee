@@ -96,6 +96,7 @@ class Domain
   watch: (object, property, operation, continuation, scope) ->
     @setup()
     path = @getPath(object, property)
+    value =  @get(path)
     if @indexOfTriplet(@watchers[path], operation, continuation, scope) == -1
       observers = @watched[continuation] ||= []
       observers.push(operation, path, scope)
@@ -113,8 +114,8 @@ class Domain
           obj[prop] = true
           @subscribe(id, prop, path)
 
-    return @get(path)
-
+    return value
+    
   unwatch: (object, property, operation, continuation, scope) ->
     path = @getPath(object, property)
     observers = @watched[continuation]
@@ -378,7 +379,8 @@ class Domain
   # Unset transaction flag and return changes
   commit: ->
     if changes = @changes
-      @register()
+      if @Solver
+        @register()
       @changes = undefined
       return changes
 

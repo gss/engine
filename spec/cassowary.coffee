@@ -1,7 +1,7 @@
 expect = chai.expect
-c = GSS.prototype.Domains.Linear.prototype.Solver
 
 describe 'Cassowary', ->
+  c = GSS.prototype.Domains.Linear.prototype.Solver
   it 'should be available', ->
     expect(c).to.be.a 'function'
   it 'var >= num', ->

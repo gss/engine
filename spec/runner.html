@@ -24,16 +24,15 @@
     <script src="../node_modules/chai/chai.js"></script>
     <script src="../node_modules/mocha/mocha.js"></script>
     <script>
+      assert = chai.assert
+      expect = chai.expect
+    </script>
+    <script>
       mocha.setup('bdd');
       chai.config.includeStack = true;
       chai.config.showDiff = true;
     </script>
-    <!-- 
-    -->
-    <script src="../dist/specs.js"></script>
-    <!-- 
-    <script src="./js/pages.js"></script>
-    -->
+    <script src="./js/specs.js"></script>
     <script>
       if (window.mochaPhantomJS) {
         mochaPhantomJS.run();

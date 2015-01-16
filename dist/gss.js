@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.GSS=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -15776,9 +15776,9 @@ Command.List = (function(_super) {
   List.prototype.type = 'List';
 
   List.prototype.condition = function(engine, operation) {
-    var _ref;
-    if (operation.parent) {
-      return (_ref = operation.parent) != null ? _ref.command.List : void 0;
+    var parent;
+    if (parent = operation.parent) {
+      return parent.command.List || parent[0] === true;
     } else {
       return true;
     }
@@ -15966,9 +15966,10 @@ Domain = (function() {
   };
 
   Domain.prototype.watch = function(object, property, operation, continuation, scope) {
-    var id, j, obj, observers, path, prop, watchers, _base, _base1, _base2;
+    var id, j, obj, observers, path, prop, value, watchers, _base, _base1, _base2;
     this.setup();
     path = this.getPath(object, property);
+    value = this.get(path);
     if (this.indexOfTriplet(this.watchers[path], operation, continuation, scope) === -1) {
       observers = (_base = this.watched)[continuation] || (_base[continuation] = []);
       observers.push(operation, path, scope);
@@ -15984,7 +15985,7 @@ Domain = (function() {
         }
       }
     }
-    return this.get(path);
+    return value;
   };
 
   Domain.prototype.unwatch = function(object, property, operation, continuation, scope) {
@@ -16335,7 +16336,9 @@ Domain = (function() {
   Domain.prototype.commit = function() {
     var changes;
     if (changes = this.changes) {
-      this.register();
+      if (this.Solver) {
+        this.register();
+      }
       this.changes = void 0;
       return changes;
     }
@@ -16537,13 +16540,17 @@ Engine = (function() {
   };
 
   Engine.prototype.solve = function() {
-    var args, result, strategy, transacting;
+    var args, quiet, result, strategy, transacting;
     if (!this.transacting) {
       this.transacting = transacting = true;
     }
     args = this.transact.apply(this, arguments);
     if (typeof args[0] === 'function') {
-      result = args.shift().apply(this, args);
+      if (result = args.shift().apply(this, args)) {
+        this.updating.apply(result);
+      }
+      debugger;
+      quiet = true;
     } else if (args[0] != null) {
       strategy = this[this.strategy];
       if (strategy.solve) {
@@ -16556,7 +16563,7 @@ Engine = (function() {
     }
     if (transacting) {
       this.transacting = void 0;
-      return this.commit(result);
+      return this.commit(result, void 0, quiet);
     }
   };
 
@@ -16595,7 +16602,7 @@ Engine = (function() {
     return args;
   };
 
-  Engine.prototype.commit = function(solution, update) {
+  Engine.prototype.commit = function(solution, update, apply) {
     var _ref, _ref1;
     if (update == null) {
       update = this.updating;
@@ -16623,11 +16630,13 @@ Engine = (function() {
           return update;
         }
       }
-      this.console.start('Apply', update.solution);
-      this.triggerEvent('apply', update.solution, update);
-      this.triggerEvent('write', update.solution, update);
-      this.triggerEvent('flush', update.solution, update);
-      this.console.end(this.values);
+      if (apply !== false) {
+        this.console.start('Apply', update.solution);
+        this.triggerEvent('apply', update.solution, update);
+        this.triggerEvent('write', update.solution, update);
+        this.triggerEvent('flush', update.solution, update);
+        this.console.end(this.values);
+      }
       if (update.solved || update.isDone()) {
         update.solved = update.restyled = void 0;
         this.triggerEvent('validate', update.solution, update);
@@ -16833,7 +16842,7 @@ Engine = (function() {
     error: function(e) {
       this.updating = void 0;
       if ((typeof window !== "undefined" && window !== null) && e.target !== window) {
-        throw "" + e.message + " (" + e.filename + ":" + e.lineno + ")";
+        throw new Error("" + e.message + " (" + e.filename + ":" + e.lineno + ")");
       }
     }
   };
@@ -17208,7 +17217,7 @@ module.exports = Engine;
 
 
 
-},{"./Command":11,"./Domain":12,"./Query":14,"./Update":16,"./domains/Abstract":24,"./domains/Boolean":25,"./domains/Document":26,"./domains/Finite":27,"./domains/Intrinsic":28,"./domains/Linear":29,"./domains/Numeric":30,"./utilities/Console":42,"./utilities/Exporter":43,"./utilities/Inspector":44}],14:[function(require,module,exports){
+},{"./Command":11,"./Domain":12,"./Query":14,"./Update":16,"./domains/Abstract":24,"./domains/Boolean":25,"./domains/Document":26,"./domains/Finite":27,"./domains/Intrinsic":28,"./domains/Linear":29,"./domains/Numeric":30,"./utilities/Console":41,"./utilities/Exporter":42,"./utilities/Inspector":43}],14:[function(require,module,exports){
 var Command, Query,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -20277,7 +20286,7 @@ Selector = (function(_super) {
       return this.solve(function() {});
     }
     result = this.solve('Mutate', String(mutations.length), function() {
-      var mutation, _base, _base1, _base2, _i, _len;
+      var mutation, _base, _base1, _base2, _base3, _i, _len;
       if (this.updating.index > -1) {
         this.updating.reset();
       }
@@ -20306,7 +20315,9 @@ Selector = (function(_super) {
             }
             Selector.mutateCharacterData(this, mutation.target, mutation);
         }
-        this.intrinsic.validate(mutation.target);
+        if (this.intrinsic.subscribers) {
+          (_base3 = this.updating).reflown || (_base3.reflown = this.scope);
+        }
       }
     });
     if (!this.scope.parentNode && this.scope.nodeType === 1) {
@@ -20972,24 +20983,10 @@ Selector.define({
         return node;
       }
     }
-  },
-  ':visible': function() {
-    return {
-      Combinator: function(node, engine, operation, continuation, scope) {
-        var eh, ey, wh, wy;
-        if (node == null) {
-          node = scope;
-        }
-        ey = this.intrinsic.watch(node, 'computed-y', operation, continuation);
-        eh = this.intrinsic.watch(node, 'computed-height', operation, continuation);
-        wh = this.intrinsic.watch(engine.scope, 'height', operation, continuation);
-        wy = this.intrinsic.watch(engine.scope, 'scroll-top', operation, continuation);
-        if (ey >= wy && ey + eh < wy + wh) {
-          return node;
-        }
-      }
-    };
-  },
+  }
+});
+
+Selector.define({
   ':next': {
     relative: true,
     Combinator: function(node, engine, operation, continuation, scope) {
@@ -21055,7 +21052,55 @@ Selector.define({
         return node;
       }
     }
+  }
+});
+
+Selector.define({
+  ':visible': {
+    singular: true,
+    Combinator: function(node, engine, operation, continuation, scope) {
+      if (node == null) {
+        node = scope;
+      }
+      debugger;
+      return Selector[':visible-y'].prototype.Combinator.apply(this, arguments) && Selector[':visible-x'].prototype.Combinator.apply(this, arguments);
+    }
   },
+  ':visible-y': {
+    singular: true,
+    Combinator: function(node, engine, operation, continuation, scope) {
+      var eh, ey, sh, sy;
+      if (node == null) {
+        node = scope;
+      }
+      ey = engine.intrinsic.watch(node, 'computed-y', operation, continuation, scope);
+      eh = engine.intrinsic.watch(node, 'computed-height', operation, continuation, scope);
+      sy = engine.intrinsic.watch(engine.scope, 'scroll-top', operation, continuation, scope);
+      sh = engine.intrinsic.watch(engine.scope, 'computed-height', operation, continuation, scope);
+      if ((ey <= sy && ey + eh > sy + sh) || (ey > sy && ey < sy + sh) || (ey + eh > sy && ey + eh < sy + sh)) {
+        return node;
+      }
+    }
+  },
+  ':visible-x': {
+    singular: true,
+    Combinator: function(node, engine, operation, continuation, scope) {
+      var ew, ex, sw, sx;
+      if (node == null) {
+        node = scope;
+      }
+      ex = engine.intrinsic.watch(node, 'computed-x', operation, continuation, scope);
+      ew = engine.intrinsic.watch(node, 'computed-width', operation, continuation, scope);
+      sx = engine.intrinsic.watch(engine.scope, 'scroll-left', operation, continuation, scope);
+      sw = engine.intrinsic.watch(engine.scope, 'computed-width', operation, continuation, scope);
+      if ((ex <= sx && ex + ew > sx + sw) || (ex > sx && ex < sx + sw) || (ex + ew > sx && ex < sx + sw)) {
+        return node;
+      }
+    }
+  }
+});
+
+Selector.define({
   ',': {
     tags: ['selector'],
     signature: false,
@@ -21209,7 +21254,7 @@ module.exports = Selector;
 
 
 
-},{"../../vendor/MutationObserver.js":45,"../../vendor/weakmap.js":47,"../Query":14}],21:[function(require,module,exports){
+},{"../../vendor/MutationObserver.js":44,"../../vendor/weakmap.js":46,"../Query":14}],21:[function(require,module,exports){
 var Command, Parser, Query, Stylesheet,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -21765,7 +21810,7 @@ Stylesheet.Import = (function(_super) {
     xhr = new XMLHttpRequest();
     xhr.onreadystatechange = (function(_this) {
       return function() {
-        if (xhr.readyState === 4 && xhr.status === 200) {
+        if (xhr.readyState === 4 && xhr.status === 200 || (!xhr.status && url.indexOf('file://') === 0)) {
           return callback(xhr.responseText);
         }
       };
@@ -22276,7 +22321,7 @@ module.exports = Abstract;
 
 
 
-},{"../Command":11,"../Domain":12,"../commands/Condition":17,"../commands/Constraint":18,"../commands/Iterator":19,"../commands/Unit":22,"../commands/Variable":23,"../properties/Dimensions":32}],25:[function(require,module,exports){
+},{"../Command":11,"../Domain":12,"../commands/Condition":17,"../commands/Constraint":18,"../commands/Iterator":19,"../commands/Unit":22,"../commands/Variable":23,"../properties/Dimensions":31}],25:[function(require,module,exports){
 var Boolean, Constraint, Numeric,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -22452,6 +22497,7 @@ Document = (function(_super) {
             this.intrinsic.verify(id, "height");
             this.intrinsic.verify(this.scope, "width");
             this.intrinsic.verify(this.scope, "height");
+            return this.intrinsic.commit();
           });
         };
       })(this));
@@ -22465,6 +22511,7 @@ Document = (function(_super) {
       return this.solve('Scroll', id, function() {
         this.intrinsic.verify(id, "scroll-top");
         this.intrinsic.verify(id, "scroll-left");
+        return this.intrinsic.commit();
       });
     },
     DOMContentLoaded: function() {
@@ -22480,7 +22527,9 @@ Document = (function(_super) {
     load: function() {
       window.removeEventListener('load', this);
       document.removeEventListener('DOMContentLoaded', this);
-      return this.solve('Loaded', function() {});
+      return this.solve('Loaded', function() {
+        return this.intrinsic.commit();
+      });
     },
     destroy: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
@@ -22762,13 +22811,6 @@ Intrinsic = (function(_super) {
     }
   };
 
-  Intrinsic.prototype.everything = {
-    'intrinsic-width': 'intrinsic-width',
-    'intrinsic-height': 'intrinsic-height',
-    'intrinsic-x': 'intrinsic-x',
-    'intrinsic-y': 'intrinsic-y'
-  };
-
   Intrinsic.prototype.get = function(object, property) {
     var path, value;
     path = this.getPath(object, property);
@@ -22777,7 +22819,7 @@ Intrinsic = (function(_super) {
         this.set(null, path, value);
       }
     }
-    return value || 0;
+    return value;
   };
 
   Intrinsic.prototype.fetch = function(path) {
@@ -22816,14 +22858,6 @@ Intrinsic = (function(_super) {
         return true;
       }
     }
-  };
-
-  Intrinsic.prototype.validate = function(node) {
-    var subscribers;
-    if (!(subscribers = this.subscribers)) {
-      return;
-    }
-    return this.engine.updating.reflown = this.scope;
   };
 
   Intrinsic.prototype.verify = function(object, property) {
@@ -22897,7 +22931,7 @@ Intrinsic = (function(_super) {
   Intrinsic.prototype.subscribe = function(id, property) {
     var node, path, _ref;
     if ((node = this.identity.solve(id)) && node.nodeType === 1) {
-      property = property.replace(/^(?:computed|intrinsic)-/, '');
+      property = property.replace(/^intrinsic-/, '');
       path = this.getPath(id, property);
       if (this.engine.values.hasOwnProperty(path) || ((_ref = this.engine.updating.solution) != null ? _ref.hasOwnProperty(path) : void 0)) {
         return node.style[property] = '';
@@ -22928,10 +22962,12 @@ Intrinsic = (function(_super) {
               break;
             case "width":
             case "intrinsic-width":
+            case "computed-width":
               this.set(id, prop, node.offsetWidth);
               break;
             case "height":
             case "intrinsic-height":
+            case "computed-height":
               this.set(id, prop, node.offsetHeight);
               break;
             default:
@@ -23073,7 +23109,7 @@ module.exports = Intrinsic;
 
 
 
-},{"../Style":15,"../commands/Unit":22,"../properties/Getters":33,"../properties/Styles":34,"../types/Color":35,"../types/Easing":36,"../types/Gradient":37,"../types/Matrix":38,"../types/Primitive":40,"../types/URL":41,"./Numeric":30}],29:[function(require,module,exports){
+},{"../Style":15,"../commands/Unit":22,"../properties/Getters":32,"../properties/Styles":33,"../types/Color":34,"../types/Easing":35,"../types/Gradient":36,"../types/Matrix":37,"../types/Primitive":39,"../types/URL":40,"./Numeric":30}],29:[function(require,module,exports){
 var Command, Constraint, Domain, Linear, Variable, c,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -23428,14 +23464,7 @@ module.exports = Numeric;
 
 
 
-},{"../Command":11,"../Domain":12,"../commands/Variable":23,"../types/Measurement":39}],31:[function(require,module,exports){
-(function (global){
-global.GSS = require('./Engine');
-
-
-
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Engine":13}],32:[function(require,module,exports){
+},{"../Command":11,"../Domain":12,"../commands/Variable":23,"../types/Measurement":38}],31:[function(require,module,exports){
 var Dimensions;
 
 Dimensions = (function() {
@@ -23474,7 +23503,7 @@ module.exports = Dimensions;
 
 
 
-},{}],33:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 var Getters;
 
 Getters = (function() {
@@ -23576,7 +23605,7 @@ module.exports = Getters;
 
 
 
-},{}],34:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 var Command, Styles;
 
 Styles = (function() {
@@ -23852,7 +23881,7 @@ module.exports = Styles;
 
 
 
-},{"../Command":11}],35:[function(require,module,exports){
+},{"../Command":11}],34:[function(require,module,exports){
 var Color, Command,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -23965,7 +23994,7 @@ module.exports = Color;
 
 
 
-},{"../Command":11}],36:[function(require,module,exports){
+},{"../Command":11}],35:[function(require,module,exports){
 var Command, Easing,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -24003,7 +24032,7 @@ module.exports = Easing;
 
 
 
-},{"../commands/Variable":23}],37:[function(require,module,exports){
+},{"../commands/Variable":23}],36:[function(require,module,exports){
 var Command, Gradient,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -24039,7 +24068,7 @@ module.exports = Gradient;
 
 
 
-},{"../Command":11}],38:[function(require,module,exports){
+},{"../Command":11}],37:[function(require,module,exports){
 var Command, Matrix,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -24280,7 +24309,7 @@ module.exports = Matrix;
 
 
 
-},{"../../vendor/gl-matrix":46,"../Command":11}],39:[function(require,module,exports){
+},{"../../vendor/gl-matrix":45,"../Command":11}],38:[function(require,module,exports){
 var Measurement, Unit, Variable,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -24474,7 +24503,7 @@ module.exports = Measurement;
 
 
 
-},{"../commands/Unit":22,"../commands/Variable":23}],40:[function(require,module,exports){
+},{"../commands/Unit":22,"../commands/Variable":23}],39:[function(require,module,exports){
 var Command, Primitive,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -24634,7 +24663,7 @@ module.exports = Primitive;
 
 
 
-},{"../Command":11}],41:[function(require,module,exports){
+},{"../Command":11}],40:[function(require,module,exports){
 var Command, URL,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -24669,7 +24698,7 @@ module.exports = URL;
 
 
 
-},{"../Command":11}],42:[function(require,module,exports){
+},{"../Command":11}],41:[function(require,module,exports){
 var Console, method, _i, _len, _ref,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -24936,7 +24965,7 @@ module.exports = Console;
 
 
 
-},{}],43:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 var Exporter,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -25055,7 +25084,7 @@ module.exports = Exporter;
 
 
 
-},{}],44:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 var Inspector,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   __hasProp = {}.hasOwnProperty;
@@ -25709,7 +25738,7 @@ module.exports = Inspector;
 
 
 
-},{}],45:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 (function (global){
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
@@ -26256,7 +26285,7 @@ if (typeof window != 'undefined') {
     global.MutationObserver = JsMutationObserver;
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],46:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 /**
  * @fileoverview gl-matrix - High performance matrix and vector operations
  * @author Brandon Jones
@@ -30375,7 +30404,7 @@ if(typeof(exports) !== 'undefined') {
   })(shim.exports);
 })(this);
 
-},{}],47:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
  * Use of this source code is governed by a BSD-style
@@ -30414,4 +30443,5 @@ if (typeof WeakMap === 'undefined') {
   })();
 }
 
-},{}]},{},[31]);
+},{}]},{},[13])(13)
+});

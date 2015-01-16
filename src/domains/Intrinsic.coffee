@@ -61,6 +61,7 @@ class Intrinsic extends Numeric
         @intrinsic.verify('::window', 'height')
         @intrinsic.verify(@scope, 'width')
         @intrinsic.verify(@scope, 'height')
+        
         if measured = @intrinsic.solve()
           if true#Object.keys(measured).length
             update.apply measured
@@ -133,17 +134,13 @@ class Intrinsic extends Numeric
       return @changes
     return
 
-  everything: {
-    'intrinsic-width', 'intrinsic-height', 'intrinsic-x', 'intrinsic-y'
-  }
-
   get: (object, property) ->
     path = @getPath(object, property)
 
     unless (value = Numeric::get.call(@, null, path))?
       if (value = @fetch(path))?
         @set(null, path, value)
-    return value || 0
+    return value# || 0
 
   fetch: (path) ->
     if (prop = @properties[path])?
@@ -173,14 +170,6 @@ class Intrinsic extends Numeric
       if @properties[(id._gss_id || id) + '[' + property + ']']?
         return true
 
-  # Triggered on possibly resized element by mutation observer
-  # If an element is known to listen for its intrinsic properties
-  # schedule a reflow on that element. If another element is already
-  # scheduled for reflow, reflow shared parent element of both elements 
-  validate: (node) ->
-    return unless subscribers = @subscribers
-
-    @engine.updating.reflown = @scope
 
   verify: (object, property) ->
     path = @getPath(object, property)
@@ -239,7 +228,7 @@ class Intrinsic extends Numeric
   # Reset intrinsic style when observed initially
   subscribe: (id, property) ->
     if (node = @identity.solve(id)) && node.nodeType == 1
-      property = property.replace(/^(?:computed|intrinsic)-/, '')
+      property = property.replace(/^intrinsic-/, '')
       path = @getPath(id, property)
       if @engine.values.hasOwnProperty(path) || @engine.updating.solution?.hasOwnProperty(path)
         node.style[property] = ''
@@ -257,9 +246,9 @@ class Intrinsic extends Numeric
               @set id, prop, x + node.offsetLeft
             when "y", "intrinsic-y", "computed-y"
               @set id, prop, y + node.offsetTop
-            when "width", "intrinsic-width"#, "computed-width"
+            when "width", "intrinsic-width", "computed-width"
               @set id, prop, node.offsetWidth
-            when "height", "intrinsic-height"#, "computed-height"
+            when "height", "intrinsic-height", "computed-height"
               @set id, prop, node.offsetHeight
             else
               style = prop.replace(/^(?:computed|intrinsic)-/, '')

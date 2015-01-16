@@ -22,9 +22,9 @@ class Query extends Command
         if yielded = parent.command.yield?(result, engine, operation, continuation, scope, ascender, ascending)
           yielded.command?.solve(yielded.domain || engine, yielded, continuation, scope, -1, result)
         else if ascender? || !@hidden || !@reference
-            return parent.command.solve(engine, parent, continuation, scope, parent.indexOf(operation), result)
-          else
-            return result
+          return parent.command.solve(engine, parent, continuation, scope, parent.indexOf(operation), result)
+        else
+          return result
      
   serialize: (operation) ->
     if @prefix?

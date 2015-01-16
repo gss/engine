@@ -811,8 +811,8 @@ class Command.List extends Command.Sequence
   type: 'List'
 
   condition: (engine, operation) ->
-    if operation.parent
-      return operation.parent?.command.List
+    if parent = operation.parent
+      return parent.command.List || parent[0] == true #FIXME, parser thing
     else
       return true
       # return !operation[0].command.Sequence

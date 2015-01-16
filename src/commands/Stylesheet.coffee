@@ -420,7 +420,7 @@ class Stylesheet.Import extends Query
   resolve: (url, method, callback) ->
     xhr = new XMLHttpRequest()
     xhr.onreadystatechange = =>
-      if xhr.readyState == 4 && xhr.status == 200
+      if xhr.readyState == 4 && xhr.status == 200 || (!xhr.status && url.indexOf('file://') == 0)
         callback(xhr.responseText)
     xhr.open(method && method.toUpperCase() || 'GET', url)
     xhr.send()

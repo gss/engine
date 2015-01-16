@@ -138,7 +138,10 @@ class Engine
 
 
     if typeof args[0] == 'function'
-      result = args.shift().apply(@, args) 
+      if result = args.shift().apply(@, args) 
+        @updating.apply result
+      debugger
+      quiet = true
     else if args[0]?
       strategy = @[@strategy]
       if strategy.solve
@@ -150,7 +153,7 @@ class Engine
 
     if transacting
       @transacting = undefined
-      return @commit(result)
+      return @commit(result, undefined, quiet)
 
   # Figure out arguments and prepare to solve given operations
   transact: ->
@@ -185,7 +188,7 @@ class Engine
     return args
 
   # Run solution in multiple ticks
-  commit: (solution, update = @updating) ->
+  commit: (solution, update = @updating, apply) ->
     return if update.blocking
 
     if solution && Object.keys(solution).length
@@ -208,12 +211,12 @@ class Engine
           return update
 
 
-      # Apply styles in bulk
-      @console.start('Apply', update.solution)
-      @triggerEvent('apply', update.solution, update)
-      @triggerEvent('write', update.solution, update)
-      @triggerEvent('flush', update.solution, update)
-      @console.end(@values)
+      unless apply == false
+        @console.start('Apply', update.solution)
+        @triggerEvent('apply', update.solution, update)
+        @triggerEvent('write', update.solution, update)
+        @triggerEvent('flush', update.solution, update)
+        @console.end(@values)
 
       # Re-measure values
       if update.solved || update.isDone()
@@ -395,7 +398,7 @@ class Engine
       @updating = undefined
       
       if window? && e.target != window
-        throw "#{e.message} (#{e.filename}:#{e.lineno})"
+        throw new Error "#{e.message} (#{e.filename}:#{e.lineno})"
       
 
   # Figure out worker url automatically
