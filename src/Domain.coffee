@@ -26,47 +26,35 @@ class Domain
   priority: 0
   strategy: undefined
 
-  constructor: (engine, url, values, name) ->
-    @values       = {}
-    @engine       = engine if engine
-    @displayName  = name   if name
-    @url          = url    if url
-    @merge(values)         if values
+  constructor: (values) ->
+    @values     = {}
     @signatures = {}
+    @merge(values) if values
+
+    if @url
+      @useWorker(@url)
 
     if @events != @engine.events
       @addListeners(@events)
-
-
 
     if @Properties
       @properties  = new @Properties(@)
       @Property.compile @properties, @
     else
       @properties = {}
-
-    if @url && @getWorkerURL
-      if @url && (@url = @getWorkerURL?(@url))
-        if engine != @
-          unless @useWorker(@url)
-            @url = undefined
-
     return @
 
   # Sub-constructor for graph wrappers
   setup: () ->
-    return if @engine == @
-      
     unless (@hasOwnProperty('watchers') || @hasOwnProperty('paths'))
       unless @hasOwnProperty('values')
-        @values   = {}
+        @values      = {}
 
       if @Solver
-        @paths    = {}
+        @paths       = {}
       else
-        @watchers = {}
-        @watched  = {}
-        @objects  = {} if @subscribing
+        @watchers    = {}
+        @watched     = {}
 
 
   # Main method to execute any kind of operations in the domain
@@ -117,13 +105,13 @@ class Domain
 
       
       # Register props by id for quick lookup
-      if @subscribing && watchers.length == 3
+      if @subscribe && watchers.length == 3
         if (j = path.indexOf('[')) > -1
           id = path.substring(0, j)
-          obj = @objects[id] ||= {}
+          obj = (@subscribers ||= {})[id] ||= {}
           prop = path.substring(j + 1, path.length - 1)
           obj[prop] = true
-          @onWatch?(id, prop)
+          @subscribe(id, prop, path)
 
     return @get(path)
 
@@ -139,10 +127,10 @@ class Domain
     watchers.splice index, 3
     unless watchers.length
       delete @watchers[path]
-      if @subscribing
+      if @subscribe
         if (j = path.indexOf('[')) > -1
           id = path.substring(0, j)
-          obj = @objects[id] ||= {}
+          obj = @subscribers[id] ||= {}
           prop = path.substring(j + 1, path.length - 1)
           old = obj[prop]
           delete obj[prop]
@@ -151,11 +139,11 @@ class Domain
             @changes[path] = null
             unless @updating.domains.indexOf(@) > @updating.index
               @updating.apply(@changes)
-          if @immediate
-            @solved.set path, null
-            @set path, null
-          if Object.keys(obj).length == 0
-            delete @objects[id]
+          @unsubscribe(id, prop, path)
+          unless Object.keys(obj).length
+            delete @subscribers[id]
+            unless Object.keys(@subscribers).length
+              @subscribers = undefined
 
   get: (object, property) ->
     return @values[@getPath(object, property)]

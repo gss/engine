@@ -60,15 +60,15 @@ class Measurement.Angle extends Measurement
           return @
   @define 
     deg: (value) ->
-      return value * (Math.PI / 180)
+      return value * 360
 
     grad: (value) ->
-      return value * (Math.PI / 180) / (360 / 400)
-
-    turn: (value) ->
-      return value * (Math.PI / 180) * 360
+      return value / (360 / 400)
 
     rad: (value) ->
+      return value * (Math.PI / 180)
+
+    turn: (value) ->
       return value
 
   @formatNumber: (number) ->

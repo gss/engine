@@ -529,12 +529,6 @@ DEMOS.ADAPTIVE_ASPECT_LINEAR = DEMOS.ADAPTIVE_ASPECT.
 assert = chai.assert
 expect = chai.expect
 
-$  = () ->
-  return document.querySelector arguments...
-  
-$$ = () -> 
-  return document.querySelectorAll arguments...
-
 remove = (el) ->
   el?.parentNode?.removeChild(el)
 
@@ -560,7 +554,7 @@ describe 'Full page tests', ->
           container.style.left = 0
           container.style.top = 0
           window.$engine = engine = new GSS(container, index == 0)
-          $('#fixtures').appendChild container
+          document.getElementById('fixtures').appendChild container
 
           container.innerHTML = DEMOS.SCOPING
           engine.then (solution) ->
@@ -659,7 +653,7 @@ describe 'Full page tests', ->
           container.style.left = 0
           container.style.top = 0
           window.$engine = engine = new GSS(container, index == 0)
-          $('#fixtures').appendChild container
+          document.getElementById('fixtures').appendChild container
 
           container.innerHTML = DEMOS.GSS1
           engine.then (solution) ->
@@ -699,7 +693,7 @@ describe 'Full page tests', ->
                 container.id = 'face-demo'
 
                 window.$engine = engine = new GSS(container, index == 0)
-                $('#fixtures').appendChild container
+                document.getElementById('fixtures').appendChild container
 
                 html = DEMOS.FACE_DETECTION_SECTION
                 if j == 0
@@ -741,7 +735,7 @@ describe 'Full page tests', ->
           container.id = 'profile-card-demo'
 
           window.$engine = engine = new GSS(container, index == 0)
-          $('#fixtures').appendChild container
+          document.getElementById('fixtures').appendChild container
 
           container.innerHTML = DEMOS.PROFILE_CARD
           container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
@@ -806,7 +800,7 @@ describe 'Full page tests', ->
                 container.style.left = 0
                 container.style.top = 0
                 window.$engine = engine = new GSS(container, index == 0)
-                $('#fixtures').appendChild container
+                document.getElementById('fixtures').appendChild container
                 if j == 0
                   container.innerHTML = DEMOS.ADAPTIVE_ASPECT
                 else

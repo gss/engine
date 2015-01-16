@@ -11,6 +11,8 @@ class Condition extends Query
     ]
   ]
 
+  List: true
+
   
   cleaning: true
 

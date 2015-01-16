@@ -31,6 +31,7 @@ class Document extends Abstract
 
 
   events:
+
     apply: ->
       @document.Selector.disconnect(@, true)
 
@@ -51,11 +52,11 @@ class Document extends Abstract
 
     solve: ->
       if @scope.nodeType == 9
-        html = @scope.body.parentNode
+        html = @scope.documentElement
         klass = html.className
         if klass.indexOf('gss-ready') == -1
           @document.Selector.disconnect(@, true)
-          html.className = (klass && klass + ' ' || '') + 'gss-ready'
+          html.setAttribute('class', (klass && klass + ' ' || '') + 'gss-ready')
           @document.Selector.connect(@, true)
 
 

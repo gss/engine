@@ -700,6 +700,16 @@ Selector.define
     tags: ['selector']
     Combinator: (node) ->
       return node unless node.nextElementSibling
+      
+  ':visible': ->
+    Combinator: (node = scope, engine, operation, continuation, scope) ->
+      ey = @intrinsic.watch(node,         'computed-y',      operation, continuation)
+      eh = @intrinsic.watch(node,         'computed-height', operation, continuation)
+      wh = @intrinsic.watch(engine.scope, 'height',          operation, continuation)
+      wy = @intrinsic.watch(engine.scope, 'scroll-top',      operation, continuation)
+      if (ey >= wy && ey + eh < wy + wh)
+        return node
+      
 
 
   ':next':

@@ -60,7 +60,7 @@ class Engine
       return new Engine(arguments[0], arguments[1], arguments[2])
 
     if url? && Worker?
-      @url = url
+      @url = @getWorkerURL(url)
 
     @listeners = {}
     @observers = {}
@@ -116,6 +116,7 @@ class Engine
 
     #if @ready
     #  @compile()
+    window?.addEventListener 'error', @eventHandler
 
     return @
 
@@ -164,8 +165,8 @@ class Engine
     
     unless @updating
       @console.start(reason || (@updated && 'Update' || 'Initialize'), arg || args)
-      @engine.updating = new @update
-      @updating.start ?= @engine.console.getTime()
+      @updating = new @update
+      @updating.start()
 
     unless @running
       @compile()
@@ -236,17 +237,6 @@ class Engine
     @fireEvent 'solved', update.solution, @updated
 
     return update.solution
-
-  validate: (update) ->
-
-    return true
-
-  # Accept solution from solver, remeasure if necessary
-  yield: (solution) ->
-    if !solution.push
-      return @updating?.each(@resolve, @engine, solution) || @onSolve(solution)
-
-    return @update.apply(@engine, arguments)
 
   # Solve problems by given domain/worker
   # Writes messages to lazy buffer, when using worker
@@ -354,6 +344,7 @@ class Engine
   # Alias `engine.then(callback)` to `engine.once('solve', callback)`
   DONE: 'solve'
 
+  # Builtin event handlers
   $events:
 
     # Perform pending query operations
@@ -399,24 +390,52 @@ class Engine
         @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
         @commit e.data
 
-    # Handle error from worker
+    # Re-raise worker exception
     error: (e) ->
-      throw new Error "#{e.message} (#{e.filename}:#{e.lineno})"
-    
-  # Figure out worker url automatically, only works with sync scripts!
+      @updating = undefined
+      
+      if window? && e.target != window
+        throw "#{e.message} (#{e.filename}:#{e.lineno})"
+      
+
+  # Figure out worker url automatically
   getWorkerURL: do ->
     if document?
+      # Check if last script has gss substring in it
       scripts = document.getElementsByTagName('script')
       src = scripts[scripts.length - 1].src
-      if location.search?.indexOf('log=0') > -1
-        src += ((src.indexOf('?') > -1) && '&' || '?') + 'log=0'
+      unless src.match(/gss/i)
+        # Select a script from document that has gss in its src
+        scripts = document.querySelectorAll('script[src*=gss]')[0]
+        if scripts.length
+          src = scripts[0].src
     return (url) ->
-      return typeof url == 'string' && url || src
+      unless typeof url == 'string'
+        url = src
+
+      unless url
+        throw new Error """
+          Can not detect GSS source file to set up worker.
+
+          - You can rename the gss file to contain "gss" in it:
+            `<script src="my-custom-path/my-gss.js"></script>`
+
+          - or provide worker path explicitly: 
+            `GSS(document, "http://absolute.path/to/worker")`
+        """
+
+      return url
 
   # Initialize new worker and subscribe engine to listen for message
   useWorker: (url) ->
-    unless typeof url == 'string' && Worker? && self.onmessage != undefined
-      return
+    # Don't use worker if path was not resolved properly
+    return unless typeof url == 'string'
+
+    # if environment doesn't support it
+    return unless Worker?
+
+    # or if it uses file protocol
+    return if !url.match(/^http:/i) && location.protocol.match(/^file:/i)
 
     @engine.worker ||= @engine.getWorker(url)
     @solve = (commands) =>
@@ -430,14 +449,10 @@ class Engine
     worker = (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)
     worker.url ||= url
     worker.addEventListener 'message', @engine.eventHandler
-    worker.addEventListener 'error', @engine.eventHandler
     return worker
 
-
-  # Return domain that should be used to evaluate given variable
-  # For unknown variables, it creates a domain instance 
-  # that will hold all dependent constraints and variables.
-  getVariableDomain: (operation, Default) ->
+  # Try to apply conventional wisdom to dispatch variable
+  getVariableDomainByConvention: (operation, Default) ->
     if operation.domain
       return operation.domain
     path = operation[1]
@@ -452,13 +467,20 @@ class Engine
           return intrinsic
       if property.indexOf('computed-') == 0 || property.indexOf('intrinsic-') == 0
         return intrinsic
-      
+
+  # Return domain that should be used to evaluate given variable
+  # For unknown variables, it creates a domain instance 
+  # that will hold all dependent constraints and variables.
+  getVariableDomain: (operation, Default) ->
+    if domain = @getVariableDomainByConvention(operation)
+      return domain
+
     if Default
       return Default
 
-    if op = @variables[path]?.constraints?[0]?.operations[0]?.domain
+    if op = @variables[operation[1]]?.constraints?[0]?.operations[0]?.domain
       return op
-    
+
     if @domain.url
       return @domain
     else

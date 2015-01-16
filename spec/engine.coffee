@@ -3,12 +3,6 @@ Engine = GSS.Engine #require 'gss-engine/lib/Engine.js'
 assert = chai.assert
 expect = chai.expect
 
-$  = () ->
-  return document.querySelector arguments...
-  
-$$ = () -> 
-  return document.querySelectorAll arguments...
-
 remove = (el) ->
   el?.parentNode?.removeChild(el)
 
@@ -26,7 +20,7 @@ describe 'GSS engine', ->
   describe 'when initialized', ->
     before ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       engine = new GSS(container)
 
     after (done) ->
@@ -95,7 +89,7 @@ describe 'GSS engine', ->
       describe "useWorker: #{useWorker}", ->
         before ->
           container = document.createElement 'div'
-          $('#fixtures').appendChild container
+          document.getElementById('fixtures').appendChild container
           container.innerHTML = """
             <button id="button1">One</button>
             <button id="button2">Second</button>
@@ -145,7 +139,7 @@ describe 'GSS engine', ->
       describe "useWorker: #{useWorker}", ->
         before ->
           container = document.createElement 'div'
-          $('#fixtures').appendChild container
+          document.getElementById('fixtures').appendChild container
           container.innerHTML = """
             <h1 id="text1" style="line-height:12px;font-size:12px;">One</h1>
             <h1 id="text2" style="line-height:12px;font-size:12px;">Two</h1>
@@ -196,7 +190,7 @@ describe 'GSS engine', ->
     
     before ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       engine = new GSS(container)
       container.innerHTML = """
       """
@@ -246,7 +240,7 @@ describe 'GSS engine', ->
     
     before ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       engine = new GSS(container)
       container.innerHTML = """
         <div id="w">        
@@ -282,7 +276,7 @@ describe 'GSS engine', ->
         assert w is 100, "button2 width: #{w}"
         container.removeEventListener 'solved', onSolved
         done()
-      $('#w').innerHTML = """
+      document.getElementById('w').innerHTML = """
       <div>        
            <div id="b1"></div>
            <div id="b2"></div>
@@ -294,7 +288,7 @@ describe 'GSS engine', ->
   describe 'Math', ->
     before ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       engine = new GSS(container)
 
     after (done) ->
@@ -322,7 +316,7 @@ describe 'GSS engine', ->
   
     beforeEach ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       engine = new GSS(container)
 
     afterEach (done) ->
@@ -357,7 +351,7 @@ describe 'GSS engine', ->
         <div id="d2"></div>
         <div id="d3"></div>
       """
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       engine = new GSS(container)
 
     afterEach (done) ->
@@ -366,11 +360,11 @@ describe 'GSS engine', ->
       
     it "force display on un-queried views", ->
       engine.solve {"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}
-      w = Math.round($('#d1').getBoundingClientRect().width)
+      w = Math.round(document.getElementById('d1').getBoundingClientRect().width)
       assert w is 1, "d1 width: #{w}"
-      w = Math.round($('#d2').getBoundingClientRect().width)
+      w = Math.round(document.getElementById('d2').getBoundingClientRect().width)
       assert w is 2, "d2 width: #{w}"
-      w = Math.round($('#d3').getBoundingClientRect().width)
+      w = Math.round(document.getElementById('d3').getBoundingClientRect().width)
       assert w is 3, "d3 width: #{w}"
 
       
@@ -383,7 +377,7 @@ describe 'GSS engine', ->
   
     before ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
   
     after ->
       remove(container)
@@ -420,7 +414,7 @@ describe 'GSS engine', ->
     before ->
       container = document.createElement 'div'
       new GSS(container)
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
   
     after ->
       remove(container)
@@ -512,7 +506,7 @@ describe 'GSS engine', ->
         setTimeout wait, 1
     
       xit 'new Engine after container re-added', () ->      
-        $('#fixtures').appendChild container      
+        document.getElementById('fixtures').appendChild container      
         engine3 = GSS(container)
         expect(engine1).to.not.equal engine3
   
@@ -525,7 +519,7 @@ describe 'GSS engine', ->
   
     before ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       #        
       container.innerHTML =  """
         <section>
@@ -715,7 +709,7 @@ describe 'GSS engine', ->
     before ->
       container = document.createElement 'div'
       container.id = "wrap-container"
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       #        
       container.innerHTML =  """
           <style type="text/gss-ast" scoped>

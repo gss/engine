@@ -13,7 +13,6 @@ Numeric   = require('./Numeric')
 
 class Intrinsic extends Numeric
   priority: 100
-  subscribing: true
   immediate: true
   url: null
 
@@ -56,7 +55,7 @@ class Intrinsic extends Numeric
       @intrinsic.remove(path)
 
     validate: (solution, update) ->
-      if @intrinsic.objects && update.domains.indexOf(@intrinsic, update.index + 1) == -1
+      if @intrinsic.subscribers && update.domains.indexOf(@intrinsic, update.index + 1) == -1
         
         @intrinsic.verify('::window', 'width')
         @intrinsic.verify('::window', 'height')
@@ -127,7 +126,7 @@ class Intrinsic extends Numeric
 
 
   perform: ->
-    if arguments.length < 4 && @objects
+    if arguments.length < 4 && @subscribers
       @console.start('Measure', @values)
       @each @scope, 'measure'
       @console.end(@changes)
@@ -179,7 +178,7 @@ class Intrinsic extends Numeric
   # schedule a reflow on that element. If another element is already
   # scheduled for reflow, reflow shared parent element of both elements 
   validate: (node) ->
-    return unless subscribers = @objects
+    return unless subscribers = @subscribers
 
     @engine.updating.reflown = @scope
 
@@ -238,17 +237,20 @@ class Intrinsic extends Numeric
     return value
     
   # Reset intrinsic style when observed initially
-  onWatch: (id, property) ->
+  subscribe: (id, property) ->
     if (node = @identity.solve(id)) && node.nodeType == 1
       property = property.replace(/^(?:computed|intrinsic)-/, '')
       path = @getPath(id, property)
       if @engine.values.hasOwnProperty(path) || @engine.updating.solution?.hasOwnProperty(path)
         node.style[property] = ''
 
+  unsubscribe: (id, property, path) ->
+    @solved.set path, null
+    @set path, null
+
   measure: (node, x, y, full) ->
-    return unless @objects
     if id = node._gss_id
-      if properties = @objects[id]
+      if properties = @subscribers[id]
         for prop of properties
           switch prop
             when "x", "intrinsic-x", "computed-x"

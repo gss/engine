@@ -14,35 +14,26 @@ module.exports = ->
     browserify:
       dist:
         files:
-          'dist/gss.js': ['src/Engine.coffee']
+          'dist/gss.js':   ['src/gss.coffee']
+          'dist/specs.js': ['spec/all.coffee']
         options:
           transform: ['coffeeify']
           browserifyOptions:
             extensions: ['.coffee']
-            fullPaths: false
-            standalone: 'GSS'
-      spec:
-        files:
-          'spec/js/specs.js': ['spec/specs.coffee']
-        options:
-          transform: ['coffeeify']
-          browserifyOptions:
-            debug: true
-            extensions: ['.coffee']
-            fullPaths: false
         debug:
           options:
-            debug: true
+            browserifyOptions:
+              debug: true
 
     # Automated recompilation and testing when developing
     watch:
-      spec:
-        files: ['spec/**/*.coffee']
-        tasks: ['browserify:spec']
-      src:
-        files: ['src/**/*.coffee']
-        tasks: ['browserify:dist']
+      'debug':
+        files: ['src/**/*.coffee','spec/**/*.coffee']
+        tasks: ['browserify:dist:debug']
 
+      'everything':
+        files: ['src/**/*.coffee','spec/**/*.coffee']
+        tasks: ['browserify:dist']
 
     # JavaScript minification for the browser
     uglify:
@@ -140,6 +131,7 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-clean'
   @loadNpmTasks 'grunt-docco'
   @loadNpmTasks 'grunt-banner'
+  @loadNpmTasks 'grunt-watchify'
 
   # Grunt plugins used for testing
   @loadNpmTasks 'grunt-coffeelint'
