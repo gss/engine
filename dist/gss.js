@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.GSS=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -17082,7 +17082,7 @@ module.exports = Engine;
 
 
 
-},{"./Command":12,"./Domain":13,"./Query":15,"./Update":17,"./domains/Abstract":25,"./domains/Boolean":26,"./domains/Document":27,"./domains/Finite":28,"./domains/Intrinsic":29,"./domains/Linear":30,"./domains/Numeric":31,"./utilities/Console":43,"./utilities/Exporter":44,"./utilities/Inspector":45}],15:[function(require,module,exports){
+},{"./Command":12,"./Domain":13,"./Query":15,"./Update":17,"./domains/Abstract":25,"./domains/Boolean":26,"./domains/Document":27,"./domains/Finite":28,"./domains/Intrinsic":29,"./domains/Linear":30,"./domains/Numeric":31,"./utilities/Console":42,"./utilities/Exporter":43,"./utilities/Inspector":44}],15:[function(require,module,exports){
 var Command, Query,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -21042,7 +21042,7 @@ module.exports = Selector;
 
 
 
-},{"../../vendor/MutationObserver.js":46,"../../vendor/weakmap.js":48,"../Query":15}],22:[function(require,module,exports){
+},{"../../vendor/MutationObserver.js":45,"../../vendor/weakmap.js":47,"../Query":15}],22:[function(require,module,exports){
 var Command, Parser, Query, Stylesheet,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -22107,7 +22107,7 @@ module.exports = Abstract;
 
 
 
-},{"../Command":12,"../Domain":13,"../commands/Condition":18,"../commands/Constraint":19,"../commands/Iterator":20,"../commands/Unit":23,"../commands/Variable":24,"../properties/Dimensions":33}],26:[function(require,module,exports){
+},{"../Command":12,"../Domain":13,"../commands/Condition":18,"../commands/Constraint":19,"../commands/Iterator":20,"../commands/Unit":23,"../commands/Variable":24,"../properties/Dimensions":32}],26:[function(require,module,exports){
 var Boolean, Constraint, Numeric,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -22904,7 +22904,7 @@ module.exports = Intrinsic;
 
 
 
-},{"../Style":16,"../commands/Unit":23,"../properties/Getters":34,"../properties/Styles":35,"../types/Color":36,"../types/Easing":37,"../types/Gradient":38,"../types/Matrix":39,"../types/Primitive":41,"../types/URL":42,"./Numeric":31}],30:[function(require,module,exports){
+},{"../Style":16,"../commands/Unit":23,"../properties/Getters":33,"../properties/Styles":34,"../types/Color":35,"../types/Easing":36,"../types/Gradient":37,"../types/Matrix":38,"../types/Primitive":40,"../types/URL":41,"./Numeric":31}],30:[function(require,module,exports){
 var Command, Constraint, Domain, Linear, Variable, c,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -23259,14 +23259,7 @@ module.exports = Numeric;
 
 
 
-},{"../Command":12,"../Domain":13,"../commands/Variable":24,"../types/Measurement":40}],32:[function(require,module,exports){
-(function (global){
-global.GSS = require('./Engine');
-
-
-
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Engine":14}],33:[function(require,module,exports){
+},{"../Command":12,"../Domain":13,"../commands/Variable":24,"../types/Measurement":39}],32:[function(require,module,exports){
 var Dimensions;
 
 Dimensions = (function() {
@@ -23305,7 +23298,7 @@ module.exports = Dimensions;
 
 
 
-},{}],34:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 var Getters;
 
 Getters = (function() {
@@ -23407,7 +23400,7 @@ module.exports = Getters;
 
 
 
-},{}],35:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 var Command, Styles;
 
 Styles = (function() {
@@ -23683,7 +23676,7 @@ module.exports = Styles;
 
 
 
-},{"../Command":12}],36:[function(require,module,exports){
+},{"../Command":12}],35:[function(require,module,exports){
 var Color, Command,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -23796,7 +23789,7 @@ module.exports = Color;
 
 
 
-},{"../Command":12}],37:[function(require,module,exports){
+},{"../Command":12}],36:[function(require,module,exports){
 var Command, Easing,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -23834,7 +23827,7 @@ module.exports = Easing;
 
 
 
-},{"../commands/Variable":24}],38:[function(require,module,exports){
+},{"../commands/Variable":24}],37:[function(require,module,exports){
 var Command, Gradient,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -23870,7 +23863,7 @@ module.exports = Gradient;
 
 
 
-},{"../Command":12}],39:[function(require,module,exports){
+},{"../Command":12}],38:[function(require,module,exports){
 var Command, Matrix,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -23998,7 +23991,7 @@ Matrix = (function(_super) {
 
 
 
-},{"../../vendor/gl-matrix":47,"../Command":12}],40:[function(require,module,exports){
+},{"../../vendor/gl-matrix":46,"../Command":12}],39:[function(require,module,exports){
 var Measurement, Unit, Variable,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -24192,7 +24185,7 @@ module.exports = Measurement;
 
 
 
-},{"../commands/Unit":23,"../commands/Variable":24}],41:[function(require,module,exports){
+},{"../commands/Unit":23,"../commands/Variable":24}],40:[function(require,module,exports){
 var Command, Primitive,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -24352,7 +24345,7 @@ module.exports = Primitive;
 
 
 
-},{"../Command":12}],42:[function(require,module,exports){
+},{"../Command":12}],41:[function(require,module,exports){
 var Command, URL,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -24387,7 +24380,7 @@ module.exports = URL;
 
 
 
-},{"../Command":12}],43:[function(require,module,exports){
+},{"../Command":12}],42:[function(require,module,exports){
 var Console, method, _i, _len, _ref;
 
 Console = (function() {
@@ -24640,7 +24633,7 @@ module.exports = Console;
 
 
 
-},{}],44:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 var Exporter,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -24759,7 +24752,7 @@ module.exports = Exporter;
 
 
 
-},{}],45:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 var Inspector,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   __hasProp = {}.hasOwnProperty;
@@ -25413,7 +25406,7 @@ module.exports = Inspector;
 
 
 
-},{}],46:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 (function (global){
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
@@ -25960,7 +25953,7 @@ if (typeof window != 'undefined') {
     global.MutationObserver = JsMutationObserver;
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],47:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 /**
  * @fileoverview gl-matrix - High performance matrix and vector operations
  * @author Brandon Jones
@@ -30079,7 +30072,7 @@ if(typeof(exports) !== 'undefined') {
   })(shim.exports);
 })(this);
 
-},{}],48:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
  * Use of this source code is governed by a BSD-style
@@ -30118,4 +30111,5 @@ if (typeof WeakMap === 'undefined') {
   })();
 }
 
-},{}]},{},[32]);
+},{}]},{},[14])(14)
+});
