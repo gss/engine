@@ -36,10 +36,17 @@ class Selector extends Query
   perform: (engine, operation, continuation, scope, ascender, ascending) ->
     command = operation.command
     selector = command.selector
-    node = ascender? && ascending || scope
-    args = [node, selector]
+    args = [
+      if ascender?
+        ascending
+      else
+        scope
+
+      selector
+    ]
     command.log(args, engine, operation, continuation, scope, command.selecting && 'select' || 'match')
     result  = command.before(args, engine, operation, continuation, scope)
+    node = args[0]
     if command.selecting
       result ?= node.querySelectorAll(args[1])
     else if (result != node) && node.matches(args[1])
@@ -315,10 +322,6 @@ class Selector extends Query
     else
       update[type] = []
     update[type].push(value)
-
-class Selector::Sequence extends Query.Sequence
-  type: 'Selector'
-
 
 Selector::checkers.selector = (command, other, parent, operation) ->
   if !other.head
@@ -697,6 +700,16 @@ Selector.define
     tags: ['selector']
     Combinator: (node) ->
       return node unless node.nextElementSibling
+      
+  ':visible': ->
+    Combinator: (node = scope, engine, operation, continuation, scope) ->
+      ey = @intrinsic.watch(node,         'computed-y',      operation, continuation)
+      eh = @intrinsic.watch(node,         'computed-height', operation, continuation)
+      wh = @intrinsic.watch(engine.scope, 'height',          operation, continuation)
+      wy = @intrinsic.watch(engine.scope, 'scroll-top',      operation, continuation)
+      if (ey >= wy && ey + eh < wy + wh)
+        return node
+      
 
 
   ':next':

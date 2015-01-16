@@ -7,7 +7,7 @@ class Console
       @level = 0
     @stack = []
     @buffer = []
-    window.addEventListener 'error', @onError, true
+    self.addEventListener 'error', @onError, true
 
   methods: ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd']
   groups: 0

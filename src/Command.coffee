@@ -130,7 +130,6 @@ class Command
   # Get implicit context
   contextualize: (args, engine, operation, continuation, scope, ascender, ascending) ->
     # Stateless commands recieve context as ascending value
-    debugger
     if ascender == -1 && ascending?
       args[0] = ascending
       return 1
@@ -814,8 +813,9 @@ class Command.List extends Command.Sequence
   condition: (engine, operation) ->
     if operation.parent
       return operation.parent?.command.List
-    #else
-    #   return !operation[0].command.Sequence
+    else
+      return true
+      # return !operation[0].command.Sequence
 
   constructor: ->
 

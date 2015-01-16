@@ -4390,7 +4390,7 @@ describe('End - to - End', function() {
           });
           return done();
         };
-        container.innerHTML = "          <div id=\"s1\"></div>\n          <div id=\"s2\"></div>\n          <style type=\"text/gss\" scoped>\n          [Wwin] == 100;          \n        \n          @if [Wwin] > 960 {\n                      \n            #s1[x] == 100;\n            @horizontal (#s1(==10))-(#s2(==10)) gap(100);\n\n          }\n\n          @else {\n\n            #s1[x] == 50;\n            @horizontal (#s1(==1))-(#s2(==1)) gap(5);\n\n          }\n          </style>";
+        container.innerHTML = "          <div id=\"s1\"></div>\n          <div id=\"s2\"></div>\n          <style type=\"text/gss\" scoped>\n          [Wwin] == 100;          \n        \n          @if [Wwin] > 960 {\n                      \n            #s1[x] == 100;\n            @h (#s1(==10))-(#s2(==10)) gap(100);\n\n          }\n\n          @else {\n\n            #s1[x] == 50;\n            @h (#s1(==1))-(#s2(==1)) gap(5);\n\n          }\n          </style>";
         return engine.once('solve', listen);
       });
     });

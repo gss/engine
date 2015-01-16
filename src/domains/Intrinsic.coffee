@@ -250,7 +250,7 @@ class Intrinsic extends Numeric
 
   measure: (node, x, y, full) ->
     if id = node._gss_id
-      if properties = @objects[id]
+      if properties = @subscribers[id]
         for prop of properties
           switch prop
             when "x", "intrinsic-x", "computed-x"

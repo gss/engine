@@ -2586,14 +2586,14 @@ describe 'End - to - End', ->
             @if [Wwin] > 960 {
                         
               #s1[x] == 100;
-              @horizontal (#s1(==10))-(#s2(==10)) gap(100);
+              @h (#s1(==10))-(#s2(==10)) gap(100);
 
             }
 
             @else {
   
               #s1[x] == 50;
-              @horizontal (#s1(==1))-(#s2(==1)) gap(5);
+              @h (#s1(==1))-(#s2(==1)) gap(5);
   
             }
             </style>

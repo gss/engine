@@ -478,7 +478,7 @@ class Engine
     if Default
       return Default
 
-    if op = @variables[path]?.constraints?[0]?.operations[0]?.domain
+    if op = @variables[operation[1]]?.constraints?[0]?.operations[0]?.domain
       return op
 
     if @domain.url
