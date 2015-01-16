@@ -16086,14 +16086,17 @@ Domain = (function() {
   };
 
   Domain.prototype.callback = function(path, value) {
-    var constraint, index, op, operation, url, values, variable, watcher, watchers, worker, workers, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+    var command, constraint, index, op, operation, url, values, variable, watcher, watchers, worker, workers, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
     if (watchers = (_ref = this.watchers) != null ? _ref[path] : void 0) {
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
         watcher = watchers[index];
         if (!watcher) {
           break;
         }
-        if (value != null) {
+        command = watcher.command;
+        if (command.deferred) {
+          this.Query.prototype.defer(this, watcher, watchers[index + 1], watchers[index + 2]);
+        } else if (value != null) {
           watcher.command.solve(this, watcher, watchers[index + 1], watchers[index + 2], true);
         } else {
           watcher.command.patch(this, watcher, watchers[index + 1], watchers[index + 2]);
@@ -16549,7 +16552,6 @@ Engine = (function() {
       if (result = args.shift().apply(this, args)) {
         this.updating.apply(result);
       }
-      debugger;
       quiet = true;
     } else if (args[0] != null) {
       strategy = this[this.strategy];
@@ -17469,7 +17471,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.commit = function(engine, solution) {
-    var collection, contd, deferred, i, index, item, mutations, old, op, watcher, _i;
+    var collection, contd, deferred, i, index, item, mutations, old, op, watcher, _i, _ref;
     if (mutations = engine.updating.mutations) {
       engine.console.start('Queries', mutations.slice());
       index = 0;
@@ -17486,19 +17488,24 @@ Query = (function(_super) {
       while (deferred[index]) {
         contd = deferred[index + 1];
         collection = this.get(engine, contd);
-        if (old = engine.updating.collections[contd]) {
-          collection = collection.slice();
-          collection.isCollection = true;
-          for (i = _i = collection.length - 1; _i >= 0; i = _i += -1) {
-            item = collection[i];
-            if (old.indexOf(item) > -1) {
-              collection.splice(i, 1);
+        op = deferred[index];
+        if (!op.command.singular) {
+          if (old = (_ref = engine.updating.collections) != null ? _ref[contd] : void 0) {
+            collection = collection.slice();
+            collection.isCollection = true;
+            for (i = _i = collection.length - 1; _i >= 0; i = _i += -1) {
+              item = collection[i];
+              if (old.indexOf(item) > -1) {
+                collection.splice(i, 1);
+              }
             }
           }
-        }
-        if (collection != null ? collection.length : void 0) {
-          op = deferred[index];
-          (engine.document || engine.abstract).Command(op).ascend(engine.document, op, contd, deferred[index + 2], collection);
+          if (collection != null ? collection.length : void 0) {
+            op.command.ascend(engine.document || engine.abstract, op, contd, deferred[index + 2], collection);
+          }
+        } else {
+          debugger;
+          op.command.solve(engine.document || engine.abstract, op, contd, deferred[index + 2], true);
         }
         index += 3;
       }
@@ -21058,6 +21065,7 @@ Selector.define({
 Selector.define({
   ':visible': {
     singular: true,
+    deferred: true,
     Combinator: function(node, engine, operation, continuation, scope) {
       if (node == null) {
         node = scope;
@@ -21068,6 +21076,7 @@ Selector.define({
   },
   ':visible-y': {
     singular: true,
+    deferred: true,
     Combinator: function(node, engine, operation, continuation, scope) {
       var eh, ey, sh, sy;
       if (node == null) {
@@ -21084,6 +21093,7 @@ Selector.define({
   },
   ':visible-x': {
     singular: true,
+    deferred: true,
     Combinator: function(node, engine, operation, continuation, scope) {
       var ew, ex, sw, sx;
       if (node == null) {

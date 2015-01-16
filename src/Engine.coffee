@@ -140,7 +140,6 @@ class Engine
     if typeof args[0] == 'function'
       if result = args.shift().apply(@, args) 
         @updating.apply result
-      debugger
       quiet = true
     else if args[0]?
       strategy = @[@strategy]

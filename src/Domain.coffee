@@ -199,7 +199,10 @@ class Domain
       for watcher, index in watchers by 3
         break unless watcher
         # Propagate updated value
-        if value?
+        command = watcher.command
+        if command.deferred
+          @Query::defer(@, watcher, watchers[index + 1], watchers[index + 2])
+        else if value?
           watcher.command.solve(@, watcher, watchers[index + 1], watchers[index + 2], true)
         # Remove propagated value and re-match expressions around it
         else

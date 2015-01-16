@@ -223,15 +223,19 @@ class Query extends Command
       while deferred[index]
         contd = deferred[index + 1]
         collection = @get(engine, contd)
-        if old = engine.updating.collections[contd]
-          collection = collection.slice()
-          collection.isCollection = true
-          for item, i in collection by -1
-            if old.indexOf(item) > -1
-              collection.splice(i, 1)
-        if collection?.length
-          op = deferred[index]
-          (engine.document || engine.abstract).Command(op).ascend(engine.document, op, contd, deferred[index + 2], collection)
+        op = deferred[index]
+        unless op.command.singular
+          if old = engine.updating.collections?[contd]
+            collection = collection.slice()
+            collection.isCollection = true
+            for item, i in collection by -1
+              if old.indexOf(item) > -1
+                collection.splice(i, 1)
+          if collection?.length
+            op.command.ascend(engine.document || engine.abstract, op, contd, deferred[index + 2], collection)
+        else
+          debugger
+          op.command.solve(engine.document || engine.abstract, op, contd, deferred[index + 2], true)
         index += 3
       engine.updating.deferred = undefined
       engine.console.end()

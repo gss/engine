@@ -743,6 +743,7 @@ Selector.define
       
   ':visible':
     singular: true
+    deferred: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
       debugger
       return Selector[':visible-y']::Combinator.apply(@, arguments) && 
@@ -750,6 +751,7 @@ Selector.define
     
   ':visible-y': 
     singular: true
+    deferred: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
       ey = engine.intrinsic.watch(node,         'computed-y',      operation, continuation, scope)
       eh = engine.intrinsic.watch(node,         'computed-height', operation, continuation, scope)
@@ -763,6 +765,7 @@ Selector.define
         
    ':visible-x':
      singular: true
+     deferred: true
      Combinator: (node = scope, engine, operation, continuation, scope) ->
        ex = engine.intrinsic.watch(node,         'computed-x',     operation, continuation, scope)
        ew = engine.intrinsic.watch(node,         'computed-width', operation, continuation, scope)
