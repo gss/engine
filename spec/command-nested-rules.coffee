@@ -21,7 +21,7 @@ describe 'Nested Rules', ->
       old.destroy()
     container = document.createElement 'div'
     container.id = 'container0'
-    $('#fixtures').appendChild container
+    document.getElementById('fixtures').appendChild container
     window.$engine = engine = new GSS(container)
 
   afterEach ->
