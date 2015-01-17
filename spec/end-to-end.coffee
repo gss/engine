@@ -316,8 +316,122 @@ describe 'End - to - End', ->
                 [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
                 .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
                 """
-              done()
-
+              engine.solve
+                A: 0
+              , ->
+                expect(getSource(engine.tag('style')[1])).to.equal """
+                  .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                  """
+                engine.solve
+                  B: 0
+                , ->
+                  expect(getSource(engine.tag('style')[1])).to.equal """
+                    .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
+                    """
+                  engine.solve
+                    B: 1
+                  , ->
+                    expect(getSource(engine.tag('style')[1])).to.equal """
+                      .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                      """
+                    engine.solve
+                      A: 1
+                    , ->
+                      expect(getSource(engine.tag('style')[1])).to.equal """
+                        [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
+                        .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                        """
+                      engine.solve
+                        B: 0
+                      , ->
+                        expect(getSource(engine.tag('style')[1])).to.equal """
+                          [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
+                          .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
+                          """
+                        done()
+              
+    describe 'conditional inverted', ->
+      it 'should dump', (done) ->
+        container.innerHTML =  """
+          <div class="outer">
+            <div class="innie-outie">
+              <div id="css-inner-dump-1"></div>
+            </div>
+          </div>
+          <div class="outie">
+            <div class="innie-outie">
+              <div id="css-inner-dump-2"></div>
+            </div>
+          </div>
+          <style type="text/gss" scoped>
+            .outer, .outie {
+              #css-inner-dump-1 {
+                @if $B > 0 {
+                  height: 200px;
+                }
+                z-index: 5;
+              }
+              @if $A > 0 {
+                .innie-outie {
+                  #css-inner-dump-2 {
+                    width: 100px;
+                  }
+                }
+              }
+            }
+          </style>
+          """
+        engine.once 'solve', ->
+          expect(getSource(engine.tag('style')[1])).to.equal """
+            .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
+            """
+          engine.solve
+            A: 1
+          , ->
+            expect(getSource(engine.tag('style')[1])).to.equal """
+              .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
+              [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
+              """
+            engine.solve
+              B: 1
+            , ->
+              expect(getSource(engine.tag('style')[1])).to.equal """
+                .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
+                """
+              engine.solve
+                A: 0
+              , ->
+                expect(getSource(engine.tag('style')[1])).to.equal """
+                  .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                  """
+                engine.solve
+                  B: 0
+                , ->
+                  expect(getSource(engine.tag('style')[1])).to.equal """
+                    .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
+                    """
+                  engine.solve
+                    B: 1
+                  , ->
+                    expect(getSource(engine.tag('style')[1])).to.equal """
+                      .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                      """
+                    engine.solve
+                      A: 1
+                    , ->
+                      expect(getSource(engine.tag('style')[1])).to.equal """
+                        .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                        [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
+                        """
+                      engine.solve
+                        B: 0
+                      , ->
+                        expect(getSource(engine.tag('style')[1])).to.equal """
+                          .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
+                          [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
+                          """
+                        done()
 
     xdescribe 'imported', ->
       it 'should dump', (done) ->

@@ -67,8 +67,7 @@ class Document extends Abstract
 
     resize: (e = '::window') ->
       id = e.target && @identify(e.target) || e
-      console.error('resize event')
-
+      
       unless @resizer?
         if e.target && @updating
           if @updating.resizing

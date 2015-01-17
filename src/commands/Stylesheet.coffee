@@ -44,28 +44,45 @@ class Stylesheet extends Command.List
 
   update: (engine, operation, property, value, stylesheet, rule) ->
     watchers = @getWatchers(engine, stylesheet)
-    sheet = stylesheet.sheet
+    unless sheet = stylesheet.sheet
+      stylesheet.parentNode?.removeChild(stylesheet)
+      return 
     needle = @getOperation(operation, watchers, rule)
     previous = []
 
-    for item, index in watchers
-      break if index >= needle
-      if ops = watchers[index]
+    debugger
+    for ops, index in watchers
+      if ops
         other = @getRule(watchers[ops[0]][0])
-        if previous.indexOf(other) == -1
+        if other == rule && index != needle
+          break
+        else if index > needle
+          break
+        else if other != rule && previous.indexOf(other) == -1
           previous.push(other)
-    unless sheet
-      if stylesheet.parentNode
-        stylesheet.parentNode.removeChild(stylesheet)
-      return 
     rules = sheet.rules || sheet.cssRules
     
-
-    if needle != operation.index || value == ''
-      index = previous.length
-      generated = rules[index]
+    # Update rule
+    index = previous.length
+    generated = rules[index]
+    if generated && (needle != operation.index || value == '' || (other == rule && index != needle))
       text = generated.cssText
-      text = text.substring(0, text.lastIndexOf('}') - 1) + ';' + property + ':' + value + '}'
+
+      # Replace old property
+      if (i = text.indexOf(property + ':')) > -1
+        unless (j = text.indexOf(';', i) + 1)
+          j = text.length - 1
+      
+      # Add property
+      else
+        i = j = text.length - 1
+      
+      if (prop = value) != ''
+        prop = property + ':' + value
+      
+      text = text.substring(0, i) + prop + text.substring(j)
+      
+      console.error(text)
       sheet.deleteRule(index)
       index = sheet.insertRule(text, index)
 
@@ -80,6 +97,8 @@ class Stylesheet extends Command.List
           break
       if !next
         sheet.deleteRule(previous.length)
+    # Insert rule
+    
     else
       body = property + ':' + value
       selectors = @getSelector(stylesheet, operation)

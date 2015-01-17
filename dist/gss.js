@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2015-01-17) - http://gridstylesheets.org */
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.GSS=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
@@ -21342,42 +21341,54 @@ Stylesheet = (function(_super) {
   Stylesheet.CanonicalizeSelectorRegExp = new RegExp("[$][a-z0-9]+[" + Command.prototype.DESCEND + "]\\s*", "gi");
 
   Stylesheet.prototype.update = function(engine, operation, property, value, stylesheet, rule) {
-    var body, generated, index, item, needle, next, ops, other, previous, rules, selectors, sheet, text, watchers, _i, _j, _len, _ref;
+    var body, generated, i, index, j, needle, next, ops, other, previous, prop, rules, selectors, sheet, text, watchers, _i, _j, _len, _ref, _ref1;
     watchers = this.getWatchers(engine, stylesheet);
-    sheet = stylesheet.sheet;
+    if (!(sheet = stylesheet.sheet)) {
+      if ((_ref = stylesheet.parentNode) != null) {
+        _ref.removeChild(stylesheet);
+      }
+      return;
+    }
     needle = this.getOperation(operation, watchers, rule);
     previous = [];
+    debugger;
     for (index = _i = 0, _len = watchers.length; _i < _len; index = ++_i) {
-      item = watchers[index];
-      if (index >= needle) {
-        break;
-      }
-      if (ops = watchers[index]) {
+      ops = watchers[index];
+      if (ops) {
         other = this.getRule(watchers[ops[0]][0]);
-        if (previous.indexOf(other) === -1) {
+        if (other === rule && index !== needle) {
+          break;
+        } else if (index > needle) {
+          break;
+        } else if (other !== rule && previous.indexOf(other) === -1) {
           previous.push(other);
         }
       }
     }
-    if (!sheet) {
-      if (stylesheet.parentNode) {
-        stylesheet.parentNode.removeChild(stylesheet);
-      }
-      return;
-    }
     rules = sheet.rules || sheet.cssRules;
-    if (needle !== operation.index || value === '') {
-      index = previous.length;
-      generated = rules[index];
+    index = previous.length;
+    generated = rules[index];
+    if (generated && (needle !== operation.index || value === '' || (other === rule && index !== needle))) {
       text = generated.cssText;
-      text = text.substring(0, text.lastIndexOf('}') - 1) + ';' + property + ':' + value + '}';
+      if ((i = text.indexOf(property + ':')) > -1) {
+        if (!(j = text.indexOf(';', i) + 1)) {
+          j = text.length - 1;
+        }
+      } else {
+        i = j = text.length - 1;
+      }
+      if ((prop = value) !== '') {
+        prop = property + ':' + value;
+      }
+      text = text.substring(0, i) + prop + text.substring(j);
+      console.error(text);
       sheet.deleteRule(index);
       index = sheet.insertRule(text, index);
       next = void 0;
       if (needle === operation.index) {
         needle++;
       }
-      for (index = _j = needle, _ref = watchers.length; needle <= _ref ? _j < _ref : _j > _ref; index = needle <= _ref ? ++_j : --_j) {
+      for (index = _j = needle, _ref1 = watchers.length; needle <= _ref1 ? _j < _ref1 : _j > _ref1; index = needle <= _ref1 ? ++_j : --_j) {
         if (ops = watchers[index]) {
           next = this.getRule(watchers[ops[0]][0]);
           if (next !== rule) {
@@ -22494,7 +22505,6 @@ Document = (function(_super) {
         e = '::window';
       }
       id = e.target && this.identify(e.target) || e;
-      console.error('resize event');
       if (this.resizer == null) {
         if (e.target && this.updating) {
           if (this.updating.resizing) {
