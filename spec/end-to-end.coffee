@@ -634,8 +634,14 @@ describe 'End - to - End', ->
               "$scroller[scroll-top]": 20
               "$floater[x]": 20
 
-            done()
+            engine.once 'solve', (e) ->
+              expect(stringify engine.values).to.eql stringify
+                "$scroller[scroll-top]": 0
+                "$floater[x]": 0
 
+              done()
+
+            engine.id('scroller').scrollTop = 0
           engine.id('scroller').scrollTop = 20
         container.innerHTML =  """
           <style>
@@ -654,8 +660,29 @@ describe 'End - to - End', ->
         
       it 'should bind to element visibility', (done) ->
         id = container._gss_id
+
+        container.style.height = '50px'
+        container.style.overflow = 'scroll'
+        container.style.fontSize = '300px'
+        container.style.position = 'relative'
+        container.innerHTML =  """
+          <style type="text/gss">
+            
+            #floater {
+              y: == 100;
+              height: == 25;
+              
+              :visible-y {
+                x: == 200;
+              } 
+            }
+          </style>
+          <div class="b" id="floater"></div>
+          <div style="width: 10px; height: 200px;"></div>
+        """
+        
+        
         engine.once 'solve', (e) ->
-          
           expect(e["#{id}[scroll-top]"]).to.eql 0
           expect(e["#{id}[computed-height]"]).to.eql 50
           expect(e["$floater[y]"]).to.eql 100
@@ -689,26 +716,6 @@ describe 'End - to - End', ->
               container.scrollTop = 110
             container.scrollTop = 100
           container.scrollTop = 50
-        container.style.height = '50px'
-        container.style.overflow = 'scroll'
-        container.style.fontSize = '300px'
-        container.style.position = 'relative'
-        container.innerHTML =  """
-          <style type="text/gss">
-            
-            #floater {
-              y: == 100;
-              height: == 25;
-              
-              :visible-y {
-                x: == 200;
-              } 
-            }
-          </style>
-          <div class="b" id="floater"></div>
-          <div style="width: 10px; height: 200px;"></div>
-        """
-        
     describe 'css binding', ->
       describe 'simple', ->
         describe 'numerical properties', ->

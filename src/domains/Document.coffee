@@ -45,9 +45,7 @@ class Document extends Abstract
       @document.Stylesheet.remove(@, path)
 
     compile: ->
-      #@console.start('Stylesheets')
       @solve @document.Stylesheet.operations
-      #@console.end()
       @document.Selector?.connect(@, true)
 
     solve: ->
@@ -69,6 +67,7 @@ class Document extends Abstract
 
     resize: (e = '::window') ->
       id = e.target && @identify(e.target) || e
+      console.error('resize event')
 
       unless @resizer?
         if e.target && @updating
@@ -100,26 +99,23 @@ class Document extends Abstract
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")
         return @intrinsic.commit()
-
+        
     # Fire as early as possible
     DOMContentLoaded: ->
       document.removeEventListener 'DOMContentLoaded', @
       @compile()
       @solve 'Ready', ->
-        #@intrinsic.commit()
 
     # Wait for web fonts
     readystatechange: ->
       if @running && document.readyState == 'complete'
         @solve 'Statechange', ->
-          #@intrinsic.commit()
 
     # Remeasure when images are loaded
     load: ->
       window.removeEventListener 'load', @
       document.removeEventListener 'DOMContentLoaded', @
       @solve 'Loaded', ->
-        @intrinsic.commit()
 
     # Unsubscribe events and observers
     destroy: ->

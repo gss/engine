@@ -131,8 +131,7 @@ class Intrinsic extends Numeric
       @console.start('Measure', @values)
       @each @scope, 'measure'
       @console.end(@changes)
-      return @changes
-    return
+    return @commit()
 
   get: (object, property) ->
     path = @getPath(object, property)
@@ -278,7 +277,7 @@ class Intrinsic extends Numeric
   ###
 
   assign: (data, node) ->
-    node ||= @reflown || @engine.scope
+    node ||= @engine.scope
 
     # Apply changed styles in batch, 
     # leave out positioning properties (Restyle/Reflow)

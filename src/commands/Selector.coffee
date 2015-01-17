@@ -138,7 +138,7 @@ class Selector extends Query
   @onMutations: (mutations) ->
     unless @running
       return if @scope.nodeType == 9
-      return @solve(->)
+      return @solve('Kick', ->)
 
     
     result = @solve 'Mutate', String(mutations.length), ->
@@ -151,16 +151,12 @@ class Selector extends Query
         switch mutation.type
           when "attributes"
             Selector.mutateAttribute(@, mutation.target, mutation.attributeName, mutation.oldValue || '')
-            @updating.restyled ?= true
           when "childList"
-            if Selector.mutateChildList(@, mutation.target, mutation)
-              @updating.restyled ?= true
+            Selector.mutateChildList(@, mutation.target, mutation)
           when "characterData"
-            @updating.restyled ?= true
             Selector.mutateCharacterData(@, mutation.target, mutation)
         
-        if @intrinsic.subscribers
-          @updating.reflown ||= @scope
+        @updating.reflown ||= @scope
       return
 
     if !@scope.parentNode && @scope.nodeType == 1
@@ -745,7 +741,6 @@ Selector.define
     singular: true
     deferred: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
-      debugger
       return Selector[':visible-y']::Combinator.apply(@, arguments) && 
              Selector[':visible-x']::Combinator.apply(@, arguments)
     

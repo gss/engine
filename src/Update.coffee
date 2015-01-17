@@ -461,6 +461,11 @@ Update.prototype =
     @cleanup 'queries', continuation
     @cleanup 'collections', continuation
     @cleanup 'mutations'
+    
+  commit: ->
+    @restyled = undefined if @restyled
+    @solved   = undefined if @solved
+    @reflown  = undefined if @reflown
 
   getProblems: (callback, bind) ->
     return GSS.prototype.clone @problems
@@ -478,8 +483,11 @@ Update.prototype =
   isDocumentDone: ->
     return !@mutations && !@deferred && !@pairs && !@stylesheets && !@branches
 
-  hadSideEffects: ->
-    return @domains.length > 0 || @hasOwnProperty('restyled')
+  isDirty: ->
+    return @restyled || @solved || @reflown
+    
+  hadSideEffects: (solution)->
+    return solution || @domains.length > 0 || @hasOwnProperty('restyled')# || @solution
 
   block: ->
     @blocking++

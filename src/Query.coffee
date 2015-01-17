@@ -234,7 +234,6 @@ class Query extends Command
           if collection?.length
             op.command.ascend(engine.document || engine.abstract, op, contd, deferred[index + 2], collection)
         else
-          debugger
           op.command.solve(engine.document || engine.abstract, op, contd, deferred[index + 2], true)
         index += 3
       engine.updating.deferred = undefined

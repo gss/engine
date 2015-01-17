@@ -39,7 +39,7 @@ describe 'Nested Rules', ->
         
         engine.solve(rules)
 
-    describe 'sequential selectors', ->
+    xdescribe 'sequential selectors', ->
       it 'should support mixed selectors', (done) ->
         rules = [
           ['==', 

@@ -140,19 +140,20 @@ class Engine
     if typeof args[0] == 'function'
       if result = args.shift().apply(@, args) 
         @updating.apply result
-      quiet = true
+        apply = false
     else if args[0]?
       strategy = @[@strategy]
       if strategy.solve
         @console.start(strategy.displayName, args)
-        result = strategy.solve.apply(strategy, args) || {}
+        result = strategy.solve.apply(strategy, args)
         @console.end(result)
       else
         result = strategy.apply(@, args)
 
     if transacting
       @transacting = undefined
-      return @commit(result, undefined, quiet)
+      
+      return @commit(result, undefined, apply)
 
   # Figure out arguments and prepare to solve given operations
   transact: ->
@@ -189,11 +190,11 @@ class Engine
   # Run solution in multiple ticks
   commit: (solution, update = @updating, apply) ->
     return if update.blocking
-
+    
     if solution && Object.keys(solution).length
       @triggerEvent('resume', solution, update)
         
-    until update.isDone() && !update.restyled && !update.solved
+    until update.isDone() && !update.isDirty()
       # Process stylesheets, mutations, pairs, conditions, branches
       until update.isDocumentDone()
         @triggerEvent('commit', update)
@@ -209,18 +210,22 @@ class Engine
         if update.busy?.length
           return update
 
-
-      unless apply == false
+      # Apply values to elements
+      if apply == false
+        @triggerEvent('flush', update.solution, update)
+      else
         @console.start('Apply', update.solution)
         @triggerEvent('apply', update.solution, update)
         @triggerEvent('write', update.solution, update)
         @triggerEvent('flush', update.solution, update)
         @console.end(@values)
 
-      # Re-measure values
-      if update.solved || update.isDone()
-        update.solved = update.restyled = undefined
-        @triggerEvent('validate', update.solution, update)
+        # Re-measure values
+        if update.solved || update.isDone()
+          @triggerEvent('validate', update.solution, update)
+      
+      
+      update.commit()
 
     # Discard pure update 
     unless update.hadSideEffects(solution)
@@ -332,7 +337,6 @@ class Engine
         domain.compile()
     @assumed.compile()
     @solved.compile()
-      
     @console.compile(@)
     @running = true
     @triggerEvent('compile', @)
@@ -354,6 +358,12 @@ class Engine
       @Query::commit(@)
       @Query::repair(@)
       @Query::branch(@)
+      
+      for domain in [@intrinsic, @assumed]
+        if values = domain.commit()
+          @updating.apply(values)
+      
+      return
 
     # Merge results into a solved domain (updates engine.values)
     flush: (solution) ->

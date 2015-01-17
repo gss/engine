@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2015-01-16) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2015-01-17) - http://gridstylesheets.org */
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.GSS=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
@@ -16340,13 +16340,15 @@ Domain = (function() {
   };
 
   Domain.prototype.commit = function() {
-    var changes;
+    var changes, prop;
     if (changes = this.changes) {
       if (this.Solver) {
         this.register();
       }
       this.changes = void 0;
-      return changes;
+      for (prop in changes) {
+        return changes;
+      }
     }
   };
 
@@ -16546,7 +16548,7 @@ Engine = (function() {
   };
 
   Engine.prototype.solve = function() {
-    var args, quiet, result, strategy, transacting;
+    var apply, args, result, strategy, transacting;
     if (!this.transacting) {
       this.transacting = transacting = true;
     }
@@ -16554,13 +16556,13 @@ Engine = (function() {
     if (typeof args[0] === 'function') {
       if (result = args.shift().apply(this, args)) {
         this.updating.apply(result);
+        apply = false;
       }
-      quiet = true;
     } else if (args[0] != null) {
       strategy = this[this.strategy];
       if (strategy.solve) {
         this.console.start(strategy.displayName, args);
-        result = strategy.solve.apply(strategy, args) || {};
+        result = strategy.solve.apply(strategy, args);
         this.console.end(result);
       } else {
         result = strategy.apply(this, args);
@@ -16568,7 +16570,7 @@ Engine = (function() {
     }
     if (transacting) {
       this.transacting = void 0;
-      return this.commit(result, void 0, quiet);
+      return this.commit(result, void 0, apply);
     }
   };
 
@@ -16618,7 +16620,7 @@ Engine = (function() {
     if (solution && Object.keys(solution).length) {
       this.triggerEvent('resume', solution, update);
     }
-    while (!(update.isDone() && !update.restyled && !update.solved)) {
+    while (!(update.isDone() && !update.isDirty())) {
       while (!update.isDocumentDone()) {
         this.triggerEvent('commit', update);
       }
@@ -16635,17 +16637,19 @@ Engine = (function() {
           return update;
         }
       }
-      if (apply !== false) {
+      if (apply === false) {
+        this.triggerEvent('flush', update.solution, update);
+      } else {
         this.console.start('Apply', update.solution);
         this.triggerEvent('apply', update.solution, update);
         this.triggerEvent('write', update.solution, update);
         this.triggerEvent('flush', update.solution, update);
         this.console.end(this.values);
+        if (update.solved || update.isDone()) {
+          this.triggerEvent('validate', update.solution, update);
+        }
       }
-      if (update.solved || update.isDone()) {
-        update.solved = update.restyled = void 0;
-        this.triggerEvent('validate', update.solution, update);
-      }
+      update.commit();
     }
     if (!update.hadSideEffects(solution)) {
       this.updating = void 0;
@@ -16800,9 +16804,17 @@ Engine = (function() {
 
   Engine.prototype.$events = {
     commit: function() {
+      var domain, values, _i, _len, _ref;
       this.Query.prototype.commit(this);
       this.Query.prototype.repair(this);
-      return this.Query.prototype.branch(this);
+      this.Query.prototype.branch(this);
+      _ref = [this.intrinsic, this.assumed];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        domain = _ref[_i];
+        if (values = domain.commit()) {
+          this.updating.apply(values);
+        }
+      }
     },
     flush: function(solution) {
       return this.solved.merge(solution);
@@ -17507,7 +17519,6 @@ Query = (function(_super) {
             op.command.ascend(engine.document || engine.abstract, op, contd, deferred[index + 2], collection);
           }
         } else {
-          debugger;
           op.command.solve(engine.document || engine.abstract, op, contd, deferred[index + 2], true);
         }
         index += 3;
@@ -19486,6 +19497,17 @@ Update.prototype = {
     this.cleanup('collections', continuation);
     return this.cleanup('mutations');
   },
+  commit: function() {
+    if (this.restyled) {
+      this.restyled = void 0;
+    }
+    if (this.solved) {
+      this.solved = void 0;
+    }
+    if (this.reflown) {
+      return this.reflown = void 0;
+    }
+  },
   getProblems: function(callback, bind) {
     return GSS.prototype.clone(this.problems);
   },
@@ -19502,8 +19524,11 @@ Update.prototype = {
   isDocumentDone: function() {
     return !this.mutations && !this.deferred && !this.pairs && !this.stylesheets && !this.branches;
   },
-  hadSideEffects: function() {
-    return this.domains.length > 0 || this.hasOwnProperty('restyled');
+  isDirty: function() {
+    return this.restyled || this.solved || this.reflown;
+  },
+  hadSideEffects: function(solution) {
+    return solution || this.domains.length > 0 || this.hasOwnProperty('restyled');
   },
   block: function() {
     return this.blocking++;
@@ -20293,10 +20318,10 @@ Selector = (function(_super) {
       if (this.scope.nodeType === 9) {
         return;
       }
-      return this.solve(function() {});
+      return this.solve('Kick', function() {});
     }
     result = this.solve('Mutate', String(mutations.length), function() {
-      var mutation, _base, _base1, _base2, _base3, _i, _len;
+      var mutation, _base, _i, _len;
       if (this.updating.index > -1) {
         this.updating.reset();
       }
@@ -20308,26 +20333,14 @@ Selector = (function(_super) {
         switch (mutation.type) {
           case "attributes":
             Selector.mutateAttribute(this, mutation.target, mutation.attributeName, mutation.oldValue || '');
-            if ((_base = this.updating).restyled == null) {
-              _base.restyled = true;
-            }
             break;
           case "childList":
-            if (Selector.mutateChildList(this, mutation.target, mutation)) {
-              if ((_base1 = this.updating).restyled == null) {
-                _base1.restyled = true;
-              }
-            }
+            Selector.mutateChildList(this, mutation.target, mutation);
             break;
           case "characterData":
-            if ((_base2 = this.updating).restyled == null) {
-              _base2.restyled = true;
-            }
             Selector.mutateCharacterData(this, mutation.target, mutation);
         }
-        if (this.intrinsic.subscribers) {
-          (_base3 = this.updating).reflown || (_base3.reflown = this.scope);
-        }
+        (_base = this.updating).reflown || (_base.reflown = this.scope);
       }
     });
     if (!this.scope.parentNode && this.scope.nodeType === 1) {
@@ -21073,7 +21086,6 @@ Selector.define({
       if (node == null) {
         node = scope;
       }
-      debugger;
       return Selector[':visible-y'].prototype.Combinator.apply(this, arguments) && Selector[':visible-x'].prototype.Combinator.apply(this, arguments);
     }
   },
@@ -21823,12 +21835,14 @@ Stylesheet.Import = (function(_super) {
     xhr = new XMLHttpRequest();
     xhr.onreadystatechange = (function(_this) {
       return function() {
-        if (xhr.readyState === 4 && xhr.status === 200 || (!xhr.status && url.indexOf('file://') === 0)) {
-          return callback(xhr.responseText);
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200 || (!xhr.status && url.indexOf('file://') === 0)) {
+            return callback(xhr.responseText);
+          }
         }
       };
     })(this);
-    xhr.open(method && method.toUpperCase() || 'GET', url);
+    xhr.open(method && method.toUpperCase() || 'GET', url, true);
     return xhr.send();
   };
 
@@ -22480,6 +22494,7 @@ Document = (function(_super) {
         e = '::window';
       }
       id = e.target && this.identify(e.target) || e;
+      console.error('resize event');
       if (this.resizer == null) {
         if (e.target && this.updating) {
           if (this.updating.resizing) {
@@ -22540,9 +22555,7 @@ Document = (function(_super) {
     load: function() {
       window.removeEventListener('load', this);
       document.removeEventListener('DOMContentLoaded', this);
-      return this.solve('Loaded', function() {
-        return this.intrinsic.commit();
-      });
+      return this.solve('Loaded', function() {});
     },
     destroy: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
@@ -22820,8 +22833,8 @@ Intrinsic = (function(_super) {
       this.console.start('Measure', this.values);
       this.each(this.scope, 'measure');
       this.console.end(this.changes);
-      return this.changes;
     }
+    return this.commit();
   };
 
   Intrinsic.prototype.get = function(object, property) {
@@ -23021,7 +23034,7 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.assign = function(data, node) {
     var id, path, positioning, positions, prop, styles, value;
-    node || (node = this.reflown || this.engine.scope);
+    node || (node = this.engine.scope);
     positioning = {};
     if (data) {
       for (path in data) {

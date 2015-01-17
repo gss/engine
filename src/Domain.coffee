@@ -385,7 +385,8 @@ class Domain
       if @Solver
         @register()
       @changes = undefined
-      return changes
+      for prop of changes
+        return changes
 
   # Make Domain class inherit given engine instance
   # Allows domain to overload engine methods and modules
