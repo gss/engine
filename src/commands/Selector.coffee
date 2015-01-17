@@ -762,21 +762,21 @@ Selector.define
          (ey > sy && ey < sy + sh)        || # top
          (ey + eh > sy && ey + eh < sy + sh) # bottom
         return node
-        
-   ':visible-x':
-     singular: true
-     deferred: true
-     Combinator: (node = scope, engine, operation, continuation, scope) ->
-       ex = engine.intrinsic.watch(node,         'computed-x',     operation, continuation, scope)
-       ew = engine.intrinsic.watch(node,         'computed-width', operation, continuation, scope)
-       sx = engine.intrinsic.watch(engine.scope, 'scroll-left',    operation, continuation, scope)
-       sw = engine.intrinsic.watch(engine.scope, 'computed-width', operation, continuation, scope)
-       
-       if (ex <= sx && ex + ew > sx + sw) || # mid
-          (ex > sx && ex < sx + sw)     || # left
-          (ex + ew > sx && ex < sx + sw)   # right
-         return node
-  
+
+  ':visible-x':
+    singular: true
+    deferred: true
+    Combinator: (node = scope, engine, operation, continuation, scope) ->
+      ex = engine.intrinsic.watch(node,         'computed-x',     operation, continuation, scope)
+      ew = engine.intrinsic.watch(node,         'computed-width', operation, continuation, scope)
+      sx = engine.intrinsic.watch(engine.scope, 'scroll-left',    operation, continuation, scope)
+      sw = engine.intrinsic.watch(engine.scope, 'computed-width', operation, continuation, scope)
+
+      if (ex <= sx && ex + ew > sx + sw)  || # mid
+         (ex > sx && ex < sx + sw)        || # left
+         (ex + ew > sx && ex < sx + sw)      # right
+        return node
+
 
 Selector.define
   # Comma combines results of multiple selectors without duplicates
