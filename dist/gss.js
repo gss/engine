@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2015-01-17) - http://gridstylesheets.org */
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.GSS=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
@@ -14961,6 +14960,9 @@ Command = (function() {
     var Default, argument, command, i, implicit, j, kind, match, signature, type, typed;
     i = -1;
     j = operation.length;
+    if (operation[0] === '.') {
+      debugger;
+    }
     while (++i < j) {
       argument = operation[i];
       typed = typeof argument;
@@ -15401,10 +15403,19 @@ Command = (function() {
     signature = engine.signatures[name];
     base = [name];
     return (_base = engine.engine)[name] || (_base[name] = function() {
-      var args, command, extras, length, result, _ref;
+      var arg, args, command, extras, index, length, permutation, permuted, result, _j, _len, _ref;
       args = Array.prototype.slice.call(arguments);
       command = Command.match(engine, base.concat(args)).prototype;
-      length = (command.hasOwnProperty('permutation') && command.permutation.length || 0) + command.padding;
+      length = command.padding;
+      if (command.hasOwnProperty('permutation')) {
+        length += (permutation = command.permutation).length;
+        permuted = [];
+        for (index = _j = 0, _len = args.length; _j < _len; index = ++_j) {
+          arg = args[index];
+          permuted[permutation[index]] = arg;
+        }
+        args = permuted;
+      }
       if (length > args.length) {
         args.length = length;
       }
@@ -15783,7 +15794,7 @@ Command.List = (function(_super) {
     if (parent = operation.parent) {
       return parent.command.List || parent[0] === true;
     } else {
-      return true;
+      return !operation[0].command.Sequence;
     }
   };
 
@@ -20211,7 +20222,7 @@ Selector = (function(_super) {
     args = [ascender != null ? ascending : scope, selector];
     command.log(args, engine, operation, continuation, scope, command.selecting && 'select' || 'match');
     result = command.before(args, engine, operation, continuation, scope);
-    node = args[0];
+    node = args[0] || scope;
     if (command.selecting) {
       if (result == null) {
         result = node.querySelectorAll(args[1]);
@@ -20588,6 +20599,19 @@ Selector = (function(_super) {
 
 })(Query);
 
+Selector.prototype.Sequence = (function(_super) {
+  __extends(Sequence, _super);
+
+  function Sequence() {
+    return Sequence.__super__.constructor.apply(this, arguments);
+  }
+
+  Sequence.prototype.type = 'Selector';
+
+  return Sequence;
+
+})(Query.Sequence);
+
 Selector.prototype.checkers.selector = function(command, other, parent, operation) {
   var selecting;
   if (!other.head) {
@@ -20626,9 +20650,41 @@ Selector.prototype.mergers.selector = function(command, other, parent, operation
   return true;
 };
 
-Selector.Selecter = Selector.extend({
+Selector.Qualifier = Selector.extend({
   signature: [
     {
+      context: ['Selector'],
+      matcher: ['String']
+    }
+  ]
+});
+
+Selector.Search = Selector.extend({
+  signature: [
+    [
+      {
+        context: ['Selector']
+      }
+    ], {
+      matcher: ['String'],
+      query: ['String']
+    }
+  ]
+});
+
+Selector.Attribute = Selector.Search.extend({
+  getIndex: function() {
+    return 'attribute';
+  }
+});
+
+Selector.Selecter = Selector.extend({
+  signature: [
+    [
+      {
+        context: ['Selector']
+      }
+    ], {
       query: ['String']
     }
   ],
@@ -20666,34 +20722,6 @@ Selector.Virtual = Selector.extend({
   ]
 });
 
-Selector.Qualifier = Selector.extend({
-  signature: [
-    {
-      context: ['Selector'],
-      matcher: ['String']
-    }
-  ]
-});
-
-Selector.Search = Selector.extend({
-  signature: [
-    [
-      {
-        context: ['Selector']
-      }
-    ], {
-      matcher: ['String'],
-      query: ['String']
-    }
-  ]
-});
-
-Selector.Attribute = Selector.Search.extend({
-  getIndex: function() {
-    return 'attribute';
-  }
-});
-
 Selector.Element = Selector.extend({
   signature: [
     [
@@ -20727,21 +20755,27 @@ Selector.define({
   '.': {
     helpers: ['class', 'getElementsByClassName'],
     tags: ['selector'],
-    Selecter: function(value, engine, operation, continuation, scope) {
-      return scope.getElementsByClassName(value);
-    },
     Qualifier: function(node, value) {
       if (node.classList.contains(value)) {
         return node;
       }
+    },
+    Selecter: function(node, value, engine, operation, continuation, scope) {
+      if (node == null) {
+        node = scope;
+      }
+      return node.getElementsByClassName(value);
     }
   },
   'tag': {
     helpers: ['getElementsByTagName'],
     tags: ['selector'],
     prefix: '',
-    Selecter: function(value, engine, operation, continuation, scope) {
-      return scope.getElementsByTagName(value);
+    Selecter: function(node, value, engine, operation, continuation, scope) {
+      if (node == null) {
+        node = scope;
+      }
+      return node.getElementsByTagName(value);
     },
     Qualifier: function(node, value) {
       if (value === '*' || node.tagName === value.toUpperCase()) {
@@ -20755,11 +20789,14 @@ Selector.define({
   '#': {
     helpers: ['id', 'getElementById'],
     tags: ['selector'],
-    Selecter: function(id, engine, operation, continuation, scope) {
+    Selecter: function(node, id, engine, operation, continuation, scope) {
+      if (node == null) {
+        node = scope;
+      }
       if (scope == null) {
         scope = engine.scope;
       }
-      return (typeof scope.getElementById === "function" ? scope.getElementById(id) : void 0) || scope.querySelector('[id="' + id + '"]');
+      return (typeof node.getElementById === "function" ? node.getElementById(id) : void 0) || scope.querySelector('[id="' + id + '"]');
     },
     Qualifier: function(node, value) {
       if (node.id === value) {
@@ -20923,7 +20960,9 @@ Selector.define({
     Virtual: function(node, value, engine, operation, continuation, scope) {
       var prefix;
       if (!node && this.localizers.indexOf(operation.parent.command.type) > -1) {
-        node = scope;
+        if (scope !== engine.scope) {
+          node = scope;
+        }
       }
       prefix = this.getScope(engine, node, continuation) || '$';
       return prefix + '"' + value + '"';

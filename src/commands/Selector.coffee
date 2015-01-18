@@ -46,7 +46,7 @@ class Selector extends Query
     ]
     command.log(args, engine, operation, continuation, scope, command.selecting && 'select' || 'match')
     result  = command.before(args, engine, operation, continuation, scope)
-    node = args[0]
+    node = args[0] || scope
     if command.selecting
       result ?= node.querySelectorAll(args[1])
     else if (result != node) && node.matches(args[1])
@@ -320,6 +320,10 @@ class Selector extends Query
       update[type] = []
     update[type].push(value)
 
+
+class Selector::Sequence extends Query.Sequence
+  type: 'Selector'
+  
 Selector::checkers.selector = (command, other, parent, operation) ->
   if !other.head
     # Native selectors cant start with combinator other than whitespace
@@ -360,12 +364,34 @@ Selector::mergers.selector = (command, other, parent, operation, inherited) ->
       left + right
   return true
 
+
+    
+# Filter elements by key
+Selector.Qualifier = Selector.extend
+  signature: [
+    context: ['Selector']
+    matcher: ['String']
+  ]
+
+# Filter elements by key with value
+Selector.Search = Selector.extend
+  signature: [
+    [context: ['Selector']]
+    matcher: ['String']
+    query: ['String']
+  ]
+
+Selector.Attribute = Selector.Search.extend
+  getIndex: ->
+    return 'attribute'
+
 # Indexed collection
 Selector.Selecter = Selector.extend
   signature: [
+    [context: ['Selector']]
     query: ['String']
   ]
-  
+
   selecting: true
 
   getIndexPrefix: ->
@@ -390,27 +416,6 @@ Selector.Virtual = Selector.extend
     query: ['String']
   ]
 
-
-    
-# Filter elements by key
-Selector.Qualifier = Selector.extend
-  signature: [
-    context: ['Selector']
-    matcher: ['String']
-  ]
-
-# Filter elements by key with value
-Selector.Search = Selector.extend
-  signature: [
-    [context: ['Selector']]
-    matcher: ['String']
-    query: ['String']
-  ]
-
-Selector.Attribute = Selector.Search.extend
-  getIndex: ->
-    return 'attribute'
-  
 # Reference to related element
 Selector.Element = Selector.extend
   signature: [[
@@ -447,21 +452,21 @@ Selector.define
   '.':
     helpers: ['class', 'getElementsByClassName']
     tags: ['selector']
-    
-    Selecter: (value, engine, operation, continuation, scope) ->
-      return scope.getElementsByClassName(value)
       
     Qualifier: (node, value) ->
       if node.classList.contains(value)
         return node 
+    
+    Selecter: (node = scope, value, engine, operation, continuation, scope) ->
+      return node.getElementsByClassName(value)
 
   'tag':
     helpers: ['getElementsByTagName']
     tags: ['selector']
     prefix: ''
 
-    Selecter: (value, engine, operation, continuation, scope) ->
-      return scope.getElementsByTagName(value)
+    Selecter: (node = scope, value, engine, operation, continuation, scope) ->
+      return node.getElementsByTagName(value)
     
     Qualifier: (node, value) ->
       if value == '*' || node.tagName == value.toUpperCase()
@@ -476,8 +481,8 @@ Selector.define
     helpers: ['id', 'getElementById']
     tags: ['selector']
     
-    Selecter: (id, engine, operation, continuation, scope = engine.scope) ->
-      return scope.getElementById?(id) || scope.querySelector('[id="' + id + '"]')
+    Selecter: (node = scope, id, engine, operation, continuation, scope = engine.scope) ->
+      return node.getElementById?(id) || scope.querySelector('[id="' + id + '"]')
       
     Qualifier: (node, value) ->
       if node.id == value
@@ -632,7 +637,8 @@ Selector.define
 
     Virtual: (node, value, engine, operation, continuation, scope) ->
       if !node && @localizers.indexOf(operation.parent.command.type) > -1
-        node = scope
+        if scope != engine.scope
+          node = scope
 
       prefix = @getScope(engine, node, continuation) || '$'
       return prefix + '"' + value + '"'

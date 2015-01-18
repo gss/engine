@@ -39,7 +39,7 @@ describe 'Nested Rules', ->
         
         engine.solve(rules)
 
-    xdescribe 'sequential selectors', ->
+    describe 'sequential selectors', ->
       it 'should support mixed selectors', (done) ->
         rules = [
           ['==', 
@@ -78,7 +78,45 @@ describe 'Nested Rules', ->
             ]
           ]]]
           engine.id('d').setAttribute('class', '')
-          #done()
+          engine.then (s) ->
+            expect(stringify(engine.updated.getProblems())).to.eql stringify([
+              [['remove', "div .gizoogle$h2↑!>!>.d"]]
+              [['remove', "div .gizoogle$h2↑!>!>.d"]]
+            ])
+            engine.id('d').setAttribute('class', 'd')    
+            
+            engine.then (s) ->
+              expect(engine.updated.getProblems()).to.eql [[[
+                key: "div .gizoogle$h2↑!>!>.d"
+                ['==', 
+                  ["get", "$d[width]"]
+                  , 100
+                ]
+              ]]]
+
+              engine.id('h2').setAttribute('class', '')
+              
+              engine.then (s) ->
+                expect(stringify(engine.updated.getProblems())).to.eql stringify([
+                  [
+                    ['remove', "div .gizoogle$h2↑!>!>.d"]
+                    ['remove', "div .gizoogle$h2↑!>!>"]
+                    ['remove', "div .gizoogle$h2↑!>"]
+                    ['remove', "div .gizoogle$h2"]
+                  ]
+                  [['remove', "div .gizoogle$h2↑!>!>.d"]]
+                ])
+                engine.id('h2').setAttribute('class', 'gizoogle')
+                
+                engine.then (s) ->
+                  expect(engine.updated.getProblems()).to.eql [[[
+                    key: "div .gizoogle$h2↑!>!>.d"
+                    ['==', 
+                      ["get", "$d[width]"]
+                      , 100
+                    ]
+                  ]]]
+                  done()
 
         engine.solve(rules)
 

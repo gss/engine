@@ -1797,7 +1797,34 @@ describe 'End - to - End', ->
     
     describe 'basic', ->
       engine = null
-    
+  
+      it 'in regular stylesheet with global rule ', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <div id="ship"></div>
+          <style type="text/gss" id="gss">
+            "mast" {
+              height: == ($ #ship)[height];
+            }
+            #ship {
+              "mast"[top] == 0;
+              "mast"[bottom] == 100;
+              "mast"[left] == 10;
+              "mast"[right] == 20;
+              &"mast"[z] == 1;
+            }
+          </style>
+          """
+        engine.once 'solve', (e) ->
+          expect((engine.values)).to.eql 
+            '$gss"mast"[height]': 100
+            '$gss"mast"[x]': 10
+            '$gss"mast"[width]': 10
+            '$gss"mast"[y]': 0
+            '$ship[height]': 100
+            '$ship"mast"[z]': 1
+          done()
+        
       it 'in regular stylesheet', (done) ->
         engine = GSS(container)
         container.innerHTML =  """
