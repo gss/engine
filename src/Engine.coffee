@@ -9,51 +9,43 @@ Domains are either independent constraint graphs or
 pseudo-solvers like intrinsic measurements.
 
 ###
+GSS = ->
+  for argument, index in arguments
+    continue unless argument
+    switch typeof argument
+      when 'object'
+        if object = @use(argument)
+          if object instanceof Engine
+            return object
+          else
+            input = object
+      when 'string', 'boolean'
+        url = argument
+          
+  # **GSS()** creates new Engine at the root, 
+  # if there is no engine assigned to it yet
+  unless @Command
+    return new Engine(arguments[0], arguments[1], arguments[2])
 
-class Engine
 
-  Command:      require('./Command')
 
+class Engine extends GSS
+
+  Command:   require('./engine/Command')
+  Domain:    require('./engine/Domain')
+  Update:    require('./engine/Update')
+  Query:     require('./engine/Query')
+    
+  Console:   require('./engine/utilities/Console')
+  Inspector: require('./engine/utilities/Inspector')
+  Exporter:  require('./engine/utilities/Exporter')
   
-  Domain:       require('./Domain')
-  Update:       require('./Update')
-  Query:        require('./Query')
-    
-  Console:      require('./utilities/Console')
-  Inspector:    require('./utilities/Inspector')
-  Exporter:     require('./utilities/Exporter')
+  Input:     require('./engine/domains/Input')
+  Data:      require('./engine/domains/Data')
+  Solver:    require('./engine/domains/Linear')
+  Output:    require('./engine/domains/Output')
 
-  Domains: 
-    Document:   require('./domains/Document')
-    Input:   require('./domains/Input')
-    Intrinsic:  require('./domains/Intrinsic')
-    Numeric:    require('./domains/Numeric')
-    Linear:     require('./domains/Linear')
-    Finite:     require('./domains/Finite')
-    Boolean:    require('./domains/Boolean')
-    
-  class Engine::Input extends Engine::Numeric
-    Selector:    require('../commands/Selector')
-    Stylesheet:  require('../commands/Stylesheet')
-
-  constructor: () -> #(scope, url, data)
-    for argument, index in arguments
-      continue unless argument
-      switch typeof argument
-        when 'object'
-          if object = @use(argument)
-            if object instanceof Engine
-              return object
-            else
-              assumed = object
-        when 'string', 'boolean'
-          url = argument
-            
-    # **GSS()** creates new Engine at the root, 
-    # if there is no engine assigned to it yet
-    unless @Command
-      return new Engine(arguments[0], arguments[1], arguments[2])
-
+  constructor: (data, url) -> #(scope, url, data)
     if url? && Worker?
       @url = @getWorkerURL(url)
 
@@ -80,43 +72,37 @@ class Engine
     @precompile()
  
     # Known suggested values
-    @assumed = new @Numeric
-    @assumed.displayName = 'Assumed'
-    @assumed.static = true
-    @assumed.setup()
+    @data = new @Data
+    @data.setup()
 
     # Final values, used in conditions
-    @solved = new @Boolean
-    @solved.displayName = 'Solved'
-    @solved.priority = -200
-    @solved.finalized = true
-    @solved.setup()
+    @output = new @Output
+    @output.setup()
 
-    @values = @solved.values
+    @values = @output.values
 
-    for property, value of assumed
-      @assumed.values[property] = @values[property] = value
+    for property, value of input
+      @input.values[property] = @values[property] = value
 
     # Cassowary is a default solver for all unknown variables
-    @domain = @linear
+    @solver = new @Solver
 
 
     @strategy = 
       unless window?
         'update'
-      else if @scope
-        'document'
-      else
-        'abstract'
+      else 
+        'input'
 
-    #if @ready
-    #  @compile()
     window?.addEventListener 'error', @eventHandler
 
     return @
     
   use: (object) ->
-    return object
+    unless object.nodeType
+      return object
+      
+  @use: (object) ->
 
   # engine.solve({}) - solve with given constants
   # engine.solve([]) - evaluate commands
@@ -285,7 +271,7 @@ class Engine
         else
           others.push(problem)
    
-    for other, i in [@assumed, @solved].concat(@domains)
+    for other, i in [@input, @output].concat(@domains)
       locals = []
       other.changes = undefined
       for remove in removes
@@ -327,8 +313,8 @@ class Engine
     for name of @Domains
       if domain = @[name.toLowerCase()]
         domain.compile()
-    @assumed.compile()
-    @solved.compile()
+    @input.compile()
+    @output.compile()
     @console.compile(@)
     @running = true
     @triggerEvent('compile', @)
@@ -351,7 +337,7 @@ class Engine
       @Query::repair(@)
       @Query::branch(@)
       
-      for domain in [@intrinsic, @assumed]
+      for domain in [@intrinsic, @input]
         if values = domain.commit()
           @updating.apply(values)
       
@@ -359,17 +345,17 @@ class Engine
 
     # Merge results into a solved domain (updates engine.values)
     flush: (solution) ->
-      @solved.merge solution
+      @output.merge solution
 
     # Apply given values to current update object and solved domain
     resume: (solution, update) ->
       if update.solution != solution
         update.apply(solution)
-      @solved.merge(solution)
+      @output.merge(solution)
 
     # Dispatch remove command
     remove: (path) ->
-      @solved.remove(path)
+      @output.remove(path)
       @updating.remove(path)
 
     # Unsubscribe from worker and forget the engine
@@ -461,8 +447,8 @@ class Engine
     if (i = path.indexOf('[')) > -1
       property = path.substring(i + 1, path.length - 1)
     
-    if @assumed.values.hasOwnProperty(path)
-      return @assumed
+    if @input.values.hasOwnProperty(path)
+      return @input
     else if property && (intrinsic = @intrinsic)
       if props = intrinsic.properties
         if (props[path]? || (props[property] && !props[property].matcher))
@@ -640,7 +626,7 @@ if !self.window && self.onmessage != undefined
           @broadcast(@updating.problems[0])
           @updating.index++
       if values
-        @assumed.merge(values)
+        @input.merge(values)
       if commands.length
         @solve(commands)
 
@@ -655,7 +641,6 @@ if !self.window && self.onmessage != undefined
       engine.linear.operations = undefined
     postMessage(result)
 
-Engine.Engine   = Engine
 
 # Identity and console modules are shared between engines
 Engine.identity = Engine::identity = new Engine::Identity
@@ -668,4 +653,6 @@ Engine.clone    = Engine::clone = (object) ->
     return object.map @clone, @
   return object
 
-module.exports = Engine
+GSS.Engine   = Engine
+
+module.exports = GSS

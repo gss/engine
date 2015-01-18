@@ -2208,7 +2208,7 @@ describe 'End - to - End', ->
     describe '|| and :: in condition', ->
       it 'should compute values', (done) ->
         
-        engine.assumed.merge '$button1[t]': 500, '$button2[t]': 400
+        engine.input.merge '$button1[t]': 500, '$button2[t]': 400
 
         engine.once 'solve', ->     
           expect(engine.values).to.eql 
@@ -2232,9 +2232,9 @@ describe 'End - to - End', ->
                 "$button2[t]": 400
               done()   
 
-            engine.assumed.merge '$button2[t]': 400
+            engine.input.merge '$button2[t]': 400
 
-          engine.assumed.merge '$button1[t]': 400, '$button2[t]': 100
+          engine.input.merge '$button1[t]': 400, '$button2[t]': 100
 
         container.innerHTML =  """
             <style type="text/gss">
@@ -2255,7 +2255,7 @@ describe 'End - to - End', ->
     describe '|| over two variables', ->
       it 'should compute values', (done) ->
         
-        engine.assumed.merge A: 200, B: 200
+        engine.input.merge A: 200, B: 200
 
         engine.once 'solve', ->     
           expect(engine.values).to.eql 
@@ -2315,13 +2315,13 @@ describe 'End - to - End', ->
                         "x": 1
                       done()
                       
-                    engine.assumed.merge A: 200, B: 200
-                  engine.assumed.merge A: 500, B: 500
-                engine.assumed.merge B: 200
-              engine.assumed.merge B: 500
-            engine.assumed.merge A: 200
+                    engine.input.merge A: 200, B: 200
+                  engine.input.merge A: 500, B: 500
+                engine.input.merge B: 200
+              engine.input.merge B: 500
+            engine.input.merge A: 200
 
-          engine.assumed.merge A: 500
+          engine.input.merge A: 500
     
         container.innerHTML =  """
             <style type="text/gss" scoped>
@@ -2342,7 +2342,7 @@ describe 'End - to - End', ->
     describe '&& over two variables', ->
       it 'should compute values', (done) ->
         
-        engine.assumed.merge input: 200
+        engine.input.merge input: 200
 
         engine.once 'solve', ->     
           expect(engine.values).to.eql 
@@ -2366,9 +2366,9 @@ describe 'End - to - End', ->
                 "z": 200
 
               done()
-            engine.assumed.merge input: 200
+            engine.input.merge input: 200
 
-          engine.assumed.merge input: 500
+          engine.input.merge input: 500
     
         container.innerHTML =  """
             <style type="text/gss" scoped>

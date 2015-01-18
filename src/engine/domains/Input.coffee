@@ -6,6 +6,8 @@ Variable    = require('../commands/Variable')
 Constraint  = require('../commands/Constraint')
 
 class Input extends Domain
+  displayName: 'Input'
+  
   url: undefined
   helps: true
 
@@ -141,7 +143,7 @@ Input::Assignment = Command.extend {
   ]
 },
   '=': (object, name, value, engine) ->
-    engine.assumed.set(object, name, value)
+    engine.input.set(object, name, value)
 
 # Style assignment
 Input::Assignment.Style = Input::Assignment.extend {
@@ -176,7 +178,7 @@ Input::Assignment.Style = Input::Assignment.extend {
     if engine.intrinsic
       engine.intrinsic.restyle object || scope, property, value, continuation, operation
     else
-      engine.assumed.set object || scope, property, value
+      engine.input.set object || scope, property, value
     return
 
 

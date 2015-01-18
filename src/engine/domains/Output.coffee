@@ -4,6 +4,8 @@ Constraint = require('../commands/Constraint')
 
 class Boolean extends Numeric
   immutable: true
+  priority: -200
+  finalized: true
   
 Boolean::Constraint = Constraint.extend {
   signature: [

@@ -11,6 +11,7 @@ Variable = require('../commands/Variable')
 
 class Numeric extends Domain
   priority: 200
+  static: true
 
   @Measurement: require('../types/Measurement')
   Length:       @Measurement.Length
