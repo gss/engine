@@ -1,12 +1,12 @@
-Engine = require('./Engine')
+GSS = require('./Engine')
 
-class Document extends Engine
+class Document extends GSS.Engine
 
-  class Document::Input extends Engine::Input
+  class @::Input extends @::Input
     Selector:    require('../commands/Selector')
     Stylesheet:  require('../commands/Stylesheet')
       
-  class Document::Output extends Engine::Output
+  class @::Output extends @::Output
     Style:        require('../Style')
     Unit:         require('../commands/Unit')
 
@@ -24,7 +24,7 @@ class Document extends Engine
     Size:         @Primitive.Size
     Position:     @Primitive.Position
   
-  class Document::Values extends Engine::Values
+  class @::Data extends @::Data
     Getters:      require('../properties/Getters')
     Styles:       require('../properties/Styles')
     immediate: true

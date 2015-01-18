@@ -57,9 +57,9 @@ class Engine extends GSS
     @pairs = {}
     
     @eventHandler = @handleEvent.bind(@)
+    @addListeners(@$$events)
     @addListeners(@$events)
     @addListeners(@events)
-
 
     @variables    = {}
     @domains      = []
@@ -69,38 +69,27 @@ class Engine extends GSS
     @inspector    = new @Inspector(@)
     @exporter     = new @Exporter(@)
 
-    @precompile()
- 
-    # Known suggested values
-    @data = new @Data
+    @update = Engine::Update.compile(@)
+    
+    @Domain.compile(@)
+    
     @data.setup()
-
-    # Final values, used in conditions
-    @output = new @Output
     @output.setup()
 
-    @values = @output.values
-
     for property, value of input
-      @input.values[property] = @values[property] = value
+      @data.values[property] = @output.values[property] = value
 
-    # Cassowary is a default solver for all unknown variables
-    @solver = new @Solver
+    @values = @output.values
+    
+    unless window?
+      @strategy = 'update'
 
-
-    @strategy = 
-      unless window?
-        'update'
-      else 
-        'input'
-
-    window?.addEventListener 'error', @eventHandler
+    self.addEventListener 'error', @eventHandler
 
     return @
     
   use: (object) ->
-    unless object.nodeType
-      return object
+    return object
       
   @use: (object) ->
 
@@ -120,7 +109,8 @@ class Engine extends GSS
         @updating.apply result
         apply = false
     else if args[0]?
-      strategy = @[@strategy]
+      strategy = @[@strategy || 'input']
+        
       if strategy.solve
         @console.start(strategy.displayName, args)
         result = strategy.solve.apply(strategy, args)
@@ -142,8 +132,6 @@ class Engine extends GSS
 
     args = Array.prototype.slice.call(arguments, +reason? + +arg?)
 
-
-    
     unless @updating
       @console.start(reason || (@updated && 'Update' || 'Initialize'), arg || args)
       @updating = new @update
@@ -231,7 +219,6 @@ class Engine extends GSS
       update.await(domain.url)
       return domain
 
-
     for problem, index in problems
       if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
         problem = problems[index] = problem[0]
@@ -302,11 +289,6 @@ class Engine extends GSS
       update.push working, worker, true
     return
 
-  # Compile initial domains and shared engine features 
-  precompile: ->
-    @Domain.compile(@Domains,   @)
-    @update = Engine::Update.compile(@)
-    @triggerEvent('precompile')
 
   # Compile all static definitions in the engine
   compile: () ->
@@ -642,17 +624,18 @@ if !self.window && self.onmessage != undefined
     postMessage(result)
 
 
+
+GSS.Engine   = Engine
+
 # Identity and console modules are shared between engines
-Engine.identity = Engine::identity = new Engine::Identity
-Engine.identify = Engine::identify = Engine.identity.set
-Engine.console  = Engine::console  = new Engine::Console
+GSS.identity = Engine::identity = new Engine::Identity
+GSS.identify = Engine::identify = GSS.identity.set
+GSS.console  = Engine::console  = new Engine::Console
 
   # Slice arrays recursively to remove the meta data
-Engine.clone    = Engine::clone = (object) -> 
+GSS.clone    = Engine::clone = (object) -> 
   if object && object.map
     return object.map @clone, @
   return object
-
-GSS.Engine   = Engine
 
 module.exports = GSS
