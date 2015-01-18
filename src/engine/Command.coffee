@@ -147,7 +147,7 @@ class Command
     i = -1
     j = operation.length
     
-    if (operation[0] == '.')
+    if (operation[0] == 'translateX')
       debugger
 
     while ++i < j
@@ -183,7 +183,11 @@ class Command
             return @uncallable('number', operation, engine)
         else
           unless signature = engine.signatures[argument]
-            unless Default = engine.Default
+            if engine.Default && engine.domain.signatures[argument]
+              Default = engine.Default
+            else if command = engine.intrinsic.Command.match(engine.intrinsic, operation, parent, index, context)
+              return command
+            else
               return @uncallable(argument, operation, engine)
         unless type = context?.command.type
           continue

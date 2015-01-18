@@ -148,7 +148,7 @@ Linear::Variable.Expression = Variable.Expression.extend Linear.Mixin,
   '/': (left, right) ->
     return c.divide(left, right)
 
-# Handle constraints wrapped into meta constructs provided by Abstract
+# Handle constraints wrapped into meta constructs provided by Input
 Linear::Meta = Command.Meta.extend {},
   'object':
     execute: (constraint, engine, operation) ->

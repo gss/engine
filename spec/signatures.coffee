@@ -23,32 +23,32 @@ describe 'Signatures', ->
   
     before ->
       engine = new GSS
-      engine.abstract.PrimitiveCommand = PrimitiveCommand
+      engine.input.PrimitiveCommand = PrimitiveCommand
       engine.compile()
     
     describe 'with primitive', ->
       it 'should match property function definition', ->
-        expect(engine.abstract.Command(['primitive', 'test'])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
-        expect(engine.abstract.Command(['primitive', 'test', 10])).to.be.an.instanceof(PrimitiveCommand.primitive)
-        expect(engine.abstract.Command(['primitive', 'test', 'test'])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
-        expect(engine.abstract.Command(['undeclared', 'test', 10])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
-        expect(engine.abstract.Command(['undeclared', 'test', 'test'])).to.be.an.instanceof(engine.abstract.Default)
+        expect(engine.input.Command(['primitive', 'test'])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
+        expect(engine.input.Command(['primitive', 'test', 10])).to.be.an.instanceof(PrimitiveCommand.primitive)
+        expect(engine.input.Command(['primitive', 'test', 'test'])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
+        expect(engine.input.Command(['undeclared', 'test', 10])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
+        expect(engine.input.Command(['undeclared', 'test', 'test'])).to.be.an.instanceof(engine.input.Default)
 
     describe 'with variables', ->
       it 'should match property function definition', ->
-        expect(engine.abstract.Command(['primitive', ['get', 'test']])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
-        expect(engine.abstract.Command(['primitive', ['get', 'test'], 10])).to.be.an.instanceof(PrimitiveCommand.primitive)
-        expect(engine.abstract.Command(['primitive', ['get', 'test'], 'test'])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
-        expect(engine.abstract.Command(['primitive', ['get', 'test'], ['get', 'test']])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
-        expect(engine.abstract.Command(['undeclared', ['get', 'test'], 10])).to.be.an.instanceof(engine.abstract.Default)
+        expect(engine.input.Command(['primitive', ['get', 'test']])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
+        expect(engine.input.Command(['primitive', ['get', 'test'], 10])).to.be.an.instanceof(PrimitiveCommand.primitive)
+        expect(engine.input.Command(['primitive', ['get', 'test'], 'test'])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
+        expect(engine.input.Command(['primitive', ['get', 'test'], ['get', 'test']])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
+        expect(engine.input.Command(['undeclared', ['get', 'test'], 10])).to.be.an.instanceof(engine.input.Default)
     
     describe 'with expressions', ->
       it 'should match property function definition', ->
-        expect(engine.abstract.Command(['primitive', ['+',  ['get', 'test'], 1]])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
-        expect(engine.abstract.Command(['primitive', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(PrimitiveCommand.primitive)
-        expect(engine.abstract.Command(['primitive', ['+',  ['get', 'test'], 1], 'test'])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
-        expect(engine.abstract.Command(['primitive', ['+',  ['get', 'test'], 1], ['+',  ['get', 'test'], 1]])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
-        expect(engine.abstract.Command(['undeclared', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(engine.abstract.Default)
+        expect(engine.input.Command(['primitive', ['+',  ['get', 'test'], 1]])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
+        expect(engine.input.Command(['primitive', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(PrimitiveCommand.primitive)
+        expect(engine.input.Command(['primitive', ['+',  ['get', 'test'], 1], 'test'])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
+        expect(engine.input.Command(['primitive', ['+',  ['get', 'test'], 1], ['+',  ['get', 'test'], 1]])).to.not.be.an.instanceof(PrimitiveCommand.primitive)
+        expect(engine.input.Command(['undeclared', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(engine.input.Default)
   
   
   
@@ -65,40 +65,40 @@ describe 'Signatures', ->
 
     before ->
       engine = new GSS
-      engine.abstract.UnorderedCommand = UnorderedCommand
+      engine.input.UnorderedCommand = UnorderedCommand
       
       engine.compile()
     
     describe 'and no required arguments', ->
       it 'should match property function definition', ->
-        expect(engine.abstract.Command(['unordered', 'test'])).to.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['unordered', 'test', 10])).to.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['unordered', 'test', 10, 20])).to.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['unordered', 10, 'test', 20])).to.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['unordered', 10, 20, 'test'])).to.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['unordered', 10, 20, 'test', 30])).to.not.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['unordered', 'test', 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', 'test'])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', 'test', 10])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', 'test', 10, 20])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', 10, 'test', 20])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', 10, 20, 'test'])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', 10, 20, 'test', 30])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', 'test', 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
 
     describe 'with variables', ->
       it 'should match property function definition', ->
-        expect(engine.abstract.Command(['unordered', ['get', 'test']])).to.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['unordered', ['get', 'test'], 10])).to.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['unordered', ['get', 'test'], 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['unordered', ['get', 'test'], ['get', 'test']])).to.not.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['undeclared', ['get', 'test'], 10])).to.be.an.instanceof(engine.abstract.Default)
+        expect(engine.input.Command(['unordered', ['get', 'test']])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', ['get', 'test'], 10])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', ['get', 'test'], 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', ['get', 'test'], ['get', 'test']])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['undeclared', ['get', 'test'], 10])).to.be.an.instanceof(engine.input.Default)
     
     describe 'with expressions', ->
       it 'should match property function definition', ->
-        expect(engine.abstract.Command(['unordered', ['+',  ['get', 'test'], 1]])).to.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['unordered', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['unordered', ['+',  ['get', 'test'], 1], 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['unordered', ['+',  ['get', 'test'], 1], ['+',  ['get', 'test'], 1]])).to.not.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['undeclared', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(engine.abstract.Default)
+        expect(engine.input.Command(['unordered', ['+',  ['get', 'test'], 1]])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', ['+',  ['get', 'test'], 1], 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['unordered', ['+',  ['get', 'test'], 1], ['+',  ['get', 'test'], 1]])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.input.Command(['undeclared', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(engine.input.Default)
 
   describe 'optional group with order specific type declaration', ->
     before ->
       engine = new GSS
-      engine.abstract.FancyTypes = GSS::Command.extend {
+      engine.input.FancyTypes = GSS::Command.extend {
         signature: [[
           left: ['String', 'Variable']
           right: ['Number', 'String']
@@ -111,15 +111,15 @@ describe 'Signatures', ->
 
 
     it 'should respect type order', ->
-      expect(engine.abstract.Command(['fancy', 'test']).permutation).to.eql([0])
-      expect(engine.abstract.Command(['fancy', 'test', 'test']).permutation).to.eql([0, 1])
-      expect(engine.abstract.Command(['fancy', 1]).permutation).to.eql([1])
-      expect(engine.abstract.Command(['fancy', 1, 1]).permutation).to.eql([1, 2])
-      expect(engine.abstract.Command(['fancy', 1, 'a']).permutation).to.eql([1, 0])
-      expect(engine.abstract.Command(['fancy', 1, 'a', 1]).permutation).to.eql([1, 0, 2])
-      #expect(engine.abstract.Command(['fancy', 1, 'a', 'b']).permutation).to.eql(undefined)
-      expect(engine.abstract.Command(['fancy', 'a', 1]).permutation).to.eql([0, 1])
-      expect(engine.abstract.Command(['fancy', 'a', 1, 2]).permutation).to.eql([0, 1, 2])
+      expect(engine.input.Command(['fancy', 'test']).permutation).to.eql([0])
+      expect(engine.input.Command(['fancy', 'test', 'test']).permutation).to.eql([0, 1])
+      expect(engine.input.Command(['fancy', 1]).permutation).to.eql([1])
+      expect(engine.input.Command(['fancy', 1, 1]).permutation).to.eql([1, 2])
+      expect(engine.input.Command(['fancy', 1, 'a']).permutation).to.eql([1, 0])
+      expect(engine.input.Command(['fancy', 1, 'a', 1]).permutation).to.eql([1, 0, 2])
+      #expect(engine.input.Command(['fancy', 1, 'a', 'b']).permutation).to.eql(undefined)
+      expect(engine.input.Command(['fancy', 'a', 1]).permutation).to.eql([0, 1])
+      expect(engine.input.Command(['fancy', 'a', 1, 2]).permutation).to.eql([0, 1, 2])
 
   describe 'optional groups and mixed with optional groups', ->
     OptionalGroupCommand = GSS::Command.extend {
@@ -140,36 +140,36 @@ describe 'Signatures', ->
   
     before ->
       engine = new GSS
-      engine.abstract.OptionalGroupCommand = OptionalGroupCommand
+      engine.input.OptionalGroupCommand = OptionalGroupCommand
       engine.compile()
       
     describe 'and no required arguments', ->
       it 'should match property function definition', ->
-        expect(engine.abstract.Command(['optional', 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', 'test', 10])).to.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', 'test', 10, 20])).to.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', 'test', 10, 'test', 20])).to.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', 'test', 10, 20, 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', 'test', 10, 'test', 20, 30])).to.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', 'test', 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', 'test', 10, 'test', 20, 30]).permutation).to.eql([0,2,1,3,4])
-        expect(engine.abstract.Command(['optional', 'test', 10, 'test', 20]).permutation).to.eql([0,2,1,3])
-        expect(engine.abstract.Command(['optional', 'test', 10, 20]).permutation).to.eql([0,2,3])
+        expect(engine.input.Command(['optional', 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', 'test', 10])).to.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', 'test', 10, 20])).to.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', 'test', 10, 'test', 20])).to.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', 'test', 10, 20, 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', 'test', 10, 'test', 20, 30])).to.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', 'test', 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', 'test', 10, 'test', 20, 30]).permutation).to.eql([0,2,1,3,4])
+        expect(engine.input.Command(['optional', 'test', 10, 'test', 20]).permutation).to.eql([0,2,1,3])
+        expect(engine.input.Command(['optional', 'test', 10, 20]).permutation).to.eql([0,2,3])
 
     describe 'with variables', ->
       it 'should match property function definition', ->
-        expect(engine.abstract.Command(['optional', ['get', 'test']])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', ['get', 'test'], 10])).to.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', ['get', 'test'], 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', ['get', 'test'], ['get', 'test']])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['undeclared', ['get', 'test'], 10])).to.be.an.instanceof(engine.abstract.Default)
+        expect(engine.input.Command(['optional', ['get', 'test']])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', ['get', 'test'], 10])).to.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', ['get', 'test'], 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', ['get', 'test'], ['get', 'test']])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['undeclared', ['get', 'test'], 10])).to.be.an.instanceof(engine.input.Default)
     
     describe 'with expressions', ->
       it 'should match property function definition', ->
-        expect(engine.abstract.Command(['optional', ['+',  ['get', 'test'], 1]])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', ['+',  ['get', 'test'], 1], 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
-        expect(engine.abstract.Command(['optional', ['+',  ['get', 'test'], 1], 'test', 10])).to.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', ['+',  ['get', 'test'], 1]])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', ['+',  ['get', 'test'], 1], 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
+        expect(engine.input.Command(['optional', ['+',  ['get', 'test'], 1], 'test', 10])).to.be.an.instanceof(OptionalGroupCommand.optional)
 
   describe 'dispatched subclassed with dynamic condition', ->
 
@@ -207,16 +207,16 @@ describe 'Signatures', ->
     
     before ->
       engine = new GSS
-      engine.abstract.WrapperCommand = WrapperCommand
-      engine.abstract.DynamicCommand = DynamicCommand
+      engine.input.WrapperCommand = WrapperCommand
+      engine.input.DynamicCommand = DynamicCommand
       engine.compile()
 
     it 'should dispatch command', ->
-      engine.abstract.Command(cmd = ['wrapper', ['dynamic'], 0])
+      engine.input.Command(cmd = ['wrapper', ['dynamic'], 0])
       expect(cmd[1].command).to.be.an.instanceof DynamicCommand.dynamic
-      engine.abstract.Command(cmd = ['wrapper', ['dynamic'], +1])
+      engine.input.Command(cmd = ['wrapper', ['dynamic'], +1])
       expect(cmd[1].command).to.be.an.instanceof DynamicCommand.Positive
-      engine.abstract.Command(cmd = ['wrapper', ['dynamic'], -1])
+      engine.input.Command(cmd = ['wrapper', ['dynamic'], -1])
       expect(cmd[1].command).to.be.an.instanceof DynamicCommand.Negative
       
 
@@ -236,12 +236,12 @@ describe 'Signatures', ->
     
     before ->
       engine = new GSS
-      engine.abstract.ObjectCommand = ObjectCommand
+      engine.input.ObjectCommand = ObjectCommand
       engine.compile()
 
     it 'should dispatch command', ->
       z = {title: 'God Object'}
-      expect(engine.abstract.Command([z, 1, 'v'])).to.not.be.an.instanceof ObjectCommand.object
-      expect(engine.abstract.Command([z, 'v', 1])).to.be.an.instanceof ObjectCommand.object
+      expect(engine.input.Command([z, 1, 'v'])).to.not.be.an.instanceof ObjectCommand.object
+      expect(engine.input.Command([z, 'v', 1])).to.be.an.instanceof ObjectCommand.object
 
 

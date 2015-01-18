@@ -80,8 +80,7 @@ class Condition extends Query
 
     if branch = operation[index]
       engine.console.start(index == 2 && 'if' || 'else', operation[index], continuation)
-      domain = (engine.document || engine.abstract)
-      result = domain.Command(branch).solve(domain, branch, @delimit(continuation, @DESCEND), scope)
+      result = domain.Command(branch).solve(engine.input, branch, @delimit(continuation, @DESCEND), scope)
       engine.console.end(result)
 
   unbranch: (engine, operation, continuation, scope) ->

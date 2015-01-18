@@ -5,7 +5,7 @@ Command     = require('../Command')
 Variable    = require('../commands/Variable')
 Constraint  = require('../commands/Constraint')
 
-class Abstract extends Domain
+class Input extends Domain
   url: undefined
   helps: true
 
@@ -17,7 +17,7 @@ class Abstract extends Domain
 
 
 
-Abstract::Remove = Command.extend {
+Input::Remove = Command.extend {
   signature: false
 
   extras: 1
@@ -29,7 +29,7 @@ Abstract::Remove = Command.extend {
 
 
 # Catch-all class for unknown commands    
-Abstract::Default = Command.Default.extend
+Input::Default = Command.Default.extend
   extras: 2
 
   execute: (args..., engine, operation) ->
@@ -37,14 +37,14 @@ Abstract::Default = Command.Default.extend
     return args
 
 # Topmost unknown command returns processed operation back to engine
-Top = Abstract::Default.extend
+Top = Input::Default.extend
   
   condition: (engine, operation) ->
     if parent = operation.parent
-      if parent.command instanceof Abstract::Default 
+      if parent.command instanceof Input::Default 
         return false
 
-    operation.index ||= engine.abstract.index = (engine.abstract.index || 0) + 1
+    operation.index ||= engine.input.index = (engine.input.index || 0) + 1
     return true
 
   extras: 4
@@ -62,7 +62,6 @@ Top = Abstract::Default.extend
     wrapper.index = operation.index
     args.parent = wrapper
 
-
     if domain = @domain?(engine, operation)
       wrapper.parent = operation.parent
       wrapper.domain ||= domain
@@ -79,13 +78,13 @@ Top = Abstract::Default.extend
         return engine[domain]
 
 # Register subclasses to be dispatched by condition
-Abstract::Default::advices = [Top]
+Input::Default::advices = [Top]
 
 # Array of commands, stops command propagation
-Abstract::List = Command.List
+Input::List = Command.List
 
 # Global variable
-Abstract::Variable = Variable.extend {
+Input::Variable = Variable.extend {
   signature: [
     property: ['String']
   ],
@@ -98,7 +97,7 @@ Abstract::Variable = Variable.extend {
     return ['get', engine.getPath(object, property)]
     
 # Scoped variable
-Abstract::Variable.Getter = Abstract::Variable.extend {
+Input::Variable.Getter = Input::Variable.extend {
   signature: [
     object:   ['Query', 'Selector', 'String']
     property: ['String']
@@ -117,7 +116,7 @@ Abstract::Variable.Getter = Abstract::Variable.extend {
     return ['get', engine.getPath(prefix, property)]
   
 # Proxy math that passes basic expressions along
-Abstract::Variable.Expression = Variable.Expression.extend {},
+Input::Variable.Expression = Variable.Expression.extend {},
   '+': (left, right) ->
     ['+', left, right]
     
@@ -132,7 +131,7 @@ Abstract::Variable.Expression = Variable.Expression.extend {},
   
   
 # Constant definition
-Abstract::Assignment = Command.extend {
+Input::Assignment = Command.extend {
   type: 'Assignment'
   
   signature: [
@@ -145,7 +144,7 @@ Abstract::Assignment = Command.extend {
     engine.assumed.set(object, name, value)
 
 # Style assignment
-Abstract::Assignment.Style = Abstract::Assignment.extend {
+Input::Assignment.Style = Input::Assignment.extend {
   signature: [
     [object:   ['Query', 'Selector']]
     property: ['String']
@@ -182,4 +181,4 @@ Abstract::Assignment.Style = Abstract::Assignment.extend {
 
 
 
-module.exports = Abstract
+module.exports = Input

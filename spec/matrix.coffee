@@ -60,7 +60,6 @@ describe 'Matrix', ->
         instanceof(engine.intrinsic.Matrix::Sequence)
       expect(engine.intrinsic.Command(['translateX', 3])).to.eql(sequence[0].command)
       expect(engine.intrinsic.Command(['rotateZ', 3])).to.not.eql(sequence[1].command)
-      expect(engine.intrinsic.Command(['rotateZ', 3])).to.not.eql(sequence[1].command)
       expect(engine.intrinsic.Command(['rotateZ', ['translateX', 3], 3])).to.eql(sequence[1].command)
       expect(->
         engine.intrinsic.Command([

@@ -14960,7 +14960,7 @@ Command = (function() {
     var Default, argument, command, i, implicit, j, kind, match, signature, type, typed;
     i = -1;
     j = operation.length;
-    if (operation[0] === '.') {
+    if (operation[0] === 'translateX') {
       debugger;
     }
     while (++i < j) {
@@ -15004,7 +15004,11 @@ Command = (function() {
           }
         } else {
           if (!(signature = engine.signatures[argument])) {
-            if (!(Default = engine.Default)) {
+            if (engine.Default && engine.domain.signatures[argument]) {
+              Default = engine.Default;
+            } else if (command = engine.intrinsic.Command.match(engine.intrinsic, operation, parent, index, context)) {
+              return command;
+            } else {
               return this.uncallable(argument, operation, engine);
             }
           }
@@ -18937,14 +18941,6 @@ Updater = function(engine) {
       return;
     }
     update = void 0;
-    if (typeof problem[0] === 'string') {
-      if (!engine.domain.signatures[problem[0]]) {
-        Domain = problem.domain = engine.solved;
-        if (!Domain.signatures[problem[0]]) {
-          problem.domain = engine.intrinsic;
-        }
-      }
-    }
     for (index = _i = 0, _len = problem.length; _i < _len; index = ++_i) {
       arg = problem[index];
       if (!(arg != null ? arg.push : void 0)) {

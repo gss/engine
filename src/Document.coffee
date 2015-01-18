@@ -1,58 +1,89 @@
-# Functions are only called for primitive values
-# When it encounters variables, it leaves expression to solver
+Engine = require('./Engine')
 
-# Provide some values for solver to crunch
-# Simplifies expressions, caches DOM computations
+class Document extends Engine
 
-# Measurements happen synchronously,
-# re-measurements are deferred to be done in bulk
+  class Document::Input extends Engine::Input
+    Selector:    require('../commands/Selector')
+    Stylesheet:  require('../commands/Stylesheet')
+      
+  class Document::Output extends Engine::Output
+    Style:        require('../Style')
+    Unit:         require('../commands/Unit')
 
-Numeric   = require('./Numeric')
+    Gradient:     require('../types/Gradient')
+    Matrix:       require('../types/Matrix')
+    Easing:       require('../types/Easing')
+    Color:        require('../types/Color')
+    URL:          require('../types/URL')
 
-
-
-class Intrinsic extends Numeric
-  priority: 100
-  immediate: true
-  url: null
-
-  Style:        require('../Style')
-  Unit:         require('../commands/Unit')
-  Getters:      require('../properties/Getters')
-  Styles:       require('../properties/Styles')
-
-  Gradient:     require('../types/Gradient')
-  Matrix:       require('../types/Matrix')
-  Easing:       require('../types/Easing')
-  Color:        require('../types/Color')
-  URL:          require('../types/URL')
-
-  @Primitive:   require('../types/Primitive')
-  Number:       @Primitive.Number
-  Integer:      @Primitive.Integer
-  String:       @Primitive.String
-  Strings:      @Primitive.Strings
-  Size:         @Primitive.Size
-  Position:     @Primitive.Position
-
-  Properties: do ->
-    Properties = (engine) ->
-      if engine
-        @engine = engine
+    @Primitive:   require('../types/Primitive')
+    Number:       @Primitive.Number
+    Integer:      @Primitive.Integer
+    String:       @Primitive.String
+    Strings:      @Primitive.Strings
+    Size:         @Primitive.Size
+    Position:     @Primitive.Position
+  
+  class Document::Values extends Engine::Values
+    Getters:      require('../properties/Getters')
+    Styles:       require('../properties/Styles')
+    immediate: true
+    
+    Properties: do ->
+      Properties = (engine) ->
+        if engine
+          @engine = engine
+        return
+      Properties.prototype = new Document::Values::Styles
+      Properties.prototype = new Properties
+      for property, value of Document::Getters::
+        Properties::[property] = value
+      Properties
+      
+  use: (argument) ->
+    if argument.nodeType
+      @scope = @getScopeElement(argument)
+      Engine[Engine.identify(argument)] = @
       return
-    Properties.prototype = new Intrinsic::Styles
-    Properties.prototype = new Properties
-    for property, value of Intrinsic::Getters::
-      Properties::[property] = value
-    Properties
+    else 
+      return super
+    
+      
+  @use: (argument) ->
+    scope = argument
+    while scope
+      if id = Engine.identity.find(scope)
+        if engine = Engine[id]
+          return engine
+      break unless scope.parentNode
+      scope = scope.parentNode
+  
 
-  events:
-    write: (solution) ->
-      if solution# && Object.keys(solution).length
-        @intrinsic.assign(solution)
+  constructor: () ->
+    super
 
-    remove: (path) ->
-      @intrinsic.remove(path)
+    if @scope.nodeType == 9
+      state = @scope.readyState
+      if state != 'complete' && state != 'loaded' && 
+          (state != 'interactive' || document.documentMode)
+        document.addEventListener('DOMContentLoaded', @engine, false)
+        document.addEventListener('readystatechange', @engine, false)
+        window  .addEventListener('load',             @engine, false)
+      else
+        setTimeout =>
+          unless @engine.running
+            @engine.compile()
+        , 10
+
+    @Selector.observe(@engine)
+
+    @scope.addEventListener 'scroll', @engine, true
+    #if @scope != document
+    #  document.addEventListener 'scroll', engine, true
+    window?.addEventListener 'resize', @engine, true
+
+
+  $$events:
 
     validate: (solution, update) ->
       if @intrinsic.subscribers && update.domains.indexOf(@intrinsic, update.index + 1) == -1
@@ -66,7 +97,106 @@ class Intrinsic extends Numeric
           if true#Object.keys(measured).length
             update.apply measured
             @solved.merge measured
+    
 
+    apply: ->
+      @document.Selector.disconnect(@, true)
+
+    write: (solution) ->
+      @document.Stylesheet.rematch(@)
+      if solution
+        @intrinsic.assign(solution)
+
+    flush: ->
+      @document.Selector.connect(@, true)
+
+    remove: (path) ->
+      @document.Stylesheet.remove(@, path)
+
+    compile: ->
+      @solve @document.Stylesheet.operations
+      @document.Selector?.connect(@, true)
+
+    solve: ->
+      if @scope.nodeType == 9
+        html = @scope.documentElement
+        klass = html.className
+        if klass.indexOf('gss-ready') == -1
+          @document.Selector.disconnect(@, true)
+          html.setAttribute('class', (klass && klass + ' ' || '') + 'gss-ready')
+          @document.Selector.connect(@, true)
+
+
+      # Unreference removed elements
+      if @document.removed
+        for id in @document.removed
+          @identity.unset(id)
+        @document.removed = undefined
+
+
+    resize: (e = '::window') ->
+      id = e.target && @identify(e.target) || e
+      
+      unless @resizer?
+        if e.target && @updating
+          if @updating.resizing
+            return @updating.resizing = 'scheduled'
+          @updating.resizing = 'computing'
+        @once 'solve', ->
+          requestAnimationFrame ->
+            if @updated?.resizing == 'scheduled'
+              @triggerEvent('resize')
+      else
+        cancelAnimationFrame(@resizer)
+
+      @resizer = requestAnimationFrame =>
+        @resizer = undefined
+        if @updating && !@updating.resizing
+          @updating.resizing = 'scheduled'
+          return
+        @solve 'Resize', id, ->
+          @intrinsic.verify(id, "width")
+          @intrinsic.verify(id, "height")
+          @intrinsic.verify(@scope, "width")
+          @intrinsic.verify(@scope, "height")
+          return @intrinsic.commit()
+          
+    scroll: (e = '::window') ->
+      id = e.target && @identify(e.target) || e
+      @solve 'Scroll', id, ->
+        @intrinsic.verify(id, "scroll-top")
+        @intrinsic.verify(id, "scroll-left")
+        return @intrinsic.commit()
+        
+    # Fire as early as possible
+    DOMContentLoaded: ->
+      document.removeEventListener 'DOMContentLoaded', @
+      @compile()
+      @solve 'Ready', ->
+
+    # Wait for web fonts
+    readystatechange: ->
+      if @running && document.readyState == 'complete'
+        @solve 'Statechange', ->
+
+    # Remeasure when images are loaded
+    load: ->
+      window.removeEventListener 'load', @
+      document.removeEventListener 'DOMContentLoaded', @
+      @solve 'Loaded', ->
+
+    # Unsubscribe events and observers
+    destroy: ->
+      if @scope
+        Engine[@scope._gss_id] = undefined
+        @dispatchEvent(@scope, 'destroy')
+      @scope.removeEventListener 'DOMContentLoaded', @
+      #if @scope != document
+      #  document.removeEventListener 'scroll', @
+      @scope.removeEventListener 'scroll', @
+      window.removeEventListener 'resize', @
+
+      @document.Selector.disconnect(@, true)
 
 
   getComputedStyle: (element, force) ->
@@ -169,11 +299,18 @@ class Intrinsic extends Numeric
       if @properties[(id._gss_id || id) + '[' + property + ']']?
         return true
 
-
   verify: (object, property) ->
     path = @getPath(object, property)
     if @values.hasOwnProperty(path)
       @set(null, path, @fetch(path))
+
+  getStyle: (node, property) ->
+    value = node.style[property] || @getComputedStyle(node)[property]
+    if value
+      num = parseFloat(value)
+      if String(num) == String(value) || (num + 'px') == value
+        return num
+    return value
 
 
   # Iterate elements and measure intrinsic offsets
@@ -215,14 +352,6 @@ class Intrinsic extends Numeric
         
       child = child.nextSibling
     return a
-
-  getStyle: (node, property) ->
-    value = node.style[property] || @getComputedStyle(node)[property]
-    if value
-      num = parseFloat(value)
-      if String(num) == String(value) || (num + 'px') == value
-        return num
-    return value
     
   # Reset intrinsic style when observed initially
   subscribe: (id, property) ->
@@ -266,10 +395,6 @@ class Intrinsic extends Numeric
     return string.replace /[A-Z]/g, (match) ->
       return '-' + match[0].toLowerCase()
       
-  @condition: ->
-    @scope?
-
-
   ### 
   Applies style changes in bulk, separates reflows & positions.
   It recursively offsets global coordinates to respect offset parent, 
@@ -352,4 +477,4 @@ class Intrinsic extends Numeric
 
 
     return offsets
-module.exports = Intrinsic
+module.exports = Document

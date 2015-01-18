@@ -13,9 +13,7 @@ Updater = (engine) ->
 
     if typeof problem[0] == 'string'
       unless engine.domain.signatures[problem[0]]
-        Domain = problem.domain = engine.solved
-        unless Domain.signatures[problem[0]]
-          problem.domain = engine.intrinsic
+        Domain = engine.solved
 
     # Process arguments
     for arg, index in problem

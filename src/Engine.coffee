@@ -25,35 +25,30 @@ class Engine
 
   Domains: 
     Document:   require('./domains/Document')
-    Abstract:   require('./domains/Abstract')
+    Input:   require('./domains/Input')
     Intrinsic:  require('./domains/Intrinsic')
     Numeric:    require('./domains/Numeric')
     Linear:     require('./domains/Linear')
     Finite:     require('./domains/Finite')
     Boolean:    require('./domains/Boolean')
+    
+  class Engine::Input extends Engine::Numeric
+    Selector:    require('../commands/Selector')
+    Stylesheet:  require('../commands/Stylesheet')
 
   constructor: () -> #(scope, url, data)
     for argument, index in arguments
       continue unless argument
       switch typeof argument
         when 'object'
-          if argument.nodeType
-            if @Command
-              @scope = scope = @getScopeElement(argument)
-              Engine[Engine.identify(argument)] = @
+          if object = @use(argument)
+            if object instanceof Engine
+              return object
             else
-              scope = argument
-              while scope
-                if id = Engine.identity.find(scope)
-                  if engine = Engine[id]
-                    return engine
-                break unless scope.parentNode
-                scope = scope.parentNode
-          else
-            assumed = argument
+              assumed = object
         when 'string', 'boolean'
           url = argument
-
+            
     # **GSS()** creates new Engine at the root, 
     # if there is no engine assigned to it yet
     unless @Command
@@ -108,7 +103,7 @@ class Engine
 
     @strategy = 
       unless window?
-        'evaluate'
+        'update'
       else if @scope
         'document'
       else
@@ -119,12 +114,9 @@ class Engine
     window?.addEventListener 'error', @eventHandler
 
     return @
-
-  # Evaluate bypassing abstract domain
-  # So queries will not be executed, 
-  # and variable names will be used as given 
-  evaluate: (expressions) ->
-    @update(expressions)
+    
+  use: (object) ->
+    return object
 
   # engine.solve({}) - solve with given constants
   # engine.solve([]) - evaluate commands
@@ -382,8 +374,6 @@ class Engine
 
     # Unsubscribe from worker and forget the engine
     destroy: (e) ->
-      if @scope
-        Engine[@scope._gss_id] = undefined
       if @worker
         @worker.removeEventListener 'message', @eventHandler
         @worker.removeEventListener 'error', @eventHandler
@@ -518,8 +508,6 @@ class Engine
     
   destroy: ->
     @triggerEvent('destroy')
-    if @scope
-      @dispatchEvent(@scope, 'destroy')
     @removeListeners(@events) if @events
 
 
