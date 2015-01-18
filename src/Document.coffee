@@ -3,20 +3,20 @@ GSS = require('./Engine')
 class Document extends GSS.Engine
 
   class @::Input extends @::Input
-    Selector:    require('../commands/Selector')
-    Stylesheet:  require('../commands/Stylesheet')
+    Selector:     require('./document/commands/Selector')
+    Stylesheet:   require('./document/commands/Stylesheet')
       
   class @::Output extends @::Output
-    Style:        require('../Style')
-    Unit:         require('../commands/Unit')
+    Style:        require('./document/Style')
+    Unit:         require('./document/commands/Unit')
 
-    Gradient:     require('../types/Gradient')
-    Matrix:       require('../types/Matrix')
-    Easing:       require('../types/Easing')
-    Color:        require('../types/Color')
-    URL:          require('../types/URL')
+    Gradient:     require('./document/types/Gradient')
+    Matrix:       require('./document/types/Matrix')
+    Easing:       require('./document/types/Easing')
+    Color:        require('./document/types/Color')
+    URL:          require('./document/types/URL')
 
-    @Primitive:   require('../types/Primitive')
+    @Primitive:   require('./document/types/Primitive')
     Number:       @Primitive.Number
     Integer:      @Primitive.Integer
     String:       @Primitive.String
@@ -25,8 +25,8 @@ class Document extends GSS.Engine
     Position:     @Primitive.Position
   
   class @::Data extends @::Data
-    Getters:      require('../properties/Getters')
-    Styles:       require('../properties/Styles')
+    Getters:      require('../document/properties/Getters')
+    Styles:       require('../document/properties/Styles')
     immediate: true
     
     Properties: do ->
@@ -39,28 +39,13 @@ class Document extends GSS.Engine
       for property, value of Document::Getters::
         Properties::[property] = value
       Properties
-      
-  use: (argument) ->
-    if argument.nodeType
-      @scope = @getScopeElement(argument)
-      Engine[Engine.identify(argument)] = @
-      return
-    else 
-      return super
-    
-      
-  @use: (argument) ->
-    scope = argument
-    while scope
-      if id = Engine.identity.find(scope)
-        if engine = Engine[id]
-          return engine
-      break unless scope.parentNode
-      scope = scope.parentNode
   
 
-  constructor: () ->
+  constructor: (data, url, scope) ->
     super
+    
+    @scope = @getScopeElement(argument || document)
+    Engine[Engine.identify(@scope)] = @
 
     if @scope.nodeType == 9
       state = @scope.readyState
@@ -78,8 +63,6 @@ class Document extends GSS.Engine
     @Selector.observe(@engine)
 
     @scope.addEventListener 'scroll', @engine, true
-    #if @scope != document
-    #  document.addEventListener 'scroll', engine, true
     window?.addEventListener 'resize', @engine, true
 
 
@@ -477,4 +460,5 @@ class Document extends GSS.Engine
 
 
     return offsets
-module.exports = Document
+
+module.exports = GSS.Document = Document

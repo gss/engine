@@ -12,8 +12,8 @@ Updater = (engine) ->
     update = undefined
 
     if typeof problem[0] == 'string'
-      unless engine.domain.signatures[problem[0]]
-        Domain = engine.solved
+      unless @domain.signatures[problem[0]]
+        Domain = @solved
 
     # Process arguments
     for arg, index in problem
@@ -37,7 +37,7 @@ Updater = (engine) ->
     # Replace arguments updates with parent function update
     unless problem[0] instanceof Array
       if update
-        update.wrap(problem, parent, domain || Domain, engine.intrinsic)
+        update.wrap(problem, parent, domain || Domain, @intrinsic)
       else if problem[0] != 'remove'
         return
       else
@@ -49,7 +49,7 @@ Updater = (engine) ->
     else if parent ||= @updating
       return parent.push(update)
     else
-      return update.each @resolve, @engine
+      return update.each @resolve, @
 
   if @prototype
     for property, value of @prototype 

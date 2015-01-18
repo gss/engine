@@ -1,4 +1,4 @@
-Parser  = require('ccss-compiler')
+GSS     = require('../../GSS')
 Command = require('../Command')
 Query   = require('../Query')
 
@@ -9,7 +9,7 @@ class Stylesheet extends Command.List
       return JSON.parse(source)
 
     "text/gss": (source) ->
-      return Parser.parse(source)?.commands
+      return GSS.Parser.parse(source)?.commands
 
     
   # Parse stylesheet, provide root operation if needed

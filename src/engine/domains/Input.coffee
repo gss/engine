@@ -181,6 +181,4 @@ Input::Assignment.Style = Input::Assignment.extend {
       engine.input.set object || scope, property, value
     return
 
-
-
 module.exports = Input

@@ -6,44 +6,23 @@ It initializes and orchestrates all moving parts.
 It operates with workers and domains. Workers are
 separate engines running in web worker thread. 
 Domains are either independent constraint graphs or
-pseudo-solvers like intrinsic measurements.
-
-###
-GSS = ->
-  for argument, index in arguments
-    continue unless argument
-    switch typeof argument
-      when 'object'
-        if object = @use(argument)
-          if object instanceof Engine
-            return object
-          else
-            input = object
-      when 'string', 'boolean'
-        url = argument
-          
-  # **GSS()** creates new Engine at the root, 
-  # if there is no engine assigned to it yet
-  unless @Command
-    return new Engine(arguments[0], arguments[1], arguments[2])
-
-
-
-class Engine extends GSS
+pseudo-solvers like intrinsic measurements. ###
+  
+class Engine
 
   Command:   require('./engine/Command')
   Domain:    require('./engine/Domain')
   Update:    require('./engine/Update')
   Query:     require('./engine/Query')
+  
+  Solver:    require('./engine/solvers/Linear')
+  Input:     require('./engine/domains/Input')
+  Data:      require('./engine/domains/Data')
+  Output:    require('./engine/domains/Output')
     
   Console:   require('./engine/utilities/Console')
   Inspector: require('./engine/utilities/Inspector')
   Exporter:  require('./engine/utilities/Exporter')
-  
-  Input:     require('./engine/domains/Input')
-  Data:      require('./engine/domains/Data')
-  Solver:    require('./engine/domains/Linear')
-  Output:    require('./engine/domains/Output')
 
   constructor: (data, url) -> #(scope, url, data)
     if url? && Worker?
@@ -69,7 +48,7 @@ class Engine extends GSS
     @inspector    = new @Inspector(@)
     @exporter     = new @Exporter(@)
 
-    @update = Engine::Update.compile(@)
+    @update = @Update.compile(@)
     
     @Domain.compile(@)
     
@@ -93,7 +72,7 @@ class Engine extends GSS
       
   @use: (object) ->
 
-  # engine.solve({}) - solve with given constants
+  # engine.solve({}) - solve with given data
   # engine.solve([]) - evaluate commands
   # engine.solve(function(){}) - buffer and solve changes of state within callback
   solve: () ->
@@ -102,7 +81,6 @@ class Engine extends GSS
       @transacting = transacting = true
 
     args = @transact.apply(@, arguments)
-
 
     if typeof args[0] == 'function'
       if result = args.shift().apply(@, args) 
@@ -623,19 +601,17 @@ if !self.window && self.onmessage != undefined
       engine.linear.operations = undefined
     postMessage(result)
 
-
-
-GSS.Engine   = Engine
+GSS.Engine   = GSS::Engine = Engine
 
 # Identity and console modules are shared between engines
 GSS.identity = Engine::identity = new Engine::Identity
 GSS.identify = Engine::identify = GSS.identity.set
 GSS.console  = Engine::console  = new Engine::Console
 
-  # Slice arrays recursively to remove the meta data
-GSS.clone    = Engine::clone = (object) -> 
+# Slice arrays recursively to remove the meta data
+GSS.clone    = Engine::clone    = (object) -> 
   if object && object.map
     return object.map @clone, @
   return object
 
-module.exports = GSS
+module.exports = Engine
