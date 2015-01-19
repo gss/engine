@@ -33,7 +33,10 @@
   "scripts": {
     "test": "grunt test"
   },
-  "main": "./lib/Engine",
+  "main": "./src/Engine",
+  "paths": [
+    "./vendor"
+  ],
   "dependencies": {
     "ccss-compiler": "~1.1.2",
     "vfl-compiler": "~1.1.3",
