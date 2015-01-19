@@ -50,7 +50,6 @@ class Stylesheet extends Command.List
     needle = @getOperation(operation, watchers, rule)
     previous = []
 
-    debugger
     for ops, index in watchers
       if ops
         other = @getRule(watchers[ops[0]][0])
