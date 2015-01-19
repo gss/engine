@@ -55,8 +55,9 @@ class Engine
     @data.setup()
     @output.setup()
 
-    for property, value of input
-      @data.values[property] = @output.values[property] = value
+    if data
+      for property, value of data
+        @data.values[property] = @output.values[property] = value
 
     @values = @output.values
     
@@ -270,12 +271,9 @@ class Engine
 
   # Compile all static definitions in the engine
   compile: () ->
-    for name of @Domains
-      if domain = @[name.toLowerCase()]
-        domain.compile()
-    @input.compile()
-    @output.compile()
-    @console.compile(@)
+    for name, domain of @
+      if domain != @ && domain.engine
+        domain.compile?(@)
     @running = true
     @triggerEvent('compile', @)
 
@@ -284,10 +282,7 @@ class Engine
     @triggerEvent(name, data, object)
     if @scope
       @dispatchEvent(@scope, name, data, object)
-
-  # Alias `engine.then(callback)` to `engine.once('solve', callback)`
-  DONE: 'solve'
-
+      
   # Builtin event handlers
   $events:
 
@@ -297,10 +292,9 @@ class Engine
       @Query::repair(@)
       @Query::branch(@)
       
-      for domain in [@intrinsic, @input]
-        if values = domain.commit()
-          @updating.apply(values)
-      
+      if values = @data.commit()
+        @updating.apply(values)
+    
       return
 
     # Merge results into a solved domain (updates engine.values)
@@ -407,15 +401,37 @@ class Engine
     if (i = path.indexOf('[')) > -1
       property = path.substring(i + 1, path.length - 1)
     
-    if @input.values.hasOwnProperty(path)
-      return @input
-    else if property && (intrinsic = @intrinsic)
-      if props = intrinsic.properties
+    if @data.values.hasOwnProperty(path)
+      return @data
+    else if property
+      if props = @data.properties
         if (props[path]? || (props[property] && !props[property].matcher))
-          return intrinsic
+          return @data
       if property.indexOf('computed-') == 0 || property.indexOf('intrinsic-') == 0
-        return intrinsic
+        return @data
 
+  # Produce string representation of id-property pair
+  getPath: (id, property) ->
+    unless property
+      property = id
+      id = undefined
+    if property.indexOf('[') > -1 || !id
+      return property
+    else
+      if typeof id != 'string'
+        if id.nodeType
+          id = @identify(id)
+        else
+          id = id.path
+      if id == @scope?._gss_id && @data.check(id, property)
+        return property
+      if id.substring(0, 2) == '$"'
+        id = id.substring(1)
+      return id + '[' + property + ']'
+
+  
+  url: false
+  
   # Return domain that should be used to evaluate given variable
   # For unknown variables, it creates a domain instance 
   # that will hold all dependent constraints and variables.
@@ -429,10 +445,10 @@ class Engine
     if op = @variables[operation[1]]?.constraints?[0]?.operations[0]?.domain
       return op
 
-    if @domain.url
-      return @domain
+    if @solver.url
+      return @solver
     else
-      return @domain.maybe()
+      return @solver.maybe()
 
   # Normalize scope element
   getScopeElement: (node) ->
@@ -518,7 +534,7 @@ class Engine
     @triggerEvent(e.type, e)
 
   then: (callback) ->
-    @once @DONE, callback
+    @once 'solve', callback
 
 class Engine::Identity
   @uid: 0
@@ -563,7 +579,7 @@ class Engine::Identity
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
     unless engine = Engine.messenger
-      engine = Engine.messenger = Engine()
+      engine = Engine.messenger = new Engine()
     data = e.data
     values = undefined
     commands = []
@@ -598,18 +614,16 @@ if !self.window && self.onmessage != undefined
         result[property] = value
     if !engine.domains.length
       engine.variables = {}
-      engine.linear.operations = undefined
+      engine.solver.operations = undefined
     postMessage(result)
 
-GSS.Engine   = GSS::Engine = Engine
-
 # Identity and console modules are shared between engines
-GSS.identity = Engine::identity = new Engine::Identity
-GSS.identify = Engine::identify = GSS.identity.set
-GSS.console  = Engine::console  = new Engine::Console
+Engine::console  = new Engine::Console
+Engine::identity = new Engine::Identity
+Engine::identify =     Engine::identity.set
 
 # Slice arrays recursively to remove the meta data
-GSS.clone    = Engine::clone    = (object) -> 
+Engine::clone    = (object) -> 
   if object && object.map
     return object.map @clone, @
   return object

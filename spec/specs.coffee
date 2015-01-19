@@ -1,4 +1,4 @@
-
+debugger
 require("./cassowary")
 require("./command-nested-rules") 
 require("./selectors")

@@ -1,32 +1,13 @@
-GSS = require('./Engine')
+Engine = require('./Engine')
 
-class Document extends GSS.Engine
-
-  class @::Input extends @::Input
-    Selector:     require('./document/commands/Selector')
-    Stylesheet:   require('./document/commands/Stylesheet')
-      
-  class @::Output extends @::Output
-    Style:        require('./document/Style')
-    Unit:         require('./document/commands/Unit')
-
-    Gradient:     require('./document/types/Gradient')
-    Matrix:       require('./document/types/Matrix')
-    Easing:       require('./document/types/Easing')
-    Color:        require('./document/types/Color')
-    URL:          require('./document/types/URL')
-
-    @Primitive:   require('./document/types/Primitive')
-    Number:       @Primitive.Number
-    Integer:      @Primitive.Integer
-    String:       @Primitive.String
-    Strings:      @Primitive.Strings
-    Size:         @Primitive.Size
-    Position:     @Primitive.Position
+class Document extends Engine
+  Style:        require('./document/Style')
+  Selector:     require('./document/commands/Selector')
+  Stylesheet:   require('./document/commands/Stylesheet')
   
   class @::Data extends @::Data
-    Getters:      require('../document/properties/Getters')
-    Styles:       require('../document/properties/Styles')
+    Getters:      require('./document/properties/Getters')
+    Styles:       require('./document/properties/Styles')
     immediate: true
     
     Properties: do ->
@@ -34,18 +15,70 @@ class Document extends GSS.Engine
         if engine
           @engine = engine
         return
-      Properties.prototype = new Document::Values::Styles
+      Properties.prototype = new Data::Styles
       Properties.prototype = new Properties
-      for property, value of Document::Getters::
+      for property, value of Data::Getters::
         Properties::[property] = value
       Properties
+
+    perform: ->
+      if arguments.length < 4 && @data.subscribers
+        @console.start('Measure', @values)
+        debugger
+        @each @scope, 'measure'
+        @console.end(@changes)
+      return @commit()
+      
+    # Reset intrinsic style when observed initially
+    subscribe: (id, property) ->
+      if (node = @identity.solve(id)) && node.nodeType == 1
+        property = property.replace(/^intrinsic-/, '')
+        path = @getPath(id, property)
+        if @engine.values.hasOwnProperty(path) || @engine.updating.solution?.hasOwnProperty(path)
+          node.style[property] = ''
+
+    unsubscribe: (id, property, path) ->
+      @solved.set path, null
+      @set path, null
+      
+
+    get: (object, property) ->
+      unless (value = super)?
+        path = @getPath(object, property)
+        if (value = @fetch(path))?
+          @set(null, path, value)
+      return value# || 0
+
+    fetch: (path) ->
+      if (prop = @properties[path])?
+        if typeof prop == 'function'
+          return prop.call(@, object)
+        else
+          return prop
+        return value
+      else 
+        if (j = path.indexOf('[')) > -1
+          id = path.substring(0, j)
+          property = path.substring(j + 1, path.length - 1)
+          object = @identity.solve(path.substring(0, j))
+
+          if (prop = @properties[property])?
+            if prop.axiom
+              return prop.call(@, object)
+            else if typeof prop != 'function'
+              return prop
+            else if !prop.matcher && property.indexOf('intrinsic') == -1
+              return prop.call(@, object)
+
+    
+
   
 
-  constructor: (data, url, scope) ->
+  constructor: (data, url, scope = document) ->
     super
     
-    @scope = @getScopeElement(argument || document)
-    Engine[Engine.identify(@scope)] = @
+    @scope = @getScopeElement(scope)
+    Engine[@identify(@scope)] = @
 
     if @scope.nodeType == 9
       state = @scope.readyState
@@ -69,52 +102,52 @@ class Document extends GSS.Engine
   $$events:
 
     validate: (solution, update) ->
-      if @intrinsic.subscribers && update.domains.indexOf(@intrinsic, update.index + 1) == -1
+      if @data.subscribers && update.domains.indexOf(@data, update.index + 1) == -1
         
-        @intrinsic.verify('::window', 'width')
-        @intrinsic.verify('::window', 'height')
-        @intrinsic.verify(@scope, 'width')
-        @intrinsic.verify(@scope, 'height')
+        @data.verify('::window', 'width')
+        @data.verify('::window', 'height')
+        @data.verify(@scope, 'width')
+        @data.verify(@scope, 'height')
         
-        if measured = @intrinsic.solve()
+        if measured = @data.solve()
           if true#Object.keys(measured).length
             update.apply measured
             @solved.merge measured
     
 
     apply: ->
-      @document.Selector.disconnect(@, true)
+      @Selector.disconnect(@, true)
 
     write: (solution) ->
-      @document.Stylesheet.rematch(@)
+      @Stylesheet.rematch(@)
       if solution
-        @intrinsic.assign(solution)
+        @assign(solution)
 
     flush: ->
-      @document.Selector.connect(@, true)
+      @Selector.connect(@, true)
 
     remove: (path) ->
-      @document.Stylesheet.remove(@, path)
+      @Stylesheet.remove(@, path)
 
     compile: ->
-      @solve @document.Stylesheet.operations
-      @document.Selector?.connect(@, true)
+      @solve @Stylesheet.operations
+      @Selector.connect(@, true)
 
     solve: ->
       if @scope.nodeType == 9
         html = @scope.documentElement
         klass = html.className
         if klass.indexOf('gss-ready') == -1
-          @document.Selector.disconnect(@, true)
+          @Selector.disconnect(@, true)
           html.setAttribute('class', (klass && klass + ' ' || '') + 'gss-ready')
-          @document.Selector.connect(@, true)
+          @Selector.connect(@, true)
 
 
       # Unreference removed elements
-      if @document.removed
-        for id in @document.removed
+      if @removed
+        for id in @removed
           @identity.unset(id)
-        @document.removed = undefined
+        @removed = undefined
 
 
     resize: (e = '::window') ->
@@ -138,18 +171,18 @@ class Document extends GSS.Engine
           @updating.resizing = 'scheduled'
           return
         @solve 'Resize', id, ->
-          @intrinsic.verify(id, "width")
-          @intrinsic.verify(id, "height")
-          @intrinsic.verify(@scope, "width")
-          @intrinsic.verify(@scope, "height")
-          return @intrinsic.commit()
+          @data.verify(id, "width")
+          @data.verify(id, "height")
+          @data.verify(@scope, "width")
+          @data.verify(@scope, "height")
+          return @data.commit()
           
     scroll: (e = '::window') ->
       id = e.target && @identify(e.target) || e
       @solve 'Scroll', id, ->
-        @intrinsic.verify(id, "scroll-top")
-        @intrinsic.verify(id, "scroll-left")
-        return @intrinsic.commit()
+        @data.verify(id, "scroll-top")
+        @data.verify(id, "scroll-left")
+        return @data.commit()
         
     # Fire as early as possible
     DOMContentLoaded: ->
@@ -179,7 +212,7 @@ class Document extends GSS.Engine
       @scope.removeEventListener 'scroll', @
       window.removeEventListener 'resize', @
 
-      @document.Selector.disconnect(@, true)
+      @Selector.disconnect(@, true)
 
 
   getComputedStyle: (element, force) ->
@@ -191,14 +224,14 @@ class Document extends GSS.Engine
         return computed[id] = window.getComputedStyle(element)
     return old
 
-  restyle: (element, property, value = '', continuation, operation) -> 
+  setStyle: (element, property, value = '', continuation, operation) -> 
     switch property
       when "x"
         property = "left"
       when "y"
         property = "top"
 
-    return unless (prop = @properties[property])?.matcher
+    return unless (prop = @data.properties[property])?.matcher
     camel = @camelize property
     if typeof value != 'string'
       value = prop.format(value)
@@ -237,56 +270,6 @@ class Document extends GSS.Engine
     element.style[camel] = value
     return
 
-
-
-  perform: ->
-    if arguments.length < 4 && @subscribers
-      @console.start('Measure', @values)
-      @each @scope, 'measure'
-      @console.end(@changes)
-    return @commit()
-
-  get: (object, property) ->
-    path = @getPath(object, property)
-
-    unless (value = Numeric::get.call(@, null, path))?
-      if (value = @fetch(path))?
-        @set(null, path, value)
-    return value# || 0
-
-  fetch: (path) ->
-    if (prop = @properties[path])?
-      if typeof prop == 'function'
-        return prop.call(@, object)
-      else
-        return prop
-      return value
-    else 
-      if (j = path.indexOf('[')) > -1
-        id = path.substring(0, j)
-        property = path.substring(j + 1, path.length - 1)
-        object = @identity.solve(path.substring(0, j))
-
-        if (prop = @properties[property])?
-          if prop.axiom
-            return prop.call(@, object)
-          else if typeof prop != 'function'
-            return prop
-          else if !prop.matcher && property.indexOf('intrinsic') == -1
-            return prop.call(@, object)
-
-  check: (id, property) ->
-    if @properties[property]? || property.indexOf('intrinsic-') == 0 || property.indexOf('computed-') == 0
-      return true
-    if @properties[id._gss_id || id]
-      if @properties[(id._gss_id || id) + '[' + property + ']']?
-        return true
-
-  verify: (object, property) ->
-    path = @getPath(object, property)
-    if @values.hasOwnProperty(path)
-      @set(null, path, @fetch(path))
-
   getStyle: (node, property) ->
     value = node.style[property] || @getComputedStyle(node)[property]
     if value
@@ -301,8 +284,8 @@ class Document extends GSS.Engine
     scope = @engine.scope
     
     if (parent ||= scope).nodeType == 9
-      @verify(parent, 'width')
-      @verify(parent, 'height')
+      @data.verify(parent, 'width')
+      @data.verify(parent, 'height')
       parent = parent.body
 
     # Calculate new offsets for given element and styles
@@ -336,21 +319,9 @@ class Document extends GSS.Engine
       child = child.nextSibling
     return a
     
-  # Reset intrinsic style when observed initially
-  subscribe: (id, property) ->
-    if (node = @identity.solve(id)) && node.nodeType == 1
-      property = property.replace(/^intrinsic-/, '')
-      path = @getPath(id, property)
-      if @engine.values.hasOwnProperty(path) || @engine.updating.solution?.hasOwnProperty(path)
-        node.style[property] = ''
-
-  unsubscribe: (id, property, path) ->
-    @solved.set path, null
-    @set path, null
-
   measure: (node, x, y, full) ->
     if id = node._gss_id
-      if properties = @subscribers[id]
+      if properties = @data.subscribers[id]
         for prop of properties
           switch prop
             when "x", "intrinsic-x", "computed-x"
@@ -428,7 +399,7 @@ class Document extends GSS.Engine
     if positioning && (property == 'x' || property == 'y')
       (positioning[id] ||= {})[property] = value
     else
-      @restyle(element, property, value)
+      @setStyle(element, property, value)
 
   # Calculate offsets according to new values (but dont set anything)
   placehold: (element, x, y, positioning, full) ->
@@ -456,9 +427,9 @@ class Document extends GSS.Engine
                 (offsets ||= {}).y = value - y
 
       # Let other measurements hook up into this batch
-      # @engine.intrinsic.update(element, x, y, full)
+      # @engine.data.update(element, x, y, full)
 
 
     return offsets
 
-module.exports = GSS.Document = Document
+module.exports = Document

@@ -7,10 +7,10 @@ GSS = -> #(data, url, scope)
     continue unless argument
     switch typeof argument
       when 'object'
-        if object.nodeType
-          scope = object
+        if argument.nodeType
+          scope = argument
         else
-          data = object
+          data = argument
       when 'string', 'boolean'
         url = argument
           
@@ -19,8 +19,8 @@ GSS = -> #(data, url, scope)
   if !(@ instanceof GSS) && scope
     parent = scope
     while parent
-      if id = Engine.identity.find(parent)
-        if engine = Engine[id]
+      if id = GSS.identity.find(parent)
+        if engine = GSS.Engine[id]
           return engine
       break unless parent.parentNode
       parent = parent.parentNode
@@ -30,6 +30,9 @@ GSS = -> #(data, url, scope)
   else
     return new GSS.Engine(data, url, scope)
     
-GSS.Engine = require('./Engine')
+GSS.Engine    = require('./Engine')
+GSS.identity  = GSS.Engine::identity
+GSS.identify  = GSS.Engine::identify
+GSS.console   = GSS.Engine::console
 
-global.GSS = module.exports = GSS
+module.exports = GSS

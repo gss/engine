@@ -12,7 +12,7 @@ Updater = (engine) ->
     update = undefined
 
     if typeof problem[0] == 'string'
-      unless @domain.signatures[problem[0]]
+      unless @solver.signatures[problem[0]]
         Domain = @solved
 
     # Process arguments
@@ -22,7 +22,7 @@ Updater = (engine) ->
         arg.parent ||= problem
         # Variable
         if arg[0] == 'get'
-          vardomain = arg.domain ||= @domain.getVariableDomain(arg, Domain)
+          vardomain = arg.domain ||= @getVariableDomain(arg, Domain)
           (update ||= new @update).push [arg], vardomain
         # Function call
         else
@@ -37,7 +37,7 @@ Updater = (engine) ->
     # Replace arguments updates with parent function update
     unless problem[0] instanceof Array
       if update
-        update.wrap(problem, parent, domain || Domain, @intrinsic)
+        update.wrap(problem, parent, domain || Domain, @data)
       else if problem[0] != 'remove'
         return
       else
@@ -466,7 +466,7 @@ Update.prototype =
     @reflown  = undefined if @reflown
 
   getProblems: (callback, bind) ->
-    return GSS.prototype.clone @problems
+    return @engine.clone @problems
     
   finish: ->
     @time = @engine.console.getTime(@started)

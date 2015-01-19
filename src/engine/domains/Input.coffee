@@ -18,7 +18,6 @@ class Input extends Domain
   Properties: require('../properties/Dimensions')  
 
 
-
 Input::Remove = Command.extend {
   signature: false
 
@@ -69,7 +68,7 @@ Top = Input::Default.extend
       wrapper.domain ||= domain
 
     if engine.update(wrapper, undefined, undefined, domain) == undefined
-      return engine.intrinsic.solve(args)
+      return engine.data.solve(args)
 
   produce: (meta, args)->
     return [meta, args]
@@ -112,8 +111,9 @@ Input::Variable.Getter = Input::Variable.extend {
     if prop = engine.properties[property]
       unless prop.matcher
         return prop.call(engine, object, continuation)
-
-    if !prefix && engine.intrinsic?.check(engine.scope, property)
+    
+    debugger
+    if !prefix && engine.data.check(engine.scope, property)
       prefix = engine.scope
     return ['get', engine.getPath(prefix, property)]
   
@@ -175,8 +175,8 @@ Input::Assignment.Style = Input::Assignment.extend {
 },
   'set': (object, property, value, engine, operation, continuation, scope) ->
 
-    if engine.intrinsic
-      engine.intrinsic.restyle object || scope, property, value, continuation, operation
+    if engine.data
+      engine.data.restyle object || scope, property, value, continuation, operation
     else
       engine.input.set object || scope, property, value
     return

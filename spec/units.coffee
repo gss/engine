@@ -109,12 +109,12 @@ describe 'Units', ->
               expect(solution['$button1[width]']).to.eql null
               expect(solution['$button1[height]']).to.eql null
               expect(solution['$button1[c]']).to.eql null
-              expect(Object.keys(engine.intrinsic.watchers)).to.eql []
+              expect(Object.keys(engine.data.watchers)).to.eql []
               done()
-          engine.intrinsic.properties['::window[width]'] = ->
+          engine.data.properties['::window[width]'] = ->
             return 1000
 
-          engine.intrinsic.set('::window', 'width', 1000)
+          engine.data.set('::window', 'width', 1000)
 
     describe 'bound to font-size', ->
       it 'should be able to compute width', (done) ->
@@ -143,7 +143,7 @@ describe 'Units', ->
               expect(solution['$button1[width]']).to.eql null
               expect(solution['$button1[height]']).to.eql null
               expect(solution['$button1[c]']).to.eql null
-              expect(Object.keys(engine.intrinsic.watchers)).to.eql []
+              expect(Object.keys(engine.data.watchers)).to.eql []
               done()
 
           engine.id('wrapper').style.fontSize = '30px'

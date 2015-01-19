@@ -12,7 +12,7 @@ describe 'Signatures', ->
   
   engine = null
   describe 'dispatched by argument types', ->
-    PrimitiveCommand = GSS::Command.extend {
+    PrimitiveCommand = GSS.Engine::Command.extend {
       signature: [
         left: ['String', 'Variable']
         right: ['Number']
@@ -53,7 +53,7 @@ describe 'Signatures', ->
   
   
   describe 'dispatched with optional arguments', ->
-    UnorderedCommand = GSS::Command.extend {
+    UnorderedCommand = GSS.Engine::Command.extend {
       signature: [[
         left: ['String', 'Variable']
         right: ['Number']
@@ -98,7 +98,7 @@ describe 'Signatures', ->
   describe 'optional group with order specific type declaration', ->
     before ->
       engine = new GSS
-      engine.input.FancyTypes = GSS::Command.extend {
+      engine.input.FancyTypes = GSS.Engine::Command.extend {
         signature: [[
           left: ['String', 'Variable']
           right: ['Number', 'String']
@@ -122,7 +122,7 @@ describe 'Signatures', ->
       expect(engine.input.Command(['fancy', 'a', 1, 2]).permutation).to.eql([0, 1, 2])
 
   describe 'optional groups and mixed with optional groups', ->
-    OptionalGroupCommand = GSS::Command.extend {
+    OptionalGroupCommand = GSS.Engine::Command.extend {
       signature: [
         left: ['Variable', 'String']
         [
@@ -173,7 +173,7 @@ describe 'Signatures', ->
 
   describe 'dispatched subclassed with dynamic condition', ->
 
-    WrapperCommand = GSS::Command.extend {
+    WrapperCommand = GSS.Engine::Command.extend {
       signature: [
         left: ['DynamicCommand']
         right: ['Number']
@@ -184,7 +184,7 @@ describe 'Signatures', ->
     }
 
 
-    DynamicCommand = GSS::Command.extend {
+    DynamicCommand = GSS.Engine::Command.extend {
       type: 'DynamicCommand'
       signature: []
     }, {
@@ -222,7 +222,7 @@ describe 'Signatures', ->
 
 
   describe 'dispatched with object as callee', ->
-    ObjectCommand = GSS::Command.extend {
+    ObjectCommand = GSS.Engine::Command.extend {
       signature: [
         left: ['Variable', 'String']
         [

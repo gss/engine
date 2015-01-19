@@ -183,9 +183,9 @@ class Command
             return @uncallable('number', operation, engine)
         else
           unless signature = engine.signatures[argument]
-            if engine.Default && engine.domain.signatures[argument]
+            if engine.Default && engine.solver.signatures[argument]
               Default = engine.Default
-            else if command = engine.intrinsic.Command.match(engine.intrinsic, operation, parent, index, context)
+            else if command = engine.data.Command.match(engine.data, operation, parent, index, context)
               return command
             else
               return @uncallable(argument, operation, engine)
@@ -523,7 +523,7 @@ class Command
   @Helper: (engine, name) ->
     signature = engine.signatures[name]
     base = [name]
-    engine.engine[name] ||= ->
+    engine.engine[name] ?= ->
       args = Array.prototype.slice.call(arguments)
       command = Command.match(engine, base.concat(args)).prototype
       length =  command.padding

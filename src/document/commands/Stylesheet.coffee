@@ -1,6 +1,6 @@
 GSS     = require('../../GSS')
-Command = require('../Command')
-Query   = require('../Query')
+Command = require('../../engine/Command')
+Query   = require('../../engine/Query')
 
 class Stylesheet extends Command.List
 

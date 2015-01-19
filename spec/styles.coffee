@@ -9,10 +9,10 @@ describe 'Styles', ->
     engine ||= new GSS(document.createElement('div'))
     engine.compile()
     doc = {}
-    for property, value of engine.intrinsic.properties
+    for property, value of engine.data.properties
       do (property, value) ->
         doc[property] = ->
-          value.apply(engine.intrinsic, arguments)
+          value.apply(engine.data, arguments)
         doc[property].initial = value.initial
         
   describe 'simple properties', ->

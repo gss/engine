@@ -14,7 +14,7 @@ class Inspector
         else if i > -1
           if prop == 'x' || prop == 'y'
             klass = 'position'
-          else if !(@engine.intrinsic.properties[prop]?.matcher)
+          else if !(@engine.data.properties[prop]?.matcher)
             klass = 'local'
         return '<strong class="' + (klass || 'variable') + '" for="' + path + '" title="' + @engine.values[path] + '">' + path + '</strong>'
       return @toExpressionString(operation[1]) + ' <b title=\'' + operation.parent?[0]?.key+ '\'>' + operation[0] + '</b> ' + @toExpressionString(operation[2])

@@ -5,10 +5,10 @@ Combinators fetch new elements, while qualifiers filter them.
 
 ###
 
-Query   = require('../Query')
+Query   = require('../../engine/Query')
 
-require '../../vendor/weakmap.js'
-require '../../vendor/MutationObserver.js'
+require '../../../vendor/weakmap.js'
+require '../../../vendor/MutationObserver.js'
 
 class Selector extends Query
   type: 'Selector'
@@ -754,10 +754,10 @@ Selector.define
     singular: true
     deferred: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
-      ey = engine.intrinsic.watch(node,         'computed-y',      operation, continuation, scope)
-      eh = engine.intrinsic.watch(node,         'computed-height', operation, continuation, scope)
-      sy = engine.intrinsic.watch(engine.scope, 'scroll-top',      operation, continuation, scope)
-      sh = engine.intrinsic.watch(engine.scope, 'computed-height', operation, continuation, scope)
+      ey = engine.data.watch(node,         'computed-y',      operation, continuation, scope)
+      eh = engine.data.watch(node,         'computed-height', operation, continuation, scope)
+      sy = engine.data.watch(engine.scope, 'scroll-top',      operation, continuation, scope)
+      sh = engine.data.watch(engine.scope, 'computed-height', operation, continuation, scope)
         
       if (ey <= sy && ey + eh > sy + sh)  || # mid
          (ey > sy && ey < sy + sh)        || # top
@@ -768,10 +768,10 @@ Selector.define
     singular: true
     deferred: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
-      ex = engine.intrinsic.watch(node,         'computed-x',     operation, continuation, scope)
-      ew = engine.intrinsic.watch(node,         'computed-width', operation, continuation, scope)
-      sx = engine.intrinsic.watch(engine.scope, 'scroll-left',    operation, continuation, scope)
-      sw = engine.intrinsic.watch(engine.scope, 'computed-width', operation, continuation, scope)
+      ex = engine.data.watch(node,         'computed-x',     operation, continuation, scope)
+      ew = engine.data.watch(node,         'computed-width', operation, continuation, scope)
+      sx = engine.data.watch(engine.scope, 'scroll-left',    operation, continuation, scope)
+      sw = engine.data.watch(engine.scope, 'computed-width', operation, continuation, scope)
 
       if (ex <= sx && ex + ew > sx + sw)  || # mid
          (ex > sx && ex < sx + sw)        || # left
