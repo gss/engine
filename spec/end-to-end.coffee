@@ -1689,8 +1689,8 @@ describe 'End - to - End', ->
   # ===========================================================
   
   describe 'External .gss files', ->
-    @timeout 4000;
     
+    @timeout 4000
     describe "single file", ->
     
       it 'should compute', (done) ->
