@@ -9,7 +9,7 @@ class Linear extends Domain
   
   priority: 0
 
-  Solver:  c
+  Engine:  c
 
   construct: () ->
     @paths    = {}

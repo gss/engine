@@ -7,9 +7,7 @@ Constraint  = require('../commands/Constraint')
 
 class Input extends Domain
   displayName: 'Input'
-  
   url: undefined
-  helps: true
 
   Iterator:   require('../commands/Iterator')
   Condition:  require('../commands/Condition')
@@ -176,7 +174,7 @@ Input::Assignment.Style = Input::Assignment.extend {
   'set': (object, property, value, engine, operation, continuation, scope) ->
 
     if engine.data
-      engine.data.restyle object || scope, property, value, continuation, operation
+      engine.setStyle object || scope, property, value, continuation, operation
     else
       engine.input.set object || scope, property, value
     return

@@ -55,11 +55,12 @@ class Engine
     @data.setup()
     @output.setup()
 
+    @values = @output.values
+    
     if data
       for property, value of data
-        @data.values[property] = @output.values[property] = value
+        @data.values[property] = @values[property] = value
 
-    @values = @output.values
     
     unless window?
       @strategy = 'update'
@@ -237,7 +238,7 @@ class Engine
         else
           others.push(problem)
    
-    for other, i in [@input, @output].concat(@domains)
+    for other, i in [@data, @output].concat(@domains)
       locals = []
       other.changes = undefined
       for remove in removes
@@ -423,7 +424,7 @@ class Engine
           id = @identify(id)
         else
           id = id.path
-      if id == @scope?._gss_id && @data.check(id, property)
+      if id == @scope?._gss_id && !@data.check(id, property)
         return property
       if id.substring(0, 2) == '$"'
         id = id.substring(1)
@@ -602,7 +603,7 @@ if !self.window && self.onmessage != undefined
           @broadcast(@updating.problems[0])
           @updating.index++
       if values
-        @input.merge(values)
+        @data.merge(values)
       if commands.length
         @solve(commands)
 

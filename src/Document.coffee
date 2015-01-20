@@ -2,8 +2,11 @@ Engine = require('./Engine')
 
 class Document extends Engine
   Style:        require('./document/Style')
-  Selector:     require('./document/commands/Selector')
-  Stylesheet:   require('./document/commands/Stylesheet')
+  
+  class @::Input extends @::Input
+    Selector:     require('./document/commands/Selector')
+    Stylesheet:   require('./document/commands/Stylesheet')
+    helps: true
   
   class @::Data extends @::Data
     Getters:      require('./document/properties/Getters')
@@ -24,7 +27,6 @@ class Document extends Engine
     perform: ->
       if arguments.length < 4 && @data.subscribers
         @console.start('Measure', @values)
-        debugger
         @each @scope, 'measure'
         @console.end(@changes)
       return @commit()
@@ -38,7 +40,7 @@ class Document extends Engine
           node.style[property] = ''
 
     unsubscribe: (id, property, path) ->
-      @solved.set path, null
+      @output.set path, null
       @set path, null
       
 
@@ -93,7 +95,7 @@ class Document extends Engine
             @engine.compile()
         , 10
 
-    @Selector.observe(@engine)
+    @input.Selector.observe(@engine)
 
     @scope.addEventListener 'scroll', @engine, true
     window?.addEventListener 'resize', @engine, true
@@ -112,35 +114,35 @@ class Document extends Engine
         if measured = @data.solve()
           if true#Object.keys(measured).length
             update.apply measured
-            @solved.merge measured
+            @output.merge measured
     
-
     apply: ->
-      @Selector.disconnect(@, true)
+      @input.Selector.disconnect(@, true)
 
     write: (solution) ->
-      @Stylesheet.rematch(@)
+      @input.Stylesheet.rematch(@)
       if solution
         @assign(solution)
 
     flush: ->
-      @Selector.connect(@, true)
+      @input.Selector.connect(@, true)
 
     remove: (path) ->
-      @Stylesheet.remove(@, path)
+      @input.Stylesheet.remove(@, path)
+      @data.remove(path)
 
     compile: ->
-      @solve @Stylesheet.operations
-      @Selector.connect(@, true)
+      @solve @input.Stylesheet.operations
+      @input.Selector.connect(@, true)
 
     solve: ->
       if @scope.nodeType == 9
         html = @scope.documentElement
         klass = html.className
         if klass.indexOf('gss-ready') == -1
-          @Selector.disconnect(@, true)
+          @input.Selector.disconnect(@, true)
           html.setAttribute('class', (klass && klass + ' ' || '') + 'gss-ready')
-          @Selector.connect(@, true)
+          @input.Selector.connect(@, true)
 
 
       # Unreference removed elements
@@ -212,7 +214,7 @@ class Document extends Engine
       @scope.removeEventListener 'scroll', @
       window.removeEventListener 'resize', @
 
-      @Selector.disconnect(@, true)
+      @input.Selector.disconnect(@, true)
 
 
   getComputedStyle: (element, force) ->

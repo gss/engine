@@ -14831,9 +14831,22 @@ Document = (function(_super) {
 
   Document.prototype.Style = require('./document/Style');
 
-  Document.prototype.Selector = require('./document/commands/Selector');
+  Document.prototype.Input = (function(_super1) {
+    __extends(Input, _super1);
 
-  Document.prototype.Stylesheet = require('./document/commands/Stylesheet');
+    function Input() {
+      return Input.__super__.constructor.apply(this, arguments);
+    }
+
+    Input.prototype.Selector = require('./document/commands/Selector');
+
+    Input.prototype.Stylesheet = require('./document/commands/Stylesheet');
+
+    Input.prototype.helps = true;
+
+    return Input;
+
+  })(Document.prototype.Input);
 
   Document.prototype.Data = (function(_super1) {
     __extends(Data, _super1);
@@ -14868,7 +14881,6 @@ Document = (function(_super) {
     Data.prototype.perform = function() {
       if (arguments.length < 4 && this.data.subscribers) {
         this.console.start('Measure', this.values);
-        debugger;
         this.each(this.scope, 'measure');
         this.console.end(this.changes);
       }
@@ -14887,7 +14899,7 @@ Document = (function(_super) {
     };
 
     Data.prototype.unsubscribe = function(id, property, path) {
-      this.solved.set(path, null);
+      this.output.set(path, null);
       return this.set(path, null);
     };
 
@@ -14957,7 +14969,7 @@ Document = (function(_super) {
         })(this), 10);
       }
     }
-    this.Selector.observe(this.engine);
+    this.input.Selector.observe(this.engine);
     this.scope.addEventListener('scroll', this.engine, true);
     if (typeof window !== "undefined" && window !== null) {
       window.addEventListener('resize', this.engine, true);
@@ -14975,29 +14987,30 @@ Document = (function(_super) {
         if (measured = this.data.solve()) {
           if (true) {
             update.apply(measured);
-            return this.solved.merge(measured);
+            return this.output.merge(measured);
           }
         }
       }
     },
     apply: function() {
-      return this.Selector.disconnect(this, true);
+      return this.input.Selector.disconnect(this, true);
     },
     write: function(solution) {
-      this.Stylesheet.rematch(this);
+      this.input.Stylesheet.rematch(this);
       if (solution) {
         return this.assign(solution);
       }
     },
     flush: function() {
-      return this.Selector.connect(this, true);
+      return this.input.Selector.connect(this, true);
     },
     remove: function(path) {
-      return this.Stylesheet.remove(this, path);
+      this.input.Stylesheet.remove(this, path);
+      return this.data.remove(path);
     },
     compile: function() {
-      this.solve(this.Stylesheet.operations);
-      return this.Selector.connect(this, true);
+      this.solve(this.input.Stylesheet.operations);
+      return this.input.Selector.connect(this, true);
     },
     solve: function() {
       var html, id, klass, _i, _len, _ref;
@@ -15005,9 +15018,9 @@ Document = (function(_super) {
         html = this.scope.documentElement;
         klass = html.className;
         if (klass.indexOf('gss-ready') === -1) {
-          this.Selector.disconnect(this, true);
+          this.input.Selector.disconnect(this, true);
           html.setAttribute('class', (klass && klass + ' ' || '') + 'gss-ready');
-          this.Selector.connect(this, true);
+          this.input.Selector.connect(this, true);
         }
       }
       if (this.removed) {
@@ -15095,7 +15108,7 @@ Document = (function(_super) {
       this.scope.removeEventListener('DOMContentLoaded', this);
       this.scope.removeEventListener('scroll', this);
       window.removeEventListener('resize', this);
-      return this.Selector.disconnect(this, true);
+      return this.input.Selector.disconnect(this, true);
     }
   };
 
@@ -15458,13 +15471,13 @@ Engine = (function() {
     this.Domain.compile(this);
     this.data.setup();
     this.output.setup();
+    this.values = this.output.values;
     if (data) {
       for (property in data) {
         value = data[property];
-        this.data.values[property] = this.output.values[property] = value;
+        this.data.values[property] = this.values[property] = value;
       }
     }
-    this.values = this.output.values;
     if (typeof window === "undefined" || window === null) {
       this.strategy = 'update';
     }
@@ -15654,7 +15667,7 @@ Engine = (function() {
         }
       }
     }
-    _ref = [this.input, this.output].concat(this.domains);
+    _ref = [this.data, this.output].concat(this.domains);
     for (i = _j = 0, _len1 = _ref.length; _j < _len1; i = ++_j) {
       other = _ref[i];
       locals = [];
@@ -15873,7 +15886,7 @@ Engine = (function() {
           id = id.path;
         }
       }
-      if (id === ((_ref = this.scope) != null ? _ref._gss_id : void 0) && this.data.check(id, property)) {
+      if (id === ((_ref = this.scope) != null ? _ref._gss_id : void 0) && !this.data.check(id, property)) {
         return property;
       }
       if (id.substring(0, 2) === '$"') {
@@ -16131,7 +16144,7 @@ if (!self.window && self.onmessage !== void 0) {
         }
       }
       if (values) {
-        this.input.merge(values);
+        this.data.merge(values);
       }
       if (commands.length) {
         return this.solve(commands);
@@ -18978,12 +18991,10 @@ Command = (function() {
           if (!(signature = engine.signatures.number)) {
             return this.uncallable('number', operation, engine);
           }
-        } else {
+        } else if (typed === 'string') {
           if (!(signature = engine.signatures[argument])) {
-            if (engine.Default && engine.solver.signatures[argument]) {
+            if (engine.Default) {
               Default = engine.Default;
-            } else if (command = engine.data.Command.match(engine.data, operation, parent, index, context)) {
-              return command;
             } else {
               return this.uncallable(argument, operation, engine);
             }
@@ -19892,8 +19903,6 @@ var Domain,
   __hasProp = {}.hasOwnProperty;
 
 Domain = (function() {
-  Domain.prototype.priority = 0;
-
   Domain.prototype.strategy = void 0;
 
   function Domain(values) {
@@ -20097,7 +20106,7 @@ Domain = (function() {
     if (this.immutable) {
       return;
     }
-    if (!this.Solver && (variable = this.variables[path])) {
+    if (!(this instanceof this.Solver) && (variable = this.variables[path])) {
       _ref1 = variable.constraints;
       for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
         constraint = _ref1[_j];
@@ -20304,7 +20313,7 @@ Domain = (function() {
   Domain.prototype.commit = function() {
     var changes, prop;
     if (changes = this.changes) {
-      if (this.Solver) {
+      if (this instanceof this.Solver) {
         this.register();
       }
       this.changes = void 0;
@@ -21859,7 +21868,7 @@ Update.prototype = {
         for (_j = 0, _len1 = operation.length; _j < _len1; _j++) {
           argument = operation[_j];
           if (signed && problems.indexOf(argument) > -1) {
-            if (!other || (domain.Solver && !other.Solver)) {
+            if (!other || (domain.Engine && !other.Engine)) {
               position = index;
               other = domain;
             }
@@ -21928,11 +21937,11 @@ Update.prototype = {
     var Solver, i, index, problems, property, variable, variables, _ref;
     problems = this.problems[target];
     variables = this.variables || (this.variables = {});
-    if (Solver = domain.Solver) {
+    if (Solver = domain.Engine) {
       _ref = problems.variables;
       for (property in _ref) {
         variable = _ref[property];
-        if (variable.domain.Solver === Solver) {
+        if (variable.domain.Engine === Solver) {
           if (((i = variables[property]) != null) && (i !== target)) {
             if (__indexOf.call((positions || (positions = [])), i) < 0) {
               index = 0;
@@ -22008,11 +22017,11 @@ Update.prototype = {
         this.setVariables(result, prob);
       }
       this.reify(exported, other, domain);
-      if (Solver = domain.Solver) {
+      if (Solver = domain.Engine) {
         _ref = result.variables;
         for (property in _ref) {
           variable = _ref[property];
-          if (variable.domain.Solver === Solver) {
+          if (variable.domain.Engine === Solver) {
             (this.variables || (this.variables = {}))[property] = to;
           }
         }
@@ -22351,7 +22360,7 @@ Condition = (function(_super) {
   Condition.prototype.boundaries = true;
 
   Condition.prototype.domains = {
-    1: 'solved'
+    1: 'output'
   };
 
   function Condition(operation, engine) {
@@ -22426,7 +22435,7 @@ Condition = (function(_super) {
     index = this.conditional + 1 + ((increment === -1) ^ inverted);
     if (branch = operation[index]) {
       engine.console.start(index === 2 && 'if' || 'else', operation[index], continuation);
-      result = domain.Command(branch).solve(engine.input, branch, this.delimit(continuation, this.DESCEND), scope);
+      result = engine.input.Command(branch).solve(engine.input, branch, this.delimit(continuation, this.DESCEND), scope);
       return engine.console.end(result);
     }
   };
@@ -23262,8 +23271,6 @@ Input = (function(_super) {
 
   Input.prototype.url = void 0;
 
-  Input.prototype.helps = true;
-
   Input.prototype.Iterator = require('../commands/Iterator');
 
   Input.prototype.Condition = require('../commands/Condition');
@@ -23462,7 +23469,7 @@ Input.prototype.Assignment.Style = Input.prototype.Assignment.extend({
 }, {
   'set': function(object, property, value, engine, operation, continuation, scope) {
     if (engine.data) {
-      engine.data.restyle(object || scope, property, value, continuation, operation);
+      engine.setStyle(object || scope, property, value, continuation, operation);
     } else {
       engine.input.set(object || scope, property, value);
     }
@@ -23474,11 +23481,11 @@ module.exports = Input;
 
 
 },{"../Command":21,"../Domain":22,"../commands/Condition":25,"../commands/Constraint":26,"../commands/Iterator":27,"../commands/Unit":28,"../commands/Variable":29,"../properties/Dimensions":33}],32:[function(require,module,exports){
-var Constraint, Input, Output,
+var Constraint, Data, Output,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Input = require('./Input');
+Data = require('./Data');
 
 Constraint = require('../commands/Constraint');
 
@@ -23488,6 +23495,8 @@ Output = (function(_super) {
   function Output() {
     return Output.__super__.constructor.apply(this, arguments);
   }
+
+  Output.prototype.displayName = 'Output';
 
   Output.prototype.immutable = true;
 
@@ -23521,7 +23530,7 @@ Output = (function(_super) {
 
   return Output;
 
-})(Input);
+})(Data);
 
 Output.prototype.Constraint = Constraint.extend({
   signature: [
@@ -23561,7 +23570,7 @@ module.exports = Output;
 
 
 
-},{"../commands/Constraint":26,"../types/Color":35,"../types/Easing":36,"../types/Gradient":37,"../types/Matrix":38,"../types/Primitive":40,"../types/URL":41,"./Input":31}],33:[function(require,module,exports){
+},{"../commands/Constraint":26,"../types/Color":35,"../types/Easing":36,"../types/Gradient":37,"../types/Matrix":38,"../types/Primitive":40,"../types/URL":41,"./Data":30}],33:[function(require,module,exports){
 var Dimensions;
 
 Dimensions = (function() {
@@ -23627,7 +23636,7 @@ Linear = (function(_super) {
 
   Linear.prototype.priority = 0;
 
-  Linear.prototype.Solver = c;
+  Linear.prototype.Engine = c;
 
   Linear.prototype.construct = function() {
     this.paths = {};

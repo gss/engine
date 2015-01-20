@@ -19,7 +19,7 @@ class Condition extends Query
   conditional: 1
   boundaries: true
   domains:
-    1: 'solved'
+    1: 'output'
 
   constructor: (operation, engine) ->
     @path = @key = @serialize(operation, engine)
@@ -80,7 +80,7 @@ class Condition extends Query
 
     if branch = operation[index]
       engine.console.start(index == 2 && 'if' || 'else', operation[index], continuation)
-      result = domain.Command(branch).solve(engine.input, branch, @delimit(continuation, @DESCEND), scope)
+      result = engine.input.Command(branch).solve(engine.input, branch, @delimit(continuation, @DESCEND), scope)
       engine.console.end(result)
 
   unbranch: (engine, operation, continuation, scope) ->

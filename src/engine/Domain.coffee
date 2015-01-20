@@ -23,7 +23,6 @@ State:
 
 
 class Domain
-  priority: 0
   strategy: undefined
 
   constructor: (values) ->
@@ -207,7 +206,7 @@ class Domain
     return if @immutable
 
     # Suggest or remove suggestions for previously added constraints
-    if !@Solver && variable = @variables[path]
+    if !(@ instanceof @Solver) && variable = @variables[path]
       for constraint in variable.constraints
         for operation in constraint.operations
           if op = operation.variables[path]
@@ -357,11 +356,12 @@ class Domain
   # Unset transaction flag and return changes
   commit: ->
     if changes = @changes
-      if @Solver
+      if @ instanceof @Solver
         @register()
       @changes = undefined
       for prop of changes
         return changes
+      return
 
   # Make Domain class inherit given engine instance
   # Allows domain to overload engine methods and modules

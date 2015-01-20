@@ -155,8 +155,9 @@ describe 'Domain', ->
       ]).to.eql
         result: 0
         a: -1
-
+      
       GSS.console.error('A=666')
+      
       expect(engine.solve
         a: 666
       ).to.eql

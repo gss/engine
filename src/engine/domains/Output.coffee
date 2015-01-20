@@ -1,7 +1,8 @@
-Input      = require('./Input')
+Data       = require('./Data')
 Constraint = require('../commands/Constraint')
 
-class Output extends Input
+class Output extends Data
+  displayName: 'Output'
   immutable: true
   priority: -200
   finalized: true

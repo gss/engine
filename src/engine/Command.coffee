@@ -181,12 +181,12 @@ class Command
         if typed == 'number'
           unless signature = engine.signatures.number
             return @uncallable('number', operation, engine)
-        else
+        else if typed == 'string'
           unless signature = engine.signatures[argument]
-            if engine.Default && engine.solver.signatures[argument]
+            if engine.Default# && engine.solver.signatures[argument]
               Default = engine.Default
-            else if command = engine.data.Command.match(engine.data, operation, parent, index, context)
-              return command
+            #else if command = engine.output.Command.match(engine.output, operation, parent, index, context)
+            #  return command
             else
               return @uncallable(argument, operation, engine)
         unless type = context?.command.type

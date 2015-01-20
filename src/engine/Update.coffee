@@ -138,7 +138,7 @@ Update.prototype =
         signed = typeof operation[0] != 'string' || domain.signatures[operation[0]]
         for argument in operation
           if signed && problems.indexOf(argument) > -1
-            if !other || (domain.Solver && !other.Solver)
+            if !other || (domain.Engine && !other.Engine)
               position = index
               other = domain
           if !positions || positions.indexOf(index) == -1
@@ -191,9 +191,9 @@ Update.prototype =
   match: (target, domain, positions) ->
     problems = @problems[target]
     variables = @variables ||= {}
-    if Solver = domain.Solver
+    if Solver = domain.Engine
       for property, variable of problems.variables
-        if variable.domain.Solver == Solver
+        if variable.domain.Engine == Solver
           if (i = variables[property])? && (i != target)
             unless i in (positions ||= [])
               index = 0
@@ -268,9 +268,9 @@ Update.prototype =
 
       @reify(exported, other, domain)
 
-      if Solver = domain.Solver
+      if Solver = domain.Engine
         for property, variable of result.variables
-          if variable.domain.Solver == Solver
+          if variable.domain.Engine == Solver
             (@variables ||= {})[property] = to
 
     other.register()

@@ -1,7 +1,7 @@
 expect = chai.expect
 
 describe 'Cassowary', ->
-  c = GSS.Engine.prototype.Solver::Solver
+  c = GSS.Engine.prototype.Solver::Engine
   it 'should be available', ->
     expect(c).to.be.a 'function'
   it 'var >= num', ->
