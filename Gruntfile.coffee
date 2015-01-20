@@ -115,15 +115,19 @@ module.exports = ->
           urls: ['http://127.0.0.1:9999/spec/runner.html']
           browsers: [
             browserName: 'googlechrome'
-            version: '34'
+            platform: 'OS X 10.8'
+            version: '37'
           ,
             browserName: 'firefox'
-            version: '28'
+            platform: 'Windows 7',
+            version: '33'
           ,
             browserName: 'safari'
-            version: '6'
+            platform: 'OS X 10.9'
+            version: '7'
           ,
             browserName: 'internet explorer'
+            platform: 'Windows 8.1',
             version: '11'
           ,
             browserName: 'internet explorer'
