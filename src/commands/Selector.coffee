@@ -824,18 +824,18 @@ if document?
     Selector['.']::Qualifier = (node, value) ->
       return node if node.className.split(/\s+/).indexOf(value) > -1
       
-  unless dummy.hasOwnProperty("parentElement") 
+  if dummy.parentElement != undefined
     Selector['!>']::Combinator = (node = scope, engine, operation, continuation, scope) ->
       if parent = node.parentNode
         return parent if parent.nodeType == 1
-  unless dummy.hasOwnProperty("nextElementSibling")
-    Selector['+']::Combinator = (node) ->
+  if dummy.nextElementSibling != undefined
+    Selector['+']::Combinator = (node = scope, engine, operation, continuation, scope) ->
       while node = node.nextSibling
         return node if node.nodeType == 1
-    Selector['!+']::Combinator = (node) ->
+    Selector['!+']::Combinator = (node = scope, engine, operation, continuation, scope) ->
       while node = node.previousSibling
         return node if node.nodeType == 1
-    Selector['++']::Combinator = (node) ->
+    Selector['++']::Combinator = (node = scope, engine, operation, continuation, scope) ->
       nodes = undefined
       prev = next = node
       while prev = prev.previousSibling
@@ -847,19 +847,19 @@ if document?
           (nodes ||= []).push(next)
           break
       return nodes
-    Selector['~']::Combinator = (node) ->
+    Selector['~']::Combinator = (node = scope, engine, operation, continuation, scope) ->
       nodes = undefined
       while node = node.nextSibling
         (nodes ||= []).push(node) if node.nodeType == 1
       return nodes
-    Selector['!~']::Combinator = (node) ->
+    Selector['!~']::Combinator = (node = scope, engine, operation, continuation, scope) ->
       nodes = undefined
       prev = node.parentNode.firstChild
       while prev && (prev != node)
         (nodes ||= []).push(prev) if prev.nodeType == 1
         prev = prev.nextSibling
       return nodes
-    Selector['~~']::Combinator = (node) ->
+    Selector['~~']::Combinator = (node = scope, engine, operation, continuation, scope) ->
       nodes = undefined
       prev = node.parentNode.firstChild
       while prev
@@ -867,13 +867,13 @@ if document?
           (nodes ||= []).push(prev) 
         prev = prev.nextSibling
       return nodes
-    Selector[':first-child']::Selecter = (node) ->
+    Selector[':first-child']::Selecter = (node = scope, engine, operation, continuation, scope) ->
       if parent = node.parentNode
         child = parent.firstChild
         while child && child.nodeType != 1
           child = child.nextSibling
         return node if child == node
-    Selector[':last-child']::Qualifier = (node) ->
+    Selector[':last-child']::Qualifier = (node = scope, engine, operation, continuation, scope) ->
       if parent = node.parentNode
         child = parent.lastChild
         while child && child.nodeType != 1

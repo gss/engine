@@ -81,7 +81,7 @@ describe 'End - to - End', ->
   
   describe 'Vanilla CSS', ->  
     getSource = (style) ->
-      Array.prototype.slice.call(style.sheet.rules).map (rule) ->
+      Array.prototype.slice.call(style.sheet.cssRules).map (rule) ->
         return rule.cssText.replace(/^\s+|\s+$|\n|\t|\s*({|}|:|;)\s*|(\s+)/g, '$1$2')
       .join('\n')
     
