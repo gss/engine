@@ -22977,6 +22977,7 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.getStyle = function(node, property) {
     var num, value;
+    property = this.camelize(property);
     value = node.style[property] || this.getComputedStyle(node)[property];
     if (value) {
       num = parseFloat(value);
@@ -23406,8 +23407,8 @@ Linear.hack = function() {
   var obj, property, set;
   if (c.isUnordered == null) {
     obj = {
-      10: 1,
-      9: 1
+      '10': 1,
+      '9': 1
     };
     for (property in obj) {
       break;

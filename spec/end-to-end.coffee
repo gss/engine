@@ -2596,10 +2596,10 @@ describe 'End - to - End', ->
         listen = (e) ->
           expect(engine.id('box1').style.width).to.eql '9px'
           expect(engine.id('box2').style.width).to.eql '19px'
-          expect(window.getComputedStyle(engine.id("box1"),null).
-            getPropertyValue("z-index")).to.equal "auto"
-          expect(window.getComputedStyle(engine.id("box2"),null).
-            getPropertyValue("z-index")).to.equal "auto"
+          #expect(window.getComputedStyle(engine.id("box1"),null).
+          #  getPropertyValue("z-index")).to.equal "auto"
+          #expect(window.getComputedStyle(engine.id("box2"),null).
+          #  getPropertyValue("z-index")).to.equal "auto"
 
           expect(window.getComputedStyle(engine.id("box1"),null).
             getPropertyValue("margin-top")).to.equal "0px"

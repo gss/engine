@@ -217,6 +217,7 @@ class Intrinsic extends Numeric
     return a
 
   getStyle: (node, property) ->
+    property = @camelize(property)
     value = node.style[property] || @getComputedStyle(node)[property]
     if value
       num = parseFloat(value)
