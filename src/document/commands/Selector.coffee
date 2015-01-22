@@ -482,7 +482,7 @@ Selector.define
     tags: ['selector']
     
     Selecter: (node = scope, id, engine, operation, continuation, scope = engine.scope) ->
-      return node.getElementById?(id) || scope.querySelector('[id="' + id + '"]')
+      return node.getElementById?(id) || node.querySelector('[id="' + id + '"]')
       
     Qualifier: (node, value) ->
       if node.id == value

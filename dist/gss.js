@@ -17247,7 +17247,7 @@ Selector.define({
       if (scope == null) {
         scope = engine.scope;
       }
-      return (typeof node.getElementById === "function" ? node.getElementById(id) : void 0) || scope.querySelector('[id="' + id + '"]');
+      return (typeof node.getElementById === "function" ? node.getElementById(id) : void 0) || node.querySelector('[id="' + id + '"]');
     },
     Qualifier: function(node, value) {
       if (node.id === value) {
