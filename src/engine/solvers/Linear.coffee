@@ -5,40 +5,41 @@ Constraint = require('../commands/Constraint')
 c          = require('cassowary')
 
 class Linear extends Domain
+  displayName: 'Linear'
+  
   priority: 0
 
-  Solver:  c
+  Engine:  c
 
-  setup: () ->
-    super
-    unless @solver
-      @solver = new c.SimplexSolver()
-      @solver.autoSolve = false
-      @solver._store = []
-      if @console.level > 2
-        c.debug = true
-        c.trace = true
-      c.Strength.require = c.Strength.required
+  construct: () ->
+    @paths    = {}
+    @instance = new c.SimplexSolver()
+    @instance.autoSolve = false
+    @instance._store = []
+    if @console.level > 2
+      c.debug = true
+      c.trace = true
+    c.Strength.require = c.Strength.required
 
-      Linear.hack()
+    Linear.hack()
 
   perform: ->
     if @constrained
       @constrained = @suggested = undefined
-      if @solver._needsSolving
-        @solver.solve()
-        return @solver._changed
+      if @instance._needsSolving
+        @instance.solve()
+        return @instance._changed
     else if @suggested
       @suggested = undefined
-      @solver.resolve()
-      return @solver._changed
+      @instance.resolve()
+      return @instance._changed
 
   unedit: (variable) ->
     if constraint = @editing?['%' + (variable.name || variable)]
-      #@solver.removeConstraint(constraint)
-      cei = @solver._editVarMap.get(constraint.variable)
-      @solver.removeColumn(cei.editMinus)
-      @solver._editVarMap.delete(constraint.variable)
+      #@instance.removeConstraint(constraint)
+      cei = @instance._editVarMap.get(constraint.variable)
+      @instance.removeColumn(cei.editMinus)
+      @instance._editVarMap.delete(constraint.variable)
       delete @editing[(variable.name || variable)]
 
       #@removeConstraint(constraint)
@@ -53,10 +54,10 @@ class Linear extends Domain
     return constraint
 
   nullify: (variable, full) ->
-    @solver._externalParametricVars.delete(variable)
+    @instance._externalParametricVars.delete(variable)
     variable.value = 0
     #if full
-    #@solver.rows.delete(variable)
+    #@instance.rows.delete(variable)
 
   suggest: (path, value, strength, weight, continuation) ->
     if typeof path == 'string'
@@ -66,7 +67,7 @@ class Linear extends Domain
       variable = path
 
     @edit(variable, strength, weight, continuation)
-    @solver.suggestValue(variable, value)
+    @instance.suggestValue(variable, value)
     variable.value = value
     @suggested = true
     return variable
@@ -96,20 +97,20 @@ Linear::Constraint = Constraint.extend {
 
   after: (args, result, engine, operation, continuation, scope, ascender, ascending) ->
     if result.hashCode
-      return ((engine.linear.operations ||= {})[operation.hash ||= @toExpression(operation)] ||= {})[@toHash(ascending)] ||= result
+      return ((engine.operations ||= {})[operation.hash ||= @toExpression(operation)] ||= {})[@toHash(ascending)] ||= result
     return result
 
   # Get cached operation by expression and set of input variables
   get: (engine, operation, scope) ->
-    return engine.linear.operations?[operation.hash ||= @toExpression(operation)]?[@toHash(scope)]
+    return engine.operations?[operation.hash ||= @toExpression(operation)]?[@toHash(scope)]
 
   yield: Linear.Mixin.yield
 
   inject: (engine, constraint) ->
-    engine.solver.addConstraint(constraint)
+    engine.instance.addConstraint(constraint)
 
   eject: (engine, constraint) ->
-    engine.solver.removeConstraint(constraint)
+    engine.instance.removeConstraint(constraint)
 
 },
   '==': (left, right, strength, weight, engine, operation) ->
@@ -148,7 +149,7 @@ Linear::Variable.Expression = Variable.Expression.extend Linear.Mixin,
   '/': (left, right) ->
     return c.divide(left, right)
 
-# Handle constraints wrapped into meta constructs provided by Abstract
+# Handle constraints wrapped into meta constructs provided by Input
 Linear::Meta = Command.Meta.extend {},
   'object':
     execute: (constraint, engine, operation) ->
@@ -175,7 +176,7 @@ Linear::Stay = Command.extend {
 },
   stay: (value, engine, operation) ->
     engine.suggested = true
-    engine.solver.addStay(value)
+    engine.instance.addStay(value)
     return
 
 Linear::Remove = Command.extend {

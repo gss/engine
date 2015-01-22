@@ -3,7 +3,7 @@ Command = require ('../Command')
 class Matrix extends Command
   type: 'Matrix'
   
-  Library: require('../../vendor/gl-matrix')
+  Library: require('../../../vendor/gl-matrix')
 
   matrix: ->
 

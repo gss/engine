@@ -1,8 +1,8 @@
-
+debugger
 require("./cassowary")
 require("./command-nested-rules") 
 require("./selectors")
-#require("./matrix")
+require("./matrix")
 require("./conditions")  
 require("./command")
 require("./domain")

@@ -12,10 +12,8 @@ Updater = (engine) ->
     update = undefined
 
     if typeof problem[0] == 'string'
-      unless engine.domain.signatures[problem[0]]
-        Domain = problem.domain = engine.solved
-        unless Domain.signatures[problem[0]]
-          problem.domain = engine.intrinsic
+      unless @solver.signatures[problem[0]]
+        Domain = @output
 
     # Process arguments
     for arg, index in problem
@@ -24,7 +22,7 @@ Updater = (engine) ->
         arg.parent ||= problem
         # Variable
         if arg[0] == 'get'
-          vardomain = arg.domain ||= @domain.getVariableDomain(arg, Domain)
+          vardomain = arg.domain ||= @getVariableDomain(arg, Domain)
           (update ||= new @update).push [arg], vardomain
         # Function call
         else
@@ -39,7 +37,7 @@ Updater = (engine) ->
     # Replace arguments updates with parent function update
     unless problem[0] instanceof Array
       if update
-        update.wrap(problem, parent, domain || Domain, engine.intrinsic)
+        update.wrap(problem, parent, domain || Domain)
       else if problem[0] != 'remove'
         return
       else
@@ -51,7 +49,7 @@ Updater = (engine) ->
     else if parent ||= @updating
       return parent.push(update)
     else
-      return update.each @resolve, @engine
+      return update.each @resolve, @
 
   if @prototype
     for property, value of @prototype 
@@ -140,7 +138,7 @@ Update.prototype =
         signed = typeof operation[0] != 'string' || domain.signatures[operation[0]]
         for argument in operation
           if signed && problems.indexOf(argument) > -1
-            if !other || (domain.Solver && !other.Solver)
+            if !other || (domain.Engine && !other.Engine)
               position = index
               other = domain
           if !positions || positions.indexOf(index) == -1
@@ -193,9 +191,9 @@ Update.prototype =
   match: (target, domain, positions) ->
     problems = @problems[target]
     variables = @variables ||= {}
-    if Solver = domain.Solver
+    if Solver = domain.Engine
       for property, variable of problems.variables
-        if variable.domain.Solver == Solver
+        if variable.domain.Engine == Solver
           if (i = variables[property])? && (i != target)
             unless i in (positions ||= [])
               index = 0
@@ -270,9 +268,9 @@ Update.prototype =
 
       @reify(exported, other, domain)
 
-      if Solver = domain.Solver
+      if Solver = domain.Engine
         for property, variable of result.variables
-          if variable.domain.Solver == Solver
+          if variable.domain.Engine == Solver
             (@variables ||= {})[property] = to
 
     other.register()
@@ -468,7 +466,7 @@ Update.prototype =
     @reflown  = undefined if @reflown
 
   getProblems: (callback, bind) ->
-    return GSS.prototype.clone @problems
+    return @engine.clone @problems
     
   finish: ->
     @time = @engine.console.getTime(@started)

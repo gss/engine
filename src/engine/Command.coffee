@@ -146,6 +146,9 @@ class Command
     # Function call
     i = -1
     j = operation.length
+    
+    if (operation[0] == 'translateX')
+      debugger
 
     while ++i < j
       argument = operation[i]
@@ -178,7 +181,7 @@ class Command
         if typed == 'number'
           unless signature = engine.signatures.number
             return @uncallable('number', operation, engine)
-        else
+        else# if typed == 'string'
           unless signature = engine.signatures[argument]
             unless Default = engine.Default
               return @uncallable(argument, operation, engine)
@@ -516,11 +519,17 @@ class Command
   @Helper: (engine, name) ->
     signature = engine.signatures[name]
     base = [name]
-    engine.engine[name] ||= ->
+    engine.engine[name] ?= ->
       args = Array.prototype.slice.call(arguments)
       command = Command.match(engine, base.concat(args)).prototype
-      length = (command.hasOwnProperty('permutation') && command.permutation.length || 0) + command.padding
-
+      length =  command.padding
+      if command.hasOwnProperty('permutation')
+        length += (permutation = command.permutation).length
+        permuted = []
+        for arg, index in args
+          permuted[permutation[index]] = arg
+        args = permuted
+        
       if length > args.length
         args.length = length
 
@@ -814,8 +823,7 @@ class Command.List extends Command.Sequence
     if parent = operation.parent
       return parent.command.List || parent[0] == true #FIXME, parser thing
     else
-      return true
-      # return !operation[0].command.Sequence
+      return !operation[0].command.Sequence
 
   constructor: ->
 

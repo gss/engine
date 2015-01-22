@@ -2,7 +2,7 @@ class Exporter
   constructor: (@engine) ->
     return unless @command = location.search.match(/export=([a-z0-9]+)/)?[1]
 
-    engine.addEventListener('precompile', @preexport)
+    @preexport()
 
   preexport: =>
     # Let every element get an ID
@@ -30,9 +30,9 @@ class Exporter
         @postexport()
 
       document.body.style.width = width + 'px'
-      @engine.intrinsic.properties['::window[height]'] = ->
+      @engine.data.properties['::window[height]'] = ->
         return height
-      @engine.intrinsic.properties['::window[width]'] = ->
+      @engine.data.properties['::window[width]'] = ->
         return width
 
     else 
@@ -55,7 +55,7 @@ class Exporter
     values = {}
     for path, value of @engine.values
       if (index = path.indexOf('[')) > -1 && path.indexOf('"') == -1
-        property = @engine.intrinsic.camelize(path.substring(index + 1, path.length - 1))
+        property = @engine.data.camelize(path.substring(index + 1, path.length - 1))
         id = path.substring(0, index)
         if property == 'x' || property == 'y' || document.body.style[property] != undefined
           unless @engine.values[id + '[intrinsic-' + property + ']']?

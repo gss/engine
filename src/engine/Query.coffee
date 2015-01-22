@@ -212,7 +212,7 @@ class Query extends Command
       index = 0
       while mutations[index]
         watcher = mutations.splice(0, 3)
-        (engine.document || engine.abstract).solve watcher[0], watcher[1], watcher[2]
+        engine.input.solve watcher[0], watcher[1], watcher[2]
       engine.updating.mutations = undefined
       engine.console.end()
 
@@ -232,9 +232,9 @@ class Query extends Command
               if old.indexOf(item) > -1
                 collection.splice(i, 1)
           if collection?.length
-            op.command.ascend(engine.document || engine.abstract, op, contd, deferred[index + 2], collection)
+            op.command.ascend(engine.input, op, contd, deferred[index + 2], collection)
         else
-          op.command.solve(engine.document || engine.abstract, op, contd, deferred[index + 2], true)
+          op.command.solve(engine.input, op, contd, deferred[index + 2], true)
         index += 3
       engine.updating.deferred = undefined
       engine.console.end()
@@ -269,7 +269,7 @@ class Query extends Command
       @chain engine, collection[index - 1], node, continuation
       @chain engine, node, collection[index + 1], continuation
       if operation.parent[0] == 'rule'
-        engine.document?.Stylesheet.match(engine, node, continuation, true)
+        engine.Stylesheet?.match(engine, node, continuation, true)
 
       return true
     else unless scopes[index] == scope && paths[index] == contd
@@ -401,7 +401,7 @@ class Query extends Command
         @chain engine, collection[index - 1], node, continuation
         @chain engine, node, collection[index], continuation
         if operation.parent[0] == 'rule'
-          engine.document?.Stylesheet.match(engine, node, continuation, false)
+          engine.Stylesheet?.match(engine, node, continuation, false)
         return true
 
 
@@ -747,7 +747,7 @@ class Query extends Command
         cleaned.splice(index, 1)
       else
         op = operation.parent
-        (engine.document || engine.abstract).solve op, contd + @PAIR, scope, true
+        engine.input.solve op, contd + @PAIR, scope, true
       
         
     for contd in cleaned

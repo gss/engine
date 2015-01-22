@@ -1,0 +1,1 @@
+global.GSS          = require('../src/GSS')

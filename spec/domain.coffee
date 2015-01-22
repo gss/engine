@@ -36,7 +36,7 @@ describe 'Domain', ->
         result: 0
         a: -5
 
-  describe 'solving and assumed domains together', ->
+  describe 'solving and input domains together', ->
     it 'should calculate simplified expression', ->
       window.$engine = engine = new GSS({
         a: 666
@@ -155,8 +155,9 @@ describe 'Domain', ->
       ]).to.eql
         result: 0
         a: -1
-
+      
       GSS.console.error('A=666')
+      
       expect(engine.solve
         a: 666
       ).to.eql

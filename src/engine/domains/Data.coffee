@@ -1,16 +1,15 @@
-### Domain: Solved values
+### Domain: Given values
 
-Merges values from all other domains, 
-enables anonymous constraints on immutable values
-
+Provides values that don't need to be solved
 ###
 
 Domain   = require('../Domain')
 Command  = require('../Command')
 Variable = require('../commands/Variable')
 
-class Numeric extends Domain
+class Data extends Domain
   priority: 200
+  static: true
 
   @Measurement: require('../types/Measurement')
   Length:       @Measurement.Length
@@ -19,25 +18,38 @@ class Numeric extends Domain
   Angle:        @Measurement.Angle
   Percentage:   @Measurement.Percentage
 
-  # Numeric domains usually dont use worker
+  # Data domains usually dont use worker
   url: null
+  
 
-Numeric::Variable = Variable.extend {},
+  check: (id, property) ->
+    if @properties[property]? || property.indexOf('intrinsic-') == 0 || property.indexOf('computed-') == 0
+      return true
+    if @properties[id._gss_id || id]
+      if @properties[(id._gss_id || id) + '[' + property + ']']?
+        return true
+
+  verify: (object, property) ->
+    path = @getPath(object, property)
+    if @values.hasOwnProperty(path)
+      @set(null, path, @fetch(path))
+
+Data::Variable = Variable.extend {},
   get: (path, engine, operation, continuation, scope) ->
     if meta = @getMeta(operation)
       continuation = meta.key
       scope ||= meta.scope && engine.identity[meta.scope] || engine.scope
     return engine.watch(null, path, operation, @delimit(continuation || ''), scope)
 
-Numeric::Variable.Expression = Variable.Expression.extend(
+Data::Variable.Expression = Variable.Expression.extend(
   before: (args, engine)->
     for arg in args
       if !arg? || arg != arg
         return NaN
 )
-Numeric::Variable.Expression.define(Variable.Expression.algebra)
+Data::Variable.Expression.define(Variable.Expression.algebra)
     
-Numeric::Meta = Command.Meta.extend {}, 
+Data::Meta = Command.Meta.extend {}, 
   'object': 
 
     execute: (result) ->
@@ -50,4 +62,4 @@ Numeric::Meta = Command.Meta.extend {},
       scope = meta.scope && engine.identity[meta.scope] || engine.scope
       [operation[1].command.solve(engine, operation[1], meta.key, scope, undefined, operation[0])]
     
-module.exports = Numeric
+module.exports = Data

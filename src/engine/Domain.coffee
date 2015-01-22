@@ -23,11 +23,9 @@ State:
 
 
 class Domain
-  priority: 0
   strategy: undefined
 
   constructor: (values) ->
-    @values     = {}
     @signatures = {}
     @merge(values) if values
 
@@ -46,16 +44,13 @@ class Domain
 
   # Sub-constructor for graph wrappers
   setup: () ->
-    unless (@hasOwnProperty('watchers') || @hasOwnProperty('paths'))
-      unless @hasOwnProperty('values')
-        @values      = {}
+    unless @hasOwnProperty('values')
+      @values = {}
+      @construct()      
 
-      if @Solver
-        @paths       = {}
-      else
-        @watchers    = {}
-        @watched     = {}
-
+  construct: ->
+    @watchers = {}
+    @watched  = {}
 
   # Main method to execute any kind of operations in the domain
   solve: (operation, continuation, scope, ascender, ascending) ->
@@ -65,9 +60,9 @@ class Domain
       if operation instanceof Array
         result = @Command(operation).solve(@, operation, continuation || '', scope || @scope, ascender, ascending)
       
-      # Suggested solution is dispatched through assumed domain
+      # Suggested solution is dispatched through data domain
       else
-        result = @assumed.merge operation
+        result = @data.merge operation
    
     if @constrained || @unconstrained
       # Find constraints that are independent from the graph
@@ -211,7 +206,7 @@ class Domain
     return if @immutable
 
     # Suggest or remove suggestions for previously added constraints
-    if !@Solver && variable = @variables[path]
+    if !(@ instanceof @Solver) && variable = @variables[path]
       for constraint in variable.constraints
         for operation in constraint.operations
           if op = operation.variables[path]
@@ -264,7 +259,7 @@ class Domain
     if nullified
       for path, variable of nullified
         if path.charAt(0) != '%'
-          result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
+          result[path] = @data.values[path] ? null
         @nullify variable
       @nullified = undefined
 
@@ -352,27 +347,6 @@ class Domain
       
     return new @Maybe
 
-  # Produce string representation of id-property pair
-  getPath: (id, property) ->
-    unless property
-      property = id
-      id = undefined
-    if property.indexOf('[') > -1 || !id
-      return property
-    else
-      if typeof id != 'string'
-        if id.nodeType
-          id = @identify(id)
-        else 
-          id = id.path
-      if id == @scope?._gss_id && !@intrinsic?.check(id, property)
-        return property
-      if id.substring(0, 2) == '$"'
-        id = id.substring(1)
-      return id + '[' + property + ']'
-
-
-
   # Set a flag to record all changed values
   transact: ->
     unless @changes
@@ -382,28 +356,29 @@ class Domain
   # Unset transaction flag and return changes
   commit: ->
     if changes = @changes
-      if @Solver
+      if @ instanceof @Solver
         @register()
       @changes = undefined
       for prop of changes
         return changes
+      return
 
   # Make Domain class inherit given engine instance
   # Allows domain to overload engine methods and modules
-  @compile = (domains, engine) ->
-    for own name, domain of domains
-      continue if domain.condition?.call(engine) == false
-      EngineDomain = engine[name] = (values) ->
-        return domain::constructor.call(@, undefined, undefined, values)
-        
-      EngineDomainWrapper = ->
-      EngineDomainWrapper.prototype = engine
-      EngineDomain.prototype    = new EngineDomainWrapper
-      EngineDomain::engine = engine
-      EngineDomain::displayName = name
-      for property, value of domain::
-        EngineDomain::[property] = value
-      engine[name.toLowerCase()] = new EngineDomain()
+  @compile: (engine) ->
+    for name, domain of engine
+      if domain.prototype && domain.prototype instanceof Domain
+        EngineDomain = engine[name] = (values) ->
+          return domain::constructor.call(@, undefined, undefined, values)
+      
+        EngineDomainWrapper = ->
+        EngineDomainWrapper.prototype = engine
+        EngineDomain.prototype        = new EngineDomainWrapper
+        EngineDomain::engine = engine
+        EngineDomain::displayName = name
+        for property, value of domain::
+          EngineDomain::[property] = value
+        engine[name.toLowerCase()] = new EngineDomain()
     @
 
   # Create flat dictionary of property handlers from nested objects
