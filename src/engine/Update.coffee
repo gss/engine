@@ -13,7 +13,7 @@ Updater = (engine) ->
 
     if typeof problem[0] == 'string'
       unless @solver.signatures[problem[0]]
-        Domain = @solved
+        Domain = @output
 
     # Process arguments
     for arg, index in problem
@@ -37,7 +37,7 @@ Updater = (engine) ->
     # Replace arguments updates with parent function update
     unless problem[0] instanceof Array
       if update
-        update.wrap(problem, parent, domain || Domain, @data)
+        update.wrap(problem, parent, domain || Domain)
       else if problem[0] != 'remove'
         return
       else

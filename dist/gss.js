@@ -18991,11 +18991,9 @@ Command = (function() {
           if (!(signature = engine.signatures.number)) {
             return this.uncallable('number', operation, engine);
           }
-        } else if (typed === 'string') {
+        } else {
           if (!(signature = engine.signatures[argument])) {
-            if (engine.Default) {
-              Default = engine.Default;
-            } else {
+            if (!(Default = engine.Default)) {
               return this.uncallable(argument, operation, engine);
             }
           }
@@ -21715,7 +21713,7 @@ Updater = function(engine) {
     update = void 0;
     if (typeof problem[0] === 'string') {
       if (!this.solver.signatures[problem[0]]) {
-        Domain = this.solved;
+        Domain = this.output;
       }
     }
     for (index = _i = 0, _len = problem.length; _i < _len; index = ++_i) {
@@ -21743,7 +21741,7 @@ Updater = function(engine) {
     }
     if (!(problem[0] instanceof Array)) {
       if (update) {
-        update.wrap(problem, parent, domain || Domain, this.data);
+        update.wrap(problem, parent, domain || Domain);
       } else if (problem[0] !== 'remove') {
         return;
       } else {
