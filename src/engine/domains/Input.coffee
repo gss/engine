@@ -11,9 +11,26 @@ class Input extends Domain
 
   Iterator:   require('../commands/Iterator')
   Condition:  require('../commands/Condition')
-  Unit:       require('../commands/Unit')
   
-  Properties: require('../properties/Dimensions')  
+  Properties: class
+    
+    right: (scope) ->
+      id = @identify(scope)
+      return ['+', ['get', @getPath(id, 'x')], ['get', @getPath(id, 'width')]]
+
+    bottom: (scope, path) ->
+      id = @identify(scope)
+      return ['+', ['get', @getPath(id, 'y')], ['get', @getPath(id, 'height')]]
+    
+    center:
+      x: (scope, path) ->
+        id = @identify(scope)
+        return ['+', ['get', @getPath(id, 'x')], ['/', ['get', @getPath(id, 'width')], 2]]
+
+      y: (scope, path) ->
+        id = @identify(scope)
+        return ['+', ['get', @getPath(id, 'y')], ['/', ['get', @getPath(id, 'height')], 2]]
+        
 
 
 Input::Remove = Command.extend {
@@ -110,7 +127,6 @@ Input::Variable.Getter = Input::Variable.extend {
       unless prop.matcher
         return prop.call(engine, object, continuation)
     
-    debugger
     if !prefix && engine.data.check(engine.scope, property)
       prefix = engine.scope
     return ['get', engine.getPath(prefix, property)]

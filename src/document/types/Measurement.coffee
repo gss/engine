@@ -1,9 +1,8 @@
-Variable = require '../commands/Variable'
 Unit     = require '../commands/Unit'
 
 
 
-class Measurement extends Variable
+class Measurement extends Unit
 
   signature: [
     value: ['Variable', 'Number']
@@ -31,6 +30,7 @@ class Measurement.Length extends Measurement
     # Static lengths
 
     px: (value) ->
+      debugger
       return value
 
     pt: (value) ->

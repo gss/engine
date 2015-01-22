@@ -10,24 +10,17 @@ Variable = require('../commands/Variable')
 class Data extends Domain
   priority: 200
   static: true
-
-  @Measurement: require('../types/Measurement')
-  Length:       @Measurement.Length
-  Time:         @Measurement.Time
-  Frequency:    @Measurement.Frequency
-  Angle:        @Measurement.Angle
-  Percentage:   @Measurement.Percentage
-
   # Data domains usually dont use worker
   url: null
   
-
+  # When should Data domain take ownership of variable?
   check: (id, property) ->
-    if @properties[property]? || property.indexOf('intrinsic-') == 0 || property.indexOf('computed-') == 0
-      return true
-    if @properties[id._gss_id || id]
-      if @properties[(id._gss_id || id) + '[' + property + ']']?
-        return true
+    return @output.properties[property] ||     # CSS property
+        @properties[property]? ||              # Getter
+        property.indexOf('intrinsic-') == 0 || # Explicitly intrinsic
+        property.indexOf('computed-') == 0 ||  # Explicitly computed
+        (@properties[id._gss_id || id] &&      # Known object + property pair
+          @properties[(id._gss_id || id) + '[' + property + ']'])?
 
   verify: (object, property) ->
     path = @getPath(object, property)

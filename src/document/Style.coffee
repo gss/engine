@@ -160,6 +160,7 @@ class Shorthand
     switch typeof operation
       when 'object'
         name = operation[0]
+        debugger
         if @styles.engine.signatures[name]?.Number?.resolved
           return @toExpressionString(key, operation[1], true) + name
         else

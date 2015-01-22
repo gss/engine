@@ -1,6 +1,6 @@
 # Algorithms are used as they are from chroma.js by Gregor Aisch (BSD License).
 
-Command = require '../Command'
+Command = require '../../engine/Command'
 
 class Color extends Command
   @Keywords: {'transparent', 'currentColor'}

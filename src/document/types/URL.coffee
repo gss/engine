@@ -1,4 +1,4 @@
-Command = require('../Command')
+Command = require('../../engine/Command')
 
 class URL extends Command
   type: 'URL'

@@ -1,4 +1,4 @@
-Command = require '../commands/Variable'
+Command = require '../../engine/commands/Variable'
 
 class Easing extends Command
   constructor: (obj) ->

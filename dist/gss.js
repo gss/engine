@@ -14829,7 +14829,9 @@ Engine = require('./Engine');
 Document = (function(_super) {
   __extends(Document, _super);
 
-  Document.prototype.Style = require('./document/Style');
+  Document.Measurement = require('./document/types/Measurement');
+
+  Document.Primitive = require('./document/types/Primitive');
 
   Document.prototype.Input = (function(_super1) {
     __extends(Input, _super1);
@@ -14842,11 +14844,62 @@ Document = (function(_super) {
 
     Input.prototype.Stylesheet = require('./document/commands/Stylesheet');
 
+    Input.prototype.Unit = require('./document/commands/Unit');
+
     Input.prototype.helps = true;
 
     return Input;
 
   })(Document.prototype.Input);
+
+  Document.prototype.Output = (function(_super1) {
+    __extends(Output, _super1);
+
+    function Output() {
+      return Output.__super__.constructor.apply(this, arguments);
+    }
+
+    Output.prototype.Style = require('./document/Style');
+
+    Output.prototype.Properties = require('./document/properties/Styles');
+
+    Output.prototype.Unit = require('./document/commands/Unit');
+
+    Output.prototype.Gradient = require('./document/types/Gradient');
+
+    Output.prototype.Matrix = require('./document/types/Matrix');
+
+    Output.prototype.Easing = require('./document/types/Easing');
+
+    Output.prototype.Color = require('./document/types/Color');
+
+    Output.prototype.URL = require('./document/types/URL');
+
+    Output.prototype.Number = Document.Primitive.Number;
+
+    Output.prototype.Integer = Document.Primitive.Integer;
+
+    Output.prototype.String = Document.Primitive.String;
+
+    Output.prototype.Strings = Document.Primitive.Strings;
+
+    Output.prototype.Size = Document.Primitive.Size;
+
+    Output.prototype.Position = Document.Primitive.Position;
+
+    Output.prototype.Length = Document.Measurement.Length;
+
+    Output.prototype.Time = Document.Measurement.Time;
+
+    Output.prototype.Frequency = Document.Measurement.Frequency;
+
+    Output.prototype.Angle = Document.Measurement.Angle;
+
+    Output.prototype.Percentage = Document.Measurement.Percentage;
+
+    return Output;
+
+  })(Document.prototype.Output);
 
   Document.prototype.Data = (function(_super1) {
     __extends(Data, _super1);
@@ -14855,28 +14908,19 @@ Document = (function(_super) {
       return Data.__super__.constructor.apply(this, arguments);
     }
 
-    Data.prototype.Getters = require('./document/properties/Getters');
-
-    Data.prototype.Styles = require('./document/properties/Styles');
-
     Data.prototype.immediate = true;
 
-    Data.prototype.Properties = (function() {
-      var Properties, property, value, _ref;
-      Properties = function(engine) {
-        if (engine) {
-          this.engine = engine;
-        }
-      };
-      Properties.prototype = new Data.prototype.Styles;
-      Properties.prototype = new Properties;
-      _ref = Data.prototype.Getters.prototype;
-      for (property in _ref) {
-        value = _ref[property];
-        Properties.prototype[property] = value;
-      }
-      return Properties;
-    })();
+    Data.prototype.Properties = require('./document/properties/Getters');
+
+    Data.prototype.Length = Document.Measurement.Length;
+
+    Data.prototype.Time = Document.Measurement.Time;
+
+    Data.prototype.Frequency = Document.Measurement.Frequency;
+
+    Data.prototype.Angle = Document.Measurement.Angle;
+
+    Data.prototype.Percentage = Document.Measurement.Percentage;
 
     Data.prototype.perform = function() {
       if (arguments.length < 4 && this.data.subscribers) {
@@ -14933,7 +14977,7 @@ Document = (function(_super) {
               return prop.call(this, object);
             } else if (typeof prop !== 'function') {
               return prop;
-            } else if (!prop.matcher && property.indexOf('intrinsic') === -1) {
+            } else if (property.indexOf('intrinsic') === -1) {
               return prop.call(this, object);
             }
           }
@@ -15125,8 +15169,33 @@ Document = (function(_super) {
     return old;
   };
 
+  Document.prototype.setAbsolutePosition = function(element, property, value) {
+    var position;
+    position = element.style.position;
+    if (element.positioned === void 0) {
+      element.positioned = +(!!position);
+    }
+    if (position && position !== 'absolute') {
+      return;
+    }
+    if (element.style[property] === '') {
+      if ((value != null) && value !== '') {
+        element.positioned = (element.positioned || 0) + 1;
+      }
+    } else {
+      if ((value == null) || value === '') {
+        element.positioned = (element.positioned || 0) - 1;
+      }
+    }
+    if (element.positioned === 1) {
+      return element.style.position = 'absolute';
+    } else if (element.positioned === 0) {
+      return element.style.position = '';
+    }
+  };
+
   Document.prototype.setStyle = function(element, property, value, continuation, operation) {
-    var camel, parent, path, position, prop, _ref, _ref1;
+    var camel, parent, path, prop, _ref;
     if (value == null) {
       value = '';
     }
@@ -15137,7 +15206,7 @@ Document = (function(_super) {
       case "y":
         property = "top";
     }
-    if (!((_ref = (prop = this.data.properties[property])) != null ? _ref.matcher : void 0)) {
+    if (!(prop = this.output.properties[property])) {
       return;
     }
     camel = this.camelize(property);
@@ -15145,29 +15214,8 @@ Document = (function(_super) {
       value = prop.format(value);
     }
     if (property === 'left' || property === 'top') {
-      position = element.style.position;
-      if (element.positioned === void 0) {
-        element.positioned = +(!!position);
-      }
-      if (position && position !== 'absolute') {
-        return;
-      }
-      if (element.style[camel] === '') {
-        if ((value != null) && value !== '') {
-          element.positioned = (element.positioned || 0) + 1;
-        }
-      } else {
-        if ((value == null) || value === '') {
-          element.positioned = (element.positioned || 0) - 1;
-        }
-      }
-      if (element.positioned === 1) {
-        element.style.position = 'absolute';
-      } else if (element.positioned === 0) {
-        element.style.position = '';
-      }
-    }
-    if (parent = operation) {
+      this.setAbsolutePosition(element, property, value);
+    } else if (parent = operation) {
       while (parent.parent) {
         parent = parent.parent;
         if (parent.command.type === 'Condition' && !parent.command.global) {
@@ -15181,7 +15229,7 @@ Document = (function(_super) {
       }
     }
     path = this.getPath(element, 'intrinsic-' + property);
-    if ((_ref1 = this.watchers) != null ? _ref1[path] : void 0) {
+    if ((_ref = this.watchers) != null ? _ref[path] : void 0) {
       return;
     }
     element.style[camel] = value;
@@ -15249,7 +15297,7 @@ Document = (function(_super) {
   };
 
   Document.prototype.measure = function(node, x, y, full) {
-    var id, prop, properties, style, _ref;
+    var id, prop, properties, style;
     if (id = node._gss_id) {
       if (properties = this.data.subscribers[id]) {
         for (prop in properties) {
@@ -15276,10 +15324,10 @@ Document = (function(_super) {
               break;
             default:
               style = prop.replace(/^(?:computed|intrinsic)-/, '');
-              if ((_ref = this.properties[style]) != null ? _ref.matcher : void 0) {
-                this.set(id, prop, this.getStyle(node, style));
-              } else {
+              if (this.properties[style]) {
                 this.set(id, prop, this.get(node, style));
+              } else if (this.output.properties[style]) {
+                this.set(id, prop, this.getStyle(node, style));
               }
           }
         }
@@ -15409,17 +15457,17 @@ module.exports = Document;
 
 
 
-},{"./Engine":14,"./document/Style":16,"./document/commands/Selector":17,"./document/commands/Stylesheet":18,"./document/properties/Getters":19,"./document/properties/Styles":20}],14:[function(require,module,exports){
+},{"./Engine":14,"./document/Style":16,"./document/commands/Selector":17,"./document/commands/Stylesheet":18,"./document/commands/Unit":19,"./document/properties/Getters":20,"./document/properties/Styles":21,"./document/types/Color":22,"./document/types/Easing":23,"./document/types/Gradient":24,"./document/types/Matrix":25,"./document/types/Measurement":26,"./document/types/Primitive":27,"./document/types/URL":28}],14:[function(require,module,exports){
 
 /* Base class: Engine
 
 Engine is a base class for scripting environment.
 It initializes and orchestrates all moving parts.
 
-It operates with workers and domains. Workers are
+It operates over workers and domains. Workers are
 separate engines running in web worker thread. 
 Domains are either independent constraint graphs or
-pseudo-solvers like intrinsic measurements.
+pseudo-solvers like DOM measurements.
  */
 var Engine,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
@@ -15433,7 +15481,7 @@ Engine = (function() {
 
   Engine.prototype.Query = require('./engine/Query');
 
-  Engine.prototype.Solver = require('./engine/solvers/Linear');
+  Engine.prototype.Solver = require('./engine/domains/Linear');
 
   Engine.prototype.Input = require('./engine/domains/Input');
 
@@ -15448,24 +15496,26 @@ Engine = (function() {
   Engine.prototype.Exporter = require('./engine/utilities/Exporter');
 
   function Engine(data, url) {
-    var property, value;
+    var events, property, value, _i, _len, _ref;
+    this.engine = this;
     if ((url != null) && (typeof Worker !== "undefined" && Worker !== null)) {
       this.url = this.getWorkerURL(url);
     }
+    this.eventHandler = this.handleEvent.bind(this);
     this.listeners = {};
+    _ref = [this.events, this.$events, this.$$events];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      events = _ref[_i];
+      this.addListeners(events);
+    }
     this.observers = {};
     this.queries = {};
     this.lefts = [];
     this.pairs = {};
-    this.eventHandler = this.handleEvent.bind(this);
-    this.addListeners(this.$$events);
-    this.addListeners(this.$events);
-    this.addListeners(this.events);
     this.variables = {};
     this.domains = [];
     this.stylesheets = [];
     this.imported = {};
-    this.engine = this;
     this.inspector = new this.Inspector(this);
     this.exporter = new this.Exporter(this);
     this.update = this.Update.compile(this);
@@ -15485,12 +15535,6 @@ Engine = (function() {
     self.addEventListener('error', this.eventHandler);
     return this;
   }
-
-  Engine.prototype.use = function(object) {
-    return object;
-  };
-
-  Engine.use = function(object) {};
 
   Engine.prototype.solve = function() {
     var apply, args, result, strategy, transacting;
@@ -15811,7 +15855,7 @@ Engine = (function() {
         url = src;
       }
       if (!url) {
-        throw new Error("Can not detect GSS source file to set up worker.\n\n- You can rename the gss file to contain \"gss\" in it:\n  `<script src=\"my-custom-path/my-gss.js\"></script>`\n\n- or provide worker path explicitly: \n  `GSS(document, \"http://absolute.path/to/worker\")`");
+        throw new Error("Can not detect GSS source file to set up worker.\n\n- You can rename the gss file to contain \"gss\" in it:\n  `<script src=\"my-custom-path/my-gss.js\"></script>`\n\n- or provide worker path explicitly: \n  `GSS(<scope>, \"http://absolute.path/to/worker\")`");
       }
       return url;
     };
@@ -16187,7 +16231,7 @@ module.exports = Engine;
 
 
 
-},{"./engine/Command":21,"./engine/Domain":22,"./engine/Query":23,"./engine/Update":24,"./engine/domains/Data":30,"./engine/domains/Input":31,"./engine/domains/Output":32,"./engine/solvers/Linear":34,"./engine/utilities/Console":42,"./engine/utilities/Exporter":43,"./engine/utilities/Inspector":44}],15:[function(require,module,exports){
+},{"./engine/Command":29,"./engine/Domain":30,"./engine/Query":31,"./engine/Update":32,"./engine/domains/Data":37,"./engine/domains/Input":38,"./engine/domains/Linear":39,"./engine/domains/Output":40,"./engine/utilities/Console":41,"./engine/utilities/Exporter":42,"./engine/utilities/Inspector":43}],15:[function(require,module,exports){
 
 /* Constructor: GSS
   Dispatches arguments by type, returns engine
@@ -16474,6 +16518,7 @@ Shorthand = (function() {
     switch (typeof operation) {
       case 'object':
         name = operation[0];
+        debugger;
         if ((_ref = this.styles.engine.signatures[name]) != null ? (_ref1 = _ref.Number) != null ? _ref1.resolved : void 0 : void 0) {
           return this.toExpressionString(key, operation[1], true) + name;
         } else {
@@ -17794,7 +17839,7 @@ module.exports = Selector;
 
 
 
-},{"../../../vendor/MutationObserver.js":45,"../../../vendor/weakmap.js":47,"../../engine/Query":23}],18:[function(require,module,exports){
+},{"../../../vendor/MutationObserver.js":44,"../../../vendor/weakmap.js":46,"../../engine/Query":31}],18:[function(require,module,exports){
 var Command, GSS, Query, Stylesheet,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -18445,7 +18490,100 @@ module.exports = Stylesheet;
 
 
 
-},{"../../GSS":15,"../../engine/Command":21,"../../engine/Query":23}],19:[function(require,module,exports){
+},{"../../GSS":15,"../../engine/Command":29,"../../engine/Query":31}],19:[function(require,module,exports){
+var Unit, Variable,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Variable = require('../../engine/commands/Variable');
+
+Unit = (function(_super) {
+  __extends(Unit, _super);
+
+  function Unit() {
+    return Unit.__super__.constructor.apply(this, arguments);
+  }
+
+  Unit.prototype.signature = [
+    {
+      value: ['Variable', 'Number']
+    }
+  ];
+
+  Unit.prototype.getProperty = function(operation) {
+    var parent;
+    parent = operation;
+    while (parent = parent.parent) {
+      if (parent.command.type === 'Assignment') {
+        return parent[1];
+      }
+    }
+  };
+
+  Unit.prototype.Dependencies = {
+    'margin-top': 'containing-width',
+    'margin-top': 'containing-width',
+    'margin-right': 'containing-width',
+    'margin-left': 'containing-width',
+    'padding-top': 'containing-width',
+    'padding-top': 'containing-width',
+    'padding-right': 'containing-width',
+    'padding-left': 'containing-width',
+    'left': 'containing-width',
+    'right': 'containing-width',
+    'width': 'containing-width',
+    'min-width': 'containing-width',
+    'max-width': 'containing-width',
+    'text-width': 'containing-width',
+    'top': 'containing-height',
+    'bottom': 'containing-height',
+    'height': 'containing-height',
+    'font-size': 'containing-font-size',
+    'vertical-align': 'line-height',
+    'background-position-x': 'width',
+    'background-position-y': 'height'
+  };
+
+  Unit.define({
+    '%': function(value, engine, operation, continuation, scope) {
+      var path, property;
+      property = this.Dependencies[this.getProperty(operation)] || 'containing-width';
+      path = engine.getPath(scope, property);
+      return ['*', ['px', value], ['get', path]];
+    },
+    em: function(value, engine, operation, continuation, scope) {
+      var path;
+      path = engine.getPath(scope, 'computed-font-size');
+      return ['*', ['px', value], ['get', path]];
+    },
+    rem: function(value, engine, operation, continuation, scope) {
+      var path;
+      path = this.engine.getPath(engine.scope._gss_id, 'computed-font-size');
+      return ['*', ['px', value], ['get', path]];
+    },
+    vw: function(value, engine, operation, continuation, scope) {
+      return ['*', ['/', ['px', value], 100], ['get', '::window[width]']];
+    },
+    vh: function(value, engine, operation, continuation, scope) {
+      return ['*', ['/', ['px', value], 100], ['get', '::window[height]']];
+    },
+    vmin: function(value, engine, operation, continuation, scope) {
+      return ['*', ['/', ['px', value], 100], ['min', ['get', '::window[height]'], ['get', '::window[width]']]];
+    },
+    vmax: function(value, engine, operation, continuation, scope) {
+      return ['*', ['/', ['px', value], 100], ['max', ['get', '::window[height]'], ['get', '::window[width]']]];
+    }
+  });
+
+  return Unit;
+
+})(Variable);
+
+module.exports = Unit;
+
+
+
+},{"../../engine/commands/Variable":36}],20:[function(require,module,exports){
 var Getters;
 
 Getters = (function() {
@@ -18547,13 +18685,15 @@ module.exports = Getters;
 
 
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 var Styles;
 
 Styles = (function() {
   var i, index, prop, side, sides, type, _base, _base1, _base2, _base3, _base4, _i, _j, _k, _len, _len1, _name, _ref, _ref1;
 
-  function Styles() {}
+  function Styles(engine) {
+    this.engine = engine;
+  }
 
   Styles.prototype.transform = [
     [
@@ -18821,7 +18961,823 @@ module.exports = Styles;
 
 
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
+var Color, Command,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Command = require('../../engine/Command');
+
+Color = (function(_super) {
+  __extends(Color, _super);
+
+  Color.Keywords = {
+    'transparent': 'transparent',
+    'currentColor': 'currentColor'
+  };
+
+  function Color(obj) {
+    switch (typeof obj) {
+      case 'string':
+        if (Color.Keywords[obj]) {
+          return obj;
+        } else if (obj.charAt(0) === '#') {
+          return obj;
+        }
+        break;
+      case 'object':
+        if (Color[obj[0]]) {
+          return obj;
+        }
+    }
+  }
+
+  Color.define({
+    hsl: function(h, s, l) {
+      var b, c, g, i, r, t1, t2, t3, _i, _ref;
+      if (s === 0) {
+        r = g = b = l * 255;
+      } else {
+        t3 = [0, 0, 0];
+        c = [0, 0, 0];
+        t2 = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        t1 = 2 * l - t2;
+        h /= 360;
+        t3[0] = h + 1 / 3;
+        t3[1] = h;
+        t3[2] = h - 1 / 3;
+        for (i = _i = 0; _i <= 2; i = ++_i) {
+          if (t3[i] < 0) {
+            t3[i] += 1;
+          }
+          if (t3[i] > 1) {
+            t3[i] -= 1;
+          }
+          if (6 * t3[i] < 1) {
+            c[i] = t1 + (t2 - t1) * 6 * t3[i];
+          } else if (2 * t3[i] < 1) {
+            c[i] = t2;
+          } else if (3 * t3[i] < 2) {
+            c[i] = t1 + (t2 - t1) * ((2 / 3) - t3[i]) * 6;
+          } else {
+            c[i] = t1;
+          }
+        }
+        _ref = [Math.round(c[0] * 255), Math.round(c[1] * 255), Math.round(c[2] * 255)], r = _ref[0], g = _ref[1], b = _ref[2];
+      }
+      return ['rgb', r, g, b];
+    },
+    hsla: function(h, s, l, a) {
+      return Type.Color.hsl.execute(h, s, l).concat[a];
+    },
+    rgb: function(r, g, b) {
+      return ['rgb', r, g, b];
+    },
+    rgba: function(r, g, b, a) {
+      return ['rgba', r, g, b, a];
+    },
+    hex: function(hex) {
+      var a, b, g, r, u;
+      if (hex.match(/^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)) {
+        if (hex.length === 4 || hex.length === 7) {
+          hex = hex.substr(1);
+        }
+        if (hex.length === 3) {
+          hex = hex.split("");
+          hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        }
+        u = parseInt(hex, 16);
+        r = u >> 16;
+        g = u >> 8 & 0xFF;
+        b = u & 0xFF;
+        return ['rgb', r, g, b];
+      }
+      if (hex.match(/^#?([A-Fa-f0-9]{8})$/)) {
+        if (hex.length === 9) {
+          hex = hex.substr(1);
+        }
+        u = parseInt(hex, 16);
+        r = u >> 24 & 0xFF;
+        g = u >> 16 & 0xFF;
+        b = u >> 8 & 0xFF;
+        a = u & 0xFF;
+        return ['rgba', r, g, b, a];
+      }
+    }
+  });
+
+  return Color;
+
+})(Command);
+
+module.exports = Color;
+
+
+
+},{"../../engine/Command":29}],23:[function(require,module,exports){
+var Command, Easing,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Command = require('../../engine/commands/Variable');
+
+Easing = (function(_super) {
+  __extends(Easing, _super);
+
+  function Easing(obj) {
+    if (typeof obj === 'string') {
+      if (obj = this.Type.Timings[obj]) {
+        return obj;
+      }
+    } else if (obj[0] === 'steps' || obj[0] === 'cubic-bezier') {
+      return obj;
+    }
+  }
+
+  Easing.define({
+    'ease': ['cubic-bezier', .42, 0, 1, 1],
+    'ease-in': ['cubic-bezier', .42, 0, 1, 1],
+    'ease-out': ['cubic-bezier', 0, 0, .58, 1],
+    'ease-in-out': ['cubic-bezier', .42, 0, .58, 1],
+    'linear': ['cubic-bezier', 0, 0, 1, 1],
+    'step-start': 'step-start',
+    'step-end': 'step-end'
+  });
+
+  return Easing;
+
+})(Command);
+
+module.exports = Easing;
+
+
+
+},{"../../engine/commands/Variable":36}],24:[function(require,module,exports){
+var Command, Gradient,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Command = require('../../engine/Command');
+
+Gradient = (function(_super) {
+  __extends(Gradient, _super);
+
+  Gradient.prototype.type = 'Gradient';
+
+  function Gradient(obj) {
+    switch (typeof obj) {
+      case 'object':
+        if (Gradient[obj[0]]) {
+          return obj;
+        }
+    }
+  }
+
+  Gradient.define({
+    'linear-gradient': function() {},
+    'radial-gradient': function() {},
+    'repeating-linear-gradient': function() {},
+    'repeating-radial-gradient': function() {}
+  });
+
+  return Gradient;
+
+})(Command);
+
+module.exports = Gradient;
+
+
+
+},{"../../engine/Command":29}],25:[function(require,module,exports){
+var Command, Matrix,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Command = require('../../engine/Command');
+
+Matrix = (function(_super) {
+  var method, property, _ref;
+
+  __extends(Matrix, _super);
+
+  function Matrix() {
+    return Matrix.__super__.constructor.apply(this, arguments);
+  }
+
+  Matrix.prototype.type = 'Matrix';
+
+  Matrix.prototype.Library = require('../../../vendor/gl-matrix');
+
+  Matrix.prototype.matrix = function() {};
+
+  Matrix.prototype.matrix3d = function() {};
+
+  Matrix.prototype.mat3 = function(matrix, method, a, b, c) {
+    if (matrix == null) {
+      matrix = this._mat3.create();
+    }
+    if (matrix.length === 9) {
+      return this._mat3[method](matrix, matrix, a, b, c);
+    } else {
+      return this._mat4[method](matrix, matrix, a, b, c);
+    }
+  };
+
+  Matrix.prototype.mat4 = function(matrix, method, a, b, c) {
+    if (matrix == null) {
+      matrix = this._mat4.create();
+    }
+    if (matrix.length === 9) {
+      matrix = this._mat4.fromMat3(matrix);
+    }
+    return this._mat4[method](matrix, matrix, a, b, c);
+  };
+
+  _ref = Matrix.prototype.Library;
+  for (property in _ref) {
+    method = _ref[property];
+    Matrix.prototype['_' + property] = method;
+  }
+
+  return Matrix;
+
+})(Command);
+
+Matrix.prototype.Sequence = (function(_super) {
+  __extends(Sequence, _super);
+
+  function Sequence() {
+    return Sequence.__super__.constructor.apply(this, arguments);
+  }
+
+  return Sequence;
+
+})(Command.Sequence);
+
+Matrix.Transformation1 = (function(_super) {
+  __extends(Transformation1, _super);
+
+  function Transformation1() {
+    return Transformation1.__super__.constructor.apply(this, arguments);
+  }
+
+  Transformation1.prototype.signature = [
+    [
+      {
+        matrix: ['Matrix']
+      }
+    ], {
+      x: ['Variable', 'Number']
+    }
+  ];
+
+  Transformation1.define({
+    translateX: function(matrix, x) {
+      return this.mat3(matrix, 'translate', [x, 1, 1]);
+    },
+    translateY: function(matrix, y) {
+      return this.mat3(matrix, 'translate', [1, y, 1]);
+    },
+    translateZ: function(matrix, z) {
+      return this.mat4(matrix, 'translate', [1, 1, z]);
+    },
+    translate: function(matrix, x) {
+      return this.mat3(matrix, 'translate', [x, x]);
+    },
+    rotateX: function(matrix, angle) {
+      return this.mat4(matrix, 'rotateX', angle * 360 * (Math.PI / 180));
+    },
+    rotateY: function(matrix, angle) {
+      return this.mat4(matrix, 'rotateY', angle * 360 * (Math.PI / 180));
+    },
+    rotateZ: function(matrix, angle) {
+      return this.mat4(matrix, 'rotateZ', angle * 360 * (Math.PI / 180));
+    },
+    scaleX: function(matrix, x) {
+      return this.mat3(matrix, 'scale', [x, 1, 1]);
+    },
+    scaleY: function(matrix, y) {
+      return this.mat3(matrix, 'scale', [1, y, 1]);
+    },
+    scaleZ: function(matrix, z) {
+      return this.mat4(matrix, 'scale', [1, 1, z]);
+    },
+    scale: function(matrix, x) {
+      return this.mat4(matrix, 'scale', [x, x, 1]);
+    },
+    rotate: function(matrix, angle) {
+      return this.mat3(matrix, 'rotate', angle * 360 * (Math.PI / 180), [0, 0, 1]);
+    }
+  });
+
+  return Transformation1;
+
+})(Matrix);
+
+Matrix.Transformation2 = (function(_super) {
+  __extends(Transformation2, _super);
+
+  function Transformation2() {
+    return Transformation2.__super__.constructor.apply(this, arguments);
+  }
+
+  Transformation2.prototype.signature = [
+    [
+      {
+        matrix: ['Matrix']
+      }
+    ], {
+      x: ['Variable', 'Number'],
+      y: ['Variable', 'Number']
+    }
+  ];
+
+  Transformation2.define({
+    translate: function(matrix, x, y) {
+      return this.mat3(matrix, 'translate', [x, y]);
+    },
+    scale: function(matrix, x, y) {
+      return this.mat3(matrix, 'translate', [x, y]);
+    }
+  });
+
+  return Transformation2;
+
+})(Matrix);
+
+Matrix.Transformation3 = (function(_super) {
+  __extends(Transformation3, _super);
+
+  function Transformation3() {
+    return Transformation3.__super__.constructor.apply(this, arguments);
+  }
+
+  Transformation3.prototype.signature = [
+    [
+      {
+        matrix: ['Matrix']
+      }
+    ], {
+      x: ['Variable', 'Number'],
+      y: ['Variable', 'Number'],
+      z: ['Variable', 'Number']
+    }
+  ];
+
+  Transformation3.define({
+    translate3d: function(matrix, x, y, z) {
+      if (z === 0) {
+        return this.mat3(matrix, 'translate', [x, y]);
+      } else {
+        return this.mat4(matrix, 'translate', [x, y, z]);
+      }
+    },
+    scale3d: function(matrix, x, y, z) {
+      if (z === 1) {
+        return this.mat3(matrix, 'scale', [x, y]);
+      } else {
+        return this.mat4(matrix, 'scale', [x, y, z]);
+      }
+    }
+  });
+
+  return Transformation3;
+
+})(Matrix);
+
+Matrix.Transformation3A = (function(_super) {
+  __extends(Transformation3A, _super);
+
+  function Transformation3A() {
+    return Transformation3A.__super__.constructor.apply(this, arguments);
+  }
+
+  Transformation3A.prototype.signature = [
+    [
+      {
+        matrix: ['Matrix']
+      }
+    ], {
+      x: ['Variable', 'Number'],
+      y: ['Variable', 'Number'],
+      z: ['Variable', 'Number'],
+      a: ['Variable', 'Number']
+    }
+  ];
+
+  Transformation3A.define({
+    rotate3d: function(matrix, x, y, z, angle) {
+      if (y == null) {
+        y = x;
+      }
+      if (z == null) {
+        z = 0;
+      }
+      if (z === 0) {
+        return this.mat3(matrix, 'rotate', [x, y], angle * 360);
+      } else {
+        return this.mat4(matrix, 'rotate', [x, y, z], angle * 360);
+      }
+    }
+  });
+
+  return Transformation3A;
+
+})(Matrix);
+
+module.exports = Matrix;
+
+
+
+},{"../../../vendor/gl-matrix":45,"../../engine/Command":29}],26:[function(require,module,exports){
+var Measurement, Unit,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Unit = require('../commands/Unit');
+
+Measurement = (function(_super) {
+  __extends(Measurement, _super);
+
+  function Measurement() {
+    return Measurement.__super__.constructor.apply(this, arguments);
+  }
+
+  Measurement.prototype.signature = [
+    {
+      value: ['Variable', 'Number']
+    }
+  ];
+
+  return Measurement;
+
+})(Unit);
+
+Measurement.Percentage = (function(_super) {
+  __extends(Percentage, _super);
+
+  function Percentage(obj) {
+    switch (typeof obj) {
+      case 'object':
+        if (obj[0] === '%') {
+          return this;
+        }
+    }
+  }
+
+  return Percentage;
+
+})(Measurement);
+
+Measurement.Length = (function(_super) {
+  __extends(Length, _super);
+
+  function Length(obj) {
+    switch (typeof obj) {
+      case 'number':
+        return obj;
+      case 'object':
+        if (Measurement.Length[obj[0]] || (Unit[obj[0]] && obj[0] !== '%')) {
+          return this;
+        }
+    }
+  }
+
+  Length.define({
+    px: function(value) {
+      debugger;
+      return value;
+    },
+    pt: function(value) {
+      return value;
+    },
+    cm: function(value) {
+      return value * 37.8;
+    },
+    mm: function(value) {
+      return value * 3.78;
+    },
+    "in": function(value) {
+      return value * 96;
+    }
+  });
+
+  Length.formatNumber = function(number) {
+    return number + 'px';
+  };
+
+  return Length;
+
+})(Measurement);
+
+Measurement.Angle = (function(_super) {
+  __extends(Angle, _super);
+
+  function Angle(obj) {
+    switch (typeof obj) {
+      case 'number':
+        return obj;
+      case 'object':
+        if (Measurement.Angle[obj[0]]) {
+          return this;
+        }
+    }
+  }
+
+  Angle.define({
+    deg: function(value) {
+      return value * 360;
+    },
+    grad: function(value) {
+      return value / (360 / 400);
+    },
+    rad: function(value) {
+      return value * (Math.PI / 180);
+    },
+    turn: function(value) {
+      return value;
+    }
+  });
+
+  Angle.formatNumber = function(number) {
+    return number + 'rad';
+  };
+
+  return Angle;
+
+})(Measurement);
+
+Measurement.Time = (function(_super) {
+  __extends(Time, _super);
+
+  function Time(obj) {
+    switch (typeof obj) {
+      case 'number':
+        return obj;
+      case 'object':
+        if (Measurement.Time[obj[0]]) {
+          return this;
+        }
+    }
+  }
+
+  Time.define({
+    h: function(value) {
+      return value * 60 * 60 * 1000;
+    },
+    min: function(value) {
+      return value * 60 * 1000;
+    },
+    s: function(value) {
+      return value * 1000;
+    },
+    ms: function(value) {
+      return value;
+    }
+  });
+
+  Time.formatNumber = function(number) {
+    return number + 'ms';
+  };
+
+  return Time;
+
+})(Measurement);
+
+Measurement.Frequency = (function(_super) {
+  __extends(Frequency, _super);
+
+  function Frequency(obj) {
+    switch (typeof obj) {
+      case 'number':
+        return obj;
+      case 'object':
+        if (Measurement.Frequency[obj[0]]) {
+          return this;
+        }
+    }
+  }
+
+  Frequency.define({
+    mhz: function(value) {
+      return value * 1000 * 1000;
+    },
+    khz: function(value) {
+      return value * 1000;
+    },
+    hz: function(value) {
+      return value;
+    }
+  });
+
+  Frequency.formatNumber = function(number) {
+    return number + 'hz';
+  };
+
+  return Frequency;
+
+})(Measurement);
+
+module.exports = Measurement;
+
+
+
+},{"../commands/Unit":19}],27:[function(require,module,exports){
+var Command, Primitive,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Command = require('../../engine/Command');
+
+Primitive = (function(_super) {
+  __extends(Primitive, _super);
+
+  function Primitive() {
+    return Primitive.__super__.constructor.apply(this, arguments);
+  }
+
+  return Primitive;
+
+})(Command);
+
+Primitive.Number = (function(_super) {
+  __extends(Number, _super);
+
+  Number.prototype.type = 'Number';
+
+  function Number(obj) {
+    var parsed;
+    parsed = parseFloat(obj);
+    if (parsed === obj) {
+      return parsed;
+    }
+  }
+
+  Number.formatNumber = function(number) {
+    return number;
+  };
+
+  return Number;
+
+})(Primitive);
+
+Primitive.Integer = (function(_super) {
+  __extends(Integer, _super);
+
+  Integer.prototype.type = 'Integer';
+
+  function Integer(obj) {
+    var parsed;
+    parsed = parseInt(obj);
+    if (String(parsed) === String(obj)) {
+      return parsed;
+    }
+  }
+
+  return Integer;
+
+})(Primitive);
+
+Primitive.String = (function(_super) {
+  __extends(String, _super);
+
+  String.prototype.type = 'String';
+
+  function String(obj) {
+    if (typeof obj === 'string') {
+      return obj;
+    }
+  }
+
+  return String;
+
+})(Primitive);
+
+Primitive.Strings = (function(_super) {
+  __extends(Strings, _super);
+
+  Strings.prototype.type = 'Strings';
+
+  function Strings(obj) {
+    if (typeof obj === 'string' || obj instanceof Array) {
+      return obj;
+    }
+  }
+
+  return Strings;
+
+})(Primitive);
+
+Primitive.Size = (function(_super) {
+  __extends(Size, _super);
+
+  Size.prototype.type = 'Size';
+
+  function Size(obj) {
+    var _ref;
+    if (typeof obj === 'string' && ((_ref = Primitive.Size.Keywords) != null ? _ref[obj] : void 0)) {
+      return obj;
+    }
+  }
+
+  Size.Keywords = {
+    'medium': 'medium',
+    'xx-small': 'xx-small',
+    'x-small': 'x-small',
+    'small': 'small',
+    'large': 'large',
+    'x-large': 'x-large',
+    'xx-large': 'xx-large',
+    'smaller': 'smaller',
+    'larger': 'larger'
+  };
+
+  return Size;
+
+})(Primitive);
+
+Primitive.Position = (function(_super) {
+  __extends(Position, _super);
+
+  Position.prototype.type = 'Position';
+
+  function Position(obj) {
+    var _ref;
+    if (typeof obj === 'string' && ((_ref = Primitive.Position.Keywords) != null ? _ref[obj] : void 0)) {
+      return obj;
+    }
+  }
+
+  Position.Keywords = {
+    "top": "top",
+    "bottom": "bottom",
+    "left": "left",
+    "right": "right"
+  };
+
+  return Position;
+
+})(Primitive);
+
+Primitive.Property = (function(_super) {
+  __extends(Property, _super);
+
+  function Property() {
+    return Property.__super__.constructor.apply(this, arguments);
+  }
+
+  Property.prototype.type = 'Property';
+
+  Property.prototype.Property = function(obj) {
+    if (this.properties[obj]) {
+      return obj;
+    }
+  };
+
+  return Property;
+
+})(Primitive);
+
+module.exports = Primitive;
+
+
+
+},{"../../engine/Command":29}],28:[function(require,module,exports){
+var Command, URL,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Command = require('../../engine/Command');
+
+URL = (function(_super) {
+  __extends(URL, _super);
+
+  URL.prototype.type = 'URL';
+
+  function URL(obj) {
+    switch (typeof obj) {
+      case 'object':
+        if (URL[obj[0]]) {
+          return obj;
+        }
+    }
+  }
+
+  URL.define({
+    'url': function() {},
+    'src': function() {},
+    'canvas': function() {}
+  });
+
+  return URL;
+
+})(Command);
+
+module.exports = URL;
+
+
+
+},{"../../engine/Command":29}],29:[function(require,module,exports){
 var Command,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -18973,9 +19929,6 @@ Command = (function() {
     var Default, argument, command, i, implicit, j, kind, match, signature, type, typed;
     i = -1;
     j = operation.length;
-    if (operation[0] === 'translateX') {
-      debugger;
-    }
     while (++i < j) {
       argument = operation[i];
       typed = typeof argument;
@@ -19898,7 +20851,7 @@ module.exports = Command;
 
 
 
-},{}],22:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 
 /* Domain: Observable object. 
 
@@ -20414,7 +21367,7 @@ module.exports = Domain;
 
 
 
-},{}],23:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 var Command, Query,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -21721,7 +22674,7 @@ module.exports = Query;
 
 
 
-},{"./Command":21}],24:[function(require,module,exports){
+},{"./Command":29}],32:[function(require,module,exports){
 var Update, Updater,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -22350,7 +23303,7 @@ module.exports = Update;
 
 
 
-},{}],25:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 var Condition, Query,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -22577,7 +23530,7 @@ module.exports = Condition;
 
 
 
-},{"../Query":23}],26:[function(require,module,exports){
+},{"../Query":31}],34:[function(require,module,exports){
 var Command, Constraint;
 
 Command = require('../Command');
@@ -22893,7 +23846,7 @@ module.exports = Constraint;
 
 
 
-},{"../Command":21}],27:[function(require,module,exports){
+},{"../Command":29}],35:[function(require,module,exports){
 var Command, Iterator,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -22962,100 +23915,7 @@ module.exports = Iterator;
 
 
 
-},{"../Command":21}],28:[function(require,module,exports){
-var Unit, Variable,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Variable = require('./Variable');
-
-Unit = (function(_super) {
-  __extends(Unit, _super);
-
-  function Unit() {
-    return Unit.__super__.constructor.apply(this, arguments);
-  }
-
-  Unit.prototype.signature = [
-    {
-      value: ['Variable', 'Number']
-    }
-  ];
-
-  Unit.prototype.getProperty = function(operation) {
-    var parent;
-    parent = operation;
-    while (parent = parent.parent) {
-      if (parent.command.type === 'Assignment') {
-        return parent[1];
-      }
-    }
-  };
-
-  Unit.prototype.Dependencies = {
-    'margin-top': 'containing-width',
-    'margin-top': 'containing-width',
-    'margin-right': 'containing-width',
-    'margin-left': 'containing-width',
-    'padding-top': 'containing-width',
-    'padding-top': 'containing-width',
-    'padding-right': 'containing-width',
-    'padding-left': 'containing-width',
-    'left': 'containing-width',
-    'right': 'containing-width',
-    'width': 'containing-width',
-    'min-width': 'containing-width',
-    'max-width': 'containing-width',
-    'text-width': 'containing-width',
-    'top': 'containing-height',
-    'bottom': 'containing-height',
-    'height': 'containing-height',
-    'font-size': 'containing-font-size',
-    'vertical-align': 'line-height',
-    'background-position-x': 'width',
-    'background-position-y': 'height'
-  };
-
-  Unit.define({
-    '%': function(value, engine, operation, continuation, scope) {
-      var path, property;
-      property = this.Dependencies[this.getProperty(operation)] || 'containing-width';
-      path = engine.getPath(scope, property);
-      return ['*', ['px', value], ['get', path]];
-    },
-    em: function(value, engine, operation, continuation, scope) {
-      var path;
-      path = engine.getPath(scope, 'computed-font-size');
-      return ['*', ['px', value], ['get', path]];
-    },
-    rem: function(value, engine, operation, continuation, scope) {
-      var path;
-      path = this.engine.getPath(engine.scope._gss_id, 'computed-font-size');
-      return ['*', ['px', value], ['get', path]];
-    },
-    vw: function(value, engine, operation, continuation, scope) {
-      return ['*', ['/', ['px', value], 100], ['get', '::window[width]']];
-    },
-    vh: function(value, engine, operation, continuation, scope) {
-      return ['*', ['/', ['px', value], 100], ['get', '::window[height]']];
-    },
-    vmin: function(value, engine, operation, continuation, scope) {
-      return ['*', ['/', ['px', value], 100], ['min', ['get', '::window[height]'], ['get', '::window[width]']]];
-    },
-    vmax: function(value, engine, operation, continuation, scope) {
-      return ['*', ['/', ['px', value], 100], ['max', ['get', '::window[height]'], ['get', '::window[width]']]];
-    }
-  });
-
-  return Unit;
-
-})(Variable);
-
-module.exports = Unit;
-
-
-
-},{"./Variable":29}],29:[function(require,module,exports){
+},{"../Command":29}],36:[function(require,module,exports){
 var Command, Variable,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -23158,7 +24018,7 @@ module.exports = Variable;
 
 
 
-},{"../Command":21}],30:[function(require,module,exports){
+},{"../Command":29}],37:[function(require,module,exports){
 
 /* Domain: Given values
 
@@ -23185,29 +24045,10 @@ Data = (function(_super) {
 
   Data.prototype["static"] = true;
 
-  Data.Measurement = require('../types/Measurement');
-
-  Data.prototype.Length = Data.Measurement.Length;
-
-  Data.prototype.Time = Data.Measurement.Time;
-
-  Data.prototype.Frequency = Data.Measurement.Frequency;
-
-  Data.prototype.Angle = Data.Measurement.Angle;
-
-  Data.prototype.Percentage = Data.Measurement.Percentage;
-
   Data.prototype.url = null;
 
   Data.prototype.check = function(id, property) {
-    if ((this.properties[property] != null) || property.indexOf('intrinsic-') === 0 || property.indexOf('computed-') === 0) {
-      return true;
-    }
-    if (this.properties[id._gss_id || id]) {
-      if (this.properties[(id._gss_id || id) + '[' + property + ']'] != null) {
-        return true;
-      }
-    }
+    return this.output.properties[property] || (this.properties[property] != null) || property.indexOf('intrinsic-') === 0 || property.indexOf('computed-') === 0 || ((this.properties[id._gss_id || id] && this.properties[(id._gss_id || id) + '[' + property + ']']) != null);
   };
 
   Data.prototype.verify = function(object, property) {
@@ -23268,7 +24109,7 @@ module.exports = Data;
 
 
 
-},{"../Command":21,"../Domain":22,"../commands/Variable":29,"../types/Measurement":39}],31:[function(require,module,exports){
+},{"../Command":29,"../Domain":30,"../commands/Variable":36}],38:[function(require,module,exports){
 var Command, Constraint, Domain, Input, Top, Variable,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -23297,9 +24138,37 @@ Input = (function(_super) {
 
   Input.prototype.Condition = require('../commands/Condition');
 
-  Input.prototype.Unit = require('../commands/Unit');
+  Input.prototype.Properties = (function() {
+    function _Class() {}
 
-  Input.prototype.Properties = require('../properties/Dimensions');
+    _Class.prototype.right = function(scope) {
+      var id;
+      id = this.identify(scope);
+      return ['+', ['get', this.getPath(id, 'x')], ['get', this.getPath(id, 'width')]];
+    };
+
+    _Class.prototype.bottom = function(scope, path) {
+      var id;
+      id = this.identify(scope);
+      return ['+', ['get', this.getPath(id, 'y')], ['get', this.getPath(id, 'height')]];
+    };
+
+    _Class.prototype.center = {
+      x: function(scope, path) {
+        var id;
+        id = this.identify(scope);
+        return ['+', ['get', this.getPath(id, 'x')], ['/', ['get', this.getPath(id, 'width')], 2]];
+      },
+      y: function(scope, path) {
+        var id;
+        id = this.identify(scope);
+        return ['+', ['get', this.getPath(id, 'y')], ['/', ['get', this.getPath(id, 'height')], 2]];
+      }
+    };
+
+    return _Class;
+
+  })();
 
   return Input;
 
@@ -23417,7 +24286,6 @@ Input.prototype.Variable.Getter = Input.prototype.Variable.extend({
         return prop.call(engine, object, continuation);
       }
     }
-    debugger;
     if (!prefix && engine.data.check(engine.scope, property)) {
       prefix = engine.scope;
     }
@@ -23502,136 +24370,7 @@ module.exports = Input;
 
 
 
-},{"../Command":21,"../Domain":22,"../commands/Condition":25,"../commands/Constraint":26,"../commands/Iterator":27,"../commands/Unit":28,"../commands/Variable":29,"../properties/Dimensions":33}],32:[function(require,module,exports){
-var Constraint, Data, Output,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Data = require('./Data');
-
-Constraint = require('../commands/Constraint');
-
-Output = (function(_super) {
-  __extends(Output, _super);
-
-  function Output() {
-    return Output.__super__.constructor.apply(this, arguments);
-  }
-
-  Output.prototype.displayName = 'Output';
-
-  Output.prototype.immutable = true;
-
-  Output.prototype.priority = -200;
-
-  Output.prototype.finalized = true;
-
-  Output.prototype.Gradient = require('../types/Gradient');
-
-  Output.prototype.Matrix = require('../types/Matrix');
-
-  Output.prototype.Easing = require('../types/Easing');
-
-  Output.prototype.Color = require('../types/Color');
-
-  Output.prototype.URL = require('../types/URL');
-
-  Output.Primitive = require('../types/Primitive');
-
-  Output.prototype.Number = Output.Primitive.Number;
-
-  Output.prototype.Integer = Output.Primitive.Integer;
-
-  Output.prototype.String = Output.Primitive.String;
-
-  Output.prototype.Strings = Output.Primitive.Strings;
-
-  Output.prototype.Size = Output.Primitive.Size;
-
-  Output.prototype.Position = Output.Primitive.Position;
-
-  return Output;
-
-})(Data);
-
-Output.prototype.Constraint = Constraint.extend({
-  signature: [
-    {
-      left: ['Variable', 'Number', 'Constraint'],
-      right: ['Variable', 'Number', 'Constraint']
-    }
-  ]
-}, {
-  "&&": function(a, b) {
-    return a && b;
-  },
-  "||": function(a, b) {
-    return a || b;
-  },
-  "!=": function(a, b) {
-    return a === b;
-  },
-  "==": function(a, b) {
-    return a === b;
-  },
-  "<=": function(a, b) {
-    return a <= b;
-  },
-  ">=": function(a, b) {
-    return a >= b;
-  },
-  "<": function(a, b) {
-    return a < b;
-  },
-  ">": function(a, b) {
-    return a > b;
-  }
-});
-
-module.exports = Output;
-
-
-
-},{"../commands/Constraint":26,"../types/Color":35,"../types/Easing":36,"../types/Gradient":37,"../types/Matrix":38,"../types/Primitive":40,"../types/URL":41,"./Data":30}],33:[function(require,module,exports){
-var Dimensions;
-
-Dimensions = (function() {
-  function Dimensions() {}
-
-  Dimensions.prototype.right = function(scope) {
-    var id;
-    id = this.identify(scope);
-    return ['+', ['get', this.getPath(id, 'x')], ['get', this.getPath(id, 'width')]];
-  };
-
-  Dimensions.prototype.bottom = function(scope, path) {
-    var id;
-    id = this.identify(scope);
-    return ['+', ['get', this.getPath(id, 'y')], ['get', this.getPath(id, 'height')]];
-  };
-
-  Dimensions.prototype.center = {
-    x: function(scope, path) {
-      var id;
-      id = this.identify(scope);
-      return ['+', ['get', this.getPath(id, 'x')], ['/', ['get', this.getPath(id, 'width')], 2]];
-    },
-    y: function(scope, path) {
-      var id;
-      id = this.identify(scope);
-      return ['+', ['get', this.getPath(id, 'y')], ['/', ['get', this.getPath(id, 'height')], 2]];
-    }
-  };
-
-  return Dimensions;
-
-})();
-
-module.exports = Dimensions;
-
-
-
-},{}],34:[function(require,module,exports){
+},{"../Command":29,"../Domain":30,"../commands/Condition":33,"../commands/Constraint":34,"../commands/Iterator":35,"../commands/Variable":36}],39:[function(require,module,exports){
 var Command, Constraint, Domain, Linear, Variable, c,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -23896,824 +24635,73 @@ module.exports = Linear;
 
 
 
-},{"../Command":21,"../Domain":22,"../commands/Constraint":26,"../commands/Variable":29,"cassowary":2}],35:[function(require,module,exports){
-var Color, Command,
+},{"../Command":29,"../Domain":30,"../commands/Constraint":34,"../commands/Variable":36,"cassowary":2}],40:[function(require,module,exports){
+var Constraint, Data, Output,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Command = require('../Command');
+Data = require('./Data');
 
-Color = (function(_super) {
-  __extends(Color, _super);
+Constraint = require('../commands/Constraint');
 
-  Color.Keywords = {
-    'transparent': 'transparent',
-    'currentColor': 'currentColor'
-  };
+Output = (function(_super) {
+  __extends(Output, _super);
 
-  function Color(obj) {
-    switch (typeof obj) {
-      case 'string':
-        if (Color.Keywords[obj]) {
-          return obj;
-        } else if (obj.charAt(0) === '#') {
-          return obj;
-        }
-        break;
-      case 'object':
-        if (Color[obj[0]]) {
-          return obj;
-        }
-    }
+  function Output() {
+    return Output.__super__.constructor.apply(this, arguments);
   }
 
-  Color.define({
-    hsl: function(h, s, l) {
-      var b, c, g, i, r, t1, t2, t3, _i, _ref;
-      if (s === 0) {
-        r = g = b = l * 255;
-      } else {
-        t3 = [0, 0, 0];
-        c = [0, 0, 0];
-        t2 = l < 0.5 ? l * (1 + s) : l + s - l * s;
-        t1 = 2 * l - t2;
-        h /= 360;
-        t3[0] = h + 1 / 3;
-        t3[1] = h;
-        t3[2] = h - 1 / 3;
-        for (i = _i = 0; _i <= 2; i = ++_i) {
-          if (t3[i] < 0) {
-            t3[i] += 1;
-          }
-          if (t3[i] > 1) {
-            t3[i] -= 1;
-          }
-          if (6 * t3[i] < 1) {
-            c[i] = t1 + (t2 - t1) * 6 * t3[i];
-          } else if (2 * t3[i] < 1) {
-            c[i] = t2;
-          } else if (3 * t3[i] < 2) {
-            c[i] = t1 + (t2 - t1) * ((2 / 3) - t3[i]) * 6;
-          } else {
-            c[i] = t1;
-          }
-        }
-        _ref = [Math.round(c[0] * 255), Math.round(c[1] * 255), Math.round(c[2] * 255)], r = _ref[0], g = _ref[1], b = _ref[2];
-      }
-      return ['rgb', r, g, b];
-    },
-    hsla: function(h, s, l, a) {
-      return Type.Color.hsl.execute(h, s, l).concat[a];
-    },
-    rgb: function(r, g, b) {
-      return ['rgb', r, g, b];
-    },
-    rgba: function(r, g, b, a) {
-      return ['rgba', r, g, b, a];
-    },
-    hex: function(hex) {
-      var a, b, g, r, u;
-      if (hex.match(/^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)) {
-        if (hex.length === 4 || hex.length === 7) {
-          hex = hex.substr(1);
-        }
-        if (hex.length === 3) {
-          hex = hex.split("");
-          hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-        }
-        u = parseInt(hex, 16);
-        r = u >> 16;
-        g = u >> 8 & 0xFF;
-        b = u & 0xFF;
-        return ['rgb', r, g, b];
-      }
-      if (hex.match(/^#?([A-Fa-f0-9]{8})$/)) {
-        if (hex.length === 9) {
-          hex = hex.substr(1);
-        }
-        u = parseInt(hex, 16);
-        r = u >> 24 & 0xFF;
-        g = u >> 16 & 0xFF;
-        b = u >> 8 & 0xFF;
-        a = u & 0xFF;
-        return ['rgba', r, g, b, a];
-      }
-    }
-  });
+  Output.prototype.displayName = 'Output';
 
-  return Color;
+  Output.prototype.immutable = true;
 
-})(Command);
+  Output.prototype.priority = -200;
 
-module.exports = Color;
+  Output.prototype.finalized = true;
 
+  return Output;
 
+})(Data);
 
-},{"../Command":21}],36:[function(require,module,exports){
-var Command, Easing,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Command = require('../commands/Variable');
-
-Easing = (function(_super) {
-  __extends(Easing, _super);
-
-  function Easing(obj) {
-    if (typeof obj === 'string') {
-      if (obj = this.Type.Timings[obj]) {
-        return obj;
-      }
-    } else if (obj[0] === 'steps' || obj[0] === 'cubic-bezier') {
-      return obj;
-    }
-  }
-
-  Easing.define({
-    'ease': ['cubic-bezier', .42, 0, 1, 1],
-    'ease-in': ['cubic-bezier', .42, 0, 1, 1],
-    'ease-out': ['cubic-bezier', 0, 0, .58, 1],
-    'ease-in-out': ['cubic-bezier', .42, 0, .58, 1],
-    'linear': ['cubic-bezier', 0, 0, 1, 1],
-    'step-start': 'step-start',
-    'step-end': 'step-end'
-  });
-
-  return Easing;
-
-})(Command);
-
-module.exports = Easing;
-
-
-
-},{"../commands/Variable":29}],37:[function(require,module,exports){
-var Command, Gradient,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Command = require('../Command');
-
-Gradient = (function(_super) {
-  __extends(Gradient, _super);
-
-  Gradient.prototype.type = 'Gradient';
-
-  function Gradient(obj) {
-    switch (typeof obj) {
-      case 'object':
-        if (Gradient[obj[0]]) {
-          return obj;
-        }
-    }
-  }
-
-  Gradient.define({
-    'linear-gradient': function() {},
-    'radial-gradient': function() {},
-    'repeating-linear-gradient': function() {},
-    'repeating-radial-gradient': function() {}
-  });
-
-  return Gradient;
-
-})(Command);
-
-module.exports = Gradient;
-
-
-
-},{"../Command":21}],38:[function(require,module,exports){
-var Command, Matrix,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Command = require('../Command');
-
-Matrix = (function(_super) {
-  var method, property, _ref;
-
-  __extends(Matrix, _super);
-
-  function Matrix() {
-    return Matrix.__super__.constructor.apply(this, arguments);
-  }
-
-  Matrix.prototype.type = 'Matrix';
-
-  Matrix.prototype.Library = require('../../../vendor/gl-matrix');
-
-  Matrix.prototype.matrix = function() {};
-
-  Matrix.prototype.matrix3d = function() {};
-
-  Matrix.prototype.mat3 = function(matrix, method, a, b, c) {
-    if (matrix == null) {
-      matrix = this._mat3.create();
-    }
-    if (matrix.length === 9) {
-      return this._mat3[method](matrix, matrix, a, b, c);
-    } else {
-      return this._mat4[method](matrix, matrix, a, b, c);
-    }
-  };
-
-  Matrix.prototype.mat4 = function(matrix, method, a, b, c) {
-    if (matrix == null) {
-      matrix = this._mat4.create();
-    }
-    if (matrix.length === 9) {
-      matrix = this._mat4.fromMat3(matrix);
-    }
-    return this._mat4[method](matrix, matrix, a, b, c);
-  };
-
-  _ref = Matrix.prototype.Library;
-  for (property in _ref) {
-    method = _ref[property];
-    Matrix.prototype['_' + property] = method;
-  }
-
-  return Matrix;
-
-})(Command);
-
-Matrix.prototype.Sequence = (function(_super) {
-  __extends(Sequence, _super);
-
-  function Sequence() {
-    return Sequence.__super__.constructor.apply(this, arguments);
-  }
-
-  return Sequence;
-
-})(Command.Sequence);
-
-Matrix.Transformation1 = (function(_super) {
-  __extends(Transformation1, _super);
-
-  function Transformation1() {
-    return Transformation1.__super__.constructor.apply(this, arguments);
-  }
-
-  Transformation1.prototype.signature = [
-    [
-      {
-        matrix: ['Matrix']
-      }
-    ], {
-      x: ['Variable', 'Number']
-    }
-  ];
-
-  Transformation1.define({
-    translateX: function(matrix, x) {
-      return this.mat3(matrix, 'translate', [x, 1, 1]);
-    },
-    translateY: function(matrix, y) {
-      return this.mat3(matrix, 'translate', [1, y, 1]);
-    },
-    translateZ: function(matrix, z) {
-      return this.mat4(matrix, 'translate', [1, 1, z]);
-    },
-    translate: function(matrix, x) {
-      return this.mat3(matrix, 'translate', [x, x]);
-    },
-    rotateX: function(matrix, angle) {
-      return this.mat4(matrix, 'rotateX', angle * 360 * (Math.PI / 180));
-    },
-    rotateY: function(matrix, angle) {
-      return this.mat4(matrix, 'rotateY', angle * 360 * (Math.PI / 180));
-    },
-    rotateZ: function(matrix, angle) {
-      return this.mat4(matrix, 'rotateZ', angle * 360 * (Math.PI / 180));
-    },
-    scaleX: function(matrix, x) {
-      return this.mat3(matrix, 'scale', [x, 1, 1]);
-    },
-    scaleY: function(matrix, y) {
-      return this.mat3(matrix, 'scale', [1, y, 1]);
-    },
-    scaleZ: function(matrix, z) {
-      return this.mat4(matrix, 'scale', [1, 1, z]);
-    },
-    scale: function(matrix, x) {
-      return this.mat4(matrix, 'scale', [x, x, 1]);
-    },
-    rotate: function(matrix, angle) {
-      return this.mat3(matrix, 'rotate', angle * 360 * (Math.PI / 180), [0, 0, 1]);
-    }
-  });
-
-  return Transformation1;
-
-})(Matrix);
-
-Matrix.Transformation2 = (function(_super) {
-  __extends(Transformation2, _super);
-
-  function Transformation2() {
-    return Transformation2.__super__.constructor.apply(this, arguments);
-  }
-
-  Transformation2.prototype.signature = [
-    [
-      {
-        matrix: ['Matrix']
-      }
-    ], {
-      x: ['Variable', 'Number'],
-      y: ['Variable', 'Number']
-    }
-  ];
-
-  Transformation2.define({
-    translate: function(matrix, x, y) {
-      return this.mat3(matrix, 'translate', [x, y]);
-    },
-    scale: function(matrix, x, y) {
-      return this.mat3(matrix, 'translate', [x, y]);
-    }
-  });
-
-  return Transformation2;
-
-})(Matrix);
-
-Matrix.Transformation3 = (function(_super) {
-  __extends(Transformation3, _super);
-
-  function Transformation3() {
-    return Transformation3.__super__.constructor.apply(this, arguments);
-  }
-
-  Transformation3.prototype.signature = [
-    [
-      {
-        matrix: ['Matrix']
-      }
-    ], {
-      x: ['Variable', 'Number'],
-      y: ['Variable', 'Number'],
-      z: ['Variable', 'Number']
-    }
-  ];
-
-  Transformation3.define({
-    translate3d: function(matrix, x, y, z) {
-      if (z === 0) {
-        return this.mat3(matrix, 'translate', [x, y]);
-      } else {
-        return this.mat4(matrix, 'translate', [x, y, z]);
-      }
-    },
-    scale3d: function(matrix, x, y, z) {
-      if (z === 1) {
-        return this.mat3(matrix, 'scale', [x, y]);
-      } else {
-        return this.mat4(matrix, 'scale', [x, y, z]);
-      }
-    }
-  });
-
-  return Transformation3;
-
-})(Matrix);
-
-Matrix.Transformation3A = (function(_super) {
-  __extends(Transformation3A, _super);
-
-  function Transformation3A() {
-    return Transformation3A.__super__.constructor.apply(this, arguments);
-  }
-
-  Transformation3A.prototype.signature = [
-    [
-      {
-        matrix: ['Matrix']
-      }
-    ], {
-      x: ['Variable', 'Number'],
-      y: ['Variable', 'Number'],
-      z: ['Variable', 'Number'],
-      a: ['Variable', 'Number']
-    }
-  ];
-
-  Transformation3A.define({
-    rotate3d: function(matrix, x, y, z, angle) {
-      if (y == null) {
-        y = x;
-      }
-      if (z == null) {
-        z = 0;
-      }
-      if (z === 0) {
-        return this.mat3(matrix, 'rotate', [x, y], angle * 360);
-      } else {
-        return this.mat4(matrix, 'rotate', [x, y, z], angle * 360);
-      }
-    }
-  });
-
-  return Transformation3A;
-
-})(Matrix);
-
-module.exports = Matrix;
-
-
-
-},{"../../../vendor/gl-matrix":46,"../Command":21}],39:[function(require,module,exports){
-var Measurement, Unit, Variable,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Variable = require('../commands/Variable');
-
-Unit = require('../commands/Unit');
-
-Measurement = (function(_super) {
-  __extends(Measurement, _super);
-
-  function Measurement() {
-    return Measurement.__super__.constructor.apply(this, arguments);
-  }
-
-  Measurement.prototype.signature = [
+Output.prototype.Constraint = Constraint.extend({
+  signature: [
     {
-      value: ['Variable', 'Number']
+      left: ['Variable', 'Number', 'Constraint'],
+      right: ['Variable', 'Number', 'Constraint']
     }
-  ];
-
-  return Measurement;
-
-})(Variable);
-
-Measurement.Percentage = (function(_super) {
-  __extends(Percentage, _super);
-
-  function Percentage(obj) {
-    switch (typeof obj) {
-      case 'object':
-        if (obj[0] === '%') {
-          return this;
-        }
-    }
+  ]
+}, {
+  "&&": function(a, b) {
+    return a && b;
+  },
+  "||": function(a, b) {
+    return a || b;
+  },
+  "!=": function(a, b) {
+    return a === b;
+  },
+  "==": function(a, b) {
+    return a === b;
+  },
+  "<=": function(a, b) {
+    return a <= b;
+  },
+  ">=": function(a, b) {
+    return a >= b;
+  },
+  "<": function(a, b) {
+    return a < b;
+  },
+  ">": function(a, b) {
+    return a > b;
   }
+});
 
-  return Percentage;
+module.exports = Output;
 
-})(Measurement);
 
-Measurement.Length = (function(_super) {
-  __extends(Length, _super);
 
-  function Length(obj) {
-    switch (typeof obj) {
-      case 'number':
-        return obj;
-      case 'object':
-        if (Measurement.Length[obj[0]] || (Unit[obj[0]] && obj[0] !== '%')) {
-          return this;
-        }
-    }
-  }
-
-  Length.define({
-    px: function(value) {
-      return value;
-    },
-    pt: function(value) {
-      return value;
-    },
-    cm: function(value) {
-      return value * 37.8;
-    },
-    mm: function(value) {
-      return value * 3.78;
-    },
-    "in": function(value) {
-      return value * 96;
-    }
-  });
-
-  Length.formatNumber = function(number) {
-    return number + 'px';
-  };
-
-  return Length;
-
-})(Measurement);
-
-Measurement.Angle = (function(_super) {
-  __extends(Angle, _super);
-
-  function Angle(obj) {
-    switch (typeof obj) {
-      case 'number':
-        return obj;
-      case 'object':
-        if (Measurement.Angle[obj[0]]) {
-          return this;
-        }
-    }
-  }
-
-  Angle.define({
-    deg: function(value) {
-      return value * 360;
-    },
-    grad: function(value) {
-      return value / (360 / 400);
-    },
-    rad: function(value) {
-      return value * (Math.PI / 180);
-    },
-    turn: function(value) {
-      return value;
-    }
-  });
-
-  Angle.formatNumber = function(number) {
-    return number + 'rad';
-  };
-
-  return Angle;
-
-})(Measurement);
-
-Measurement.Time = (function(_super) {
-  __extends(Time, _super);
-
-  function Time(obj) {
-    switch (typeof obj) {
-      case 'number':
-        return obj;
-      case 'object':
-        if (Measurement.Time[obj[0]]) {
-          return this;
-        }
-    }
-  }
-
-  Time.define({
-    h: function(value) {
-      return value * 60 * 60 * 1000;
-    },
-    min: function(value) {
-      return value * 60 * 1000;
-    },
-    s: function(value) {
-      return value * 1000;
-    },
-    ms: function(value) {
-      return value;
-    }
-  });
-
-  Time.formatNumber = function(number) {
-    return number + 'ms';
-  };
-
-  return Time;
-
-})(Measurement);
-
-Measurement.Frequency = (function(_super) {
-  __extends(Frequency, _super);
-
-  function Frequency(obj) {
-    switch (typeof obj) {
-      case 'number':
-        return obj;
-      case 'object':
-        if (Measurement.Frequency[obj[0]]) {
-          return this;
-        }
-    }
-  }
-
-  Frequency.define({
-    mhz: function(value) {
-      return value * 1000 * 1000;
-    },
-    khz: function(value) {
-      return value * 1000;
-    },
-    hz: function(value) {
-      return value;
-    }
-  });
-
-  Frequency.formatNumber = function(number) {
-    return number + 'hz';
-  };
-
-  return Frequency;
-
-})(Measurement);
-
-module.exports = Measurement;
-
-
-
-},{"../commands/Unit":28,"../commands/Variable":29}],40:[function(require,module,exports){
-var Command, Primitive,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Command = require('../Command');
-
-Primitive = (function(_super) {
-  __extends(Primitive, _super);
-
-  function Primitive() {
-    return Primitive.__super__.constructor.apply(this, arguments);
-  }
-
-  return Primitive;
-
-})(Command);
-
-Primitive.Number = (function(_super) {
-  __extends(Number, _super);
-
-  Number.prototype.type = 'Number';
-
-  function Number(obj) {
-    var parsed;
-    parsed = parseFloat(obj);
-    if (parsed === obj) {
-      return parsed;
-    }
-  }
-
-  Number.formatNumber = function(number) {
-    return number;
-  };
-
-  return Number;
-
-})(Primitive);
-
-Primitive.Integer = (function(_super) {
-  __extends(Integer, _super);
-
-  Integer.prototype.type = 'Integer';
-
-  function Integer(obj) {
-    var parsed;
-    parsed = parseInt(obj);
-    if (String(parsed) === String(obj)) {
-      return parsed;
-    }
-  }
-
-  return Integer;
-
-})(Primitive);
-
-Primitive.String = (function(_super) {
-  __extends(String, _super);
-
-  String.prototype.type = 'String';
-
-  function String(obj) {
-    if (typeof obj === 'string') {
-      return obj;
-    }
-  }
-
-  return String;
-
-})(Primitive);
-
-Primitive.Strings = (function(_super) {
-  __extends(Strings, _super);
-
-  Strings.prototype.type = 'Strings';
-
-  function Strings(obj) {
-    if (typeof obj === 'string' || obj instanceof Array) {
-      return obj;
-    }
-  }
-
-  return Strings;
-
-})(Primitive);
-
-Primitive.Size = (function(_super) {
-  __extends(Size, _super);
-
-  Size.prototype.type = 'Size';
-
-  function Size(obj) {
-    var _ref;
-    if (typeof obj === 'string' && ((_ref = Primitive.Size.Keywords) != null ? _ref[obj] : void 0)) {
-      return obj;
-    }
-  }
-
-  Size.Keywords = {
-    'medium': 'medium',
-    'xx-small': 'xx-small',
-    'x-small': 'x-small',
-    'small': 'small',
-    'large': 'large',
-    'x-large': 'x-large',
-    'xx-large': 'xx-large',
-    'smaller': 'smaller',
-    'larger': 'larger'
-  };
-
-  return Size;
-
-})(Primitive);
-
-Primitive.Position = (function(_super) {
-  __extends(Position, _super);
-
-  Position.prototype.type = 'Position';
-
-  function Position(obj) {
-    var _ref;
-    if (typeof obj === 'string' && ((_ref = Primitive.Position.Keywords) != null ? _ref[obj] : void 0)) {
-      return obj;
-    }
-  }
-
-  Position.Keywords = {
-    "top": "top",
-    "bottom": "bottom",
-    "left": "left",
-    "right": "right"
-  };
-
-  return Position;
-
-})(Primitive);
-
-Primitive.Property = (function(_super) {
-  __extends(Property, _super);
-
-  function Property() {
-    return Property.__super__.constructor.apply(this, arguments);
-  }
-
-  Property.prototype.type = 'Property';
-
-  Property.prototype.Property = function(obj) {
-    if (this.properties[obj]) {
-      return obj;
-    }
-  };
-
-  return Property;
-
-})(Primitive);
-
-module.exports = Primitive;
-
-
-
-},{"../Command":21}],41:[function(require,module,exports){
-var Command, URL,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Command = require('../Command');
-
-URL = (function(_super) {
-  __extends(URL, _super);
-
-  URL.prototype.type = 'URL';
-
-  function URL(obj) {
-    switch (typeof obj) {
-      case 'object':
-        if (URL[obj[0]]) {
-          return obj;
-        }
-    }
-  }
-
-  URL.define({
-    'url': function() {},
-    'src': function() {},
-    'canvas': function() {}
-  });
-
-  return URL;
-
-})(Command);
-
-module.exports = URL;
-
-
-
-},{"../Command":21}],42:[function(require,module,exports){
+},{"../commands/Constraint":34,"./Data":37}],41:[function(require,module,exports){
 var Console, method, _i, _len, _ref,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -24980,7 +24968,7 @@ module.exports = Console;
 
 
 
-},{}],43:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 var Exporter,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -25099,7 +25087,7 @@ module.exports = Exporter;
 
 
 
-},{}],44:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 var Inspector,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   __hasProp = {}.hasOwnProperty;
@@ -25753,7 +25741,7 @@ module.exports = Inspector;
 
 
 
-},{}],45:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 (function (global){
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
@@ -26300,7 +26288,7 @@ if (typeof window != 'undefined') {
     global.MutationObserver = JsMutationObserver;
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],46:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 /**
  * @fileoverview gl-matrix - High performance matrix and vector operations
  * @author Brandon Jones
@@ -30419,7 +30407,7 @@ if(typeof(exports) !== 'undefined') {
   })(shim.exports);
 })(this);
 
-},{}],47:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
  * Use of this source code is governed by a BSD-style

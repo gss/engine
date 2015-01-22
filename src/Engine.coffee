@@ -3,10 +3,10 @@
 Engine is a base class for scripting environment.
 It initializes and orchestrates all moving parts.
 
-It operates with workers and domains. Workers are
+It operates over workers and domains. Workers are
 separate engines running in web worker thread. 
 Domains are either independent constraint graphs or
-pseudo-solvers like intrinsic measurements. ###
+pseudo-solvers like DOM measurements. ###
   
 class Engine
 
@@ -15,7 +15,7 @@ class Engine
   Update:    require('./engine/Update')
   Query:     require('./engine/Query')
   
-  Solver:    require('./engine/solvers/Linear')
+  Solver:    require('./engine/domains/Linear')
   Input:     require('./engine/domains/Input')
   Data:      require('./engine/domains/Data')
   Output:    require('./engine/domains/Output')
@@ -25,54 +25,60 @@ class Engine
   Exporter:  require('./engine/utilities/Exporter')
 
   constructor: (data, url) -> #(scope, url, data)
+    @engine = @
+
+    # Attempt to initialize worker
     if url? && Worker?
       @url = @getWorkerURL(url)
-
+    
+    # Assign and manage event handlers
+    @eventHandler = @handleEvent.bind(@)
     @listeners = {}
+    for events in [@events, @$events, @$$events]
+      @addListeners(events)
+
+    # Manage and observe queries
     @observers = {}
     @queries   = {}
 
+    # Register pairing selectors
     @lefts = []
     @pairs = {}
-    
-    @eventHandler = @handleEvent.bind(@)
-    @addListeners(@$$events)
-    @addListeners(@$events)
-    @addListeners(@events)
 
+    # Track variables and dependency graphs
     @variables    = {}
     @domains      = []
+
+    # Bookkeep parsed stylesheets
     @stylesheets  = []
     @imported     = {}
-    @engine       = @
+
+    # Initialize utilities
     @inspector    = new @Inspector(@)
     @exporter     = new @Exporter(@)
 
+    # Subclass Update and Domains to point to this engine
     @update = @Update.compile(@)
-    
     @Domain.compile(@)
     
+    # Find and register commands in I/O domains
     @data.setup()
     @output.setup()
 
+    # Link solved values and use given data
     @values = @output.values
-    
     if data
       for property, value of data
         @data.values[property] = @values[property] = value
 
-    
+    # Bypass input domain for worker solver
     unless window?
       @strategy = 'update'
 
+    # Listen for errors to flush buffered console
     self.addEventListener 'error', @eventHandler
 
     return @
-    
-  use: (object) ->
-    return object
-      
-  @use: (object) ->
 
   # engine.solve({}) - solve with given data
   # engine.solve([]) - evaluate commands
@@ -133,10 +139,11 @@ class Engine
 
     return args
 
-  # Run solution in multiple ticks
+  # Start a solving tick, may cause others
   commit: (solution, update = @updating, apply) ->
     return if update.blocking
     
+    # Start with given solution
     if solution && Object.keys(solution).length
       @triggerEvent('resume', solution, update)
         
@@ -173,7 +180,7 @@ class Engine
       
       update.commit()
 
-    # Discard pure update 
+    # Discard update if it did nothing 
     unless update.hadSideEffects(solution)
       @updating = undefined
       @console.end()
@@ -364,7 +371,7 @@ class Engine
             `<script src="my-custom-path/my-gss.js"></script>`
 
           - or provide worker path explicitly: 
-            `GSS(document, "http://absolute.path/to/worker")`
+            `GSS(<scope>, "http://absolute.path/to/worker")`
         """
 
       return url

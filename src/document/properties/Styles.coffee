@@ -1,4 +1,5 @@
 class Styles
+  constructor: (@engine) ->
 
   transform: [[
     -> mat4.create(),

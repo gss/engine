@@ -146,9 +146,6 @@ class Command
     # Function call
     i = -1
     j = operation.length
-    
-    if (operation[0] == 'translateX')
-      debugger
 
     while ++i < j
       argument = operation[i]

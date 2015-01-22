@@ -1,28 +1,51 @@
 Engine = require('./Engine')
 
 class Document extends Engine
-  Style:        require('./document/Style')
-  
+  @Measurement:   require('./document/types/Measurement')
+  @Primitive:     require('./document/types/Primitive')
+
   class @::Input extends @::Input
     Selector:     require('./document/commands/Selector')
     Stylesheet:   require('./document/commands/Stylesheet')
+    Unit:         require('./document/commands/Unit')
     helps: true
+    
+
+  class @::Output extends @::Output
+    Style:        require('./document/Style')
+    Properties:   require('./document/properties/Styles')
+    Unit:         require('./document/commands/Unit')
+
+    Gradient:     require('./document/types/Gradient')
+    Matrix:       require('./document/types/Matrix')
+    Easing:       require('./document/types/Easing')
+    Color:        require('./document/types/Color')
+    URL:          require('./document/types/URL')
+
+    Number:       Document.Primitive.Number
+    Integer:      Document.Primitive.Integer
+    String:       Document.Primitive.String
+    Strings:      Document.Primitive.Strings
+    Size:         Document.Primitive.Size
+    Position:     Document.Primitive.Position
+    
+    Length:       Document.Measurement.Length
+    Time:         Document.Measurement.Time
+    Frequency:    Document.Measurement.Frequency
+    Angle:        Document.Measurement.Angle
+    Percentage:   Document.Measurement.Percentage
+    
+
   
   class @::Data extends @::Data
-    Getters:      require('./document/properties/Getters')
-    Styles:       require('./document/properties/Styles')
-    immediate: true
-    
-    Properties: do ->
-      Properties = (engine) ->
-        if engine
-          @engine = engine
-        return
-      Properties.prototype = new Data::Styles
-      Properties.prototype = new Properties
-      for property, value of Data::Getters::
-        Properties::[property] = value
-      Properties
+    immediate:    true
+    Properties:   require('./document/properties/Getters')
+
+    Length:       Document.Measurement.Length
+    Time:         Document.Measurement.Time
+    Frequency:    Document.Measurement.Frequency
+    Angle:        Document.Measurement.Angle
+    Percentage:   Document.Measurement.Percentage
 
     perform: ->
       if arguments.length < 4 && @data.subscribers
@@ -69,12 +92,8 @@ class Document extends Engine
               return prop.call(@, object)
             else if typeof prop != 'function'
               return prop
-            else if !prop.matcher && property.indexOf('intrinsic') == -1
+            else if property.indexOf('intrinsic') == -1
               return prop.call(@, object)
-
-    
-
-  
 
   constructor: (data, url, scope = document) ->
     super
@@ -105,7 +124,6 @@ class Document extends Engine
 
     validate: (solution, update) ->
       if @data.subscribers && update.domains.indexOf(@data, update.index + 1) == -1
-        
         @data.verify('::window', 'width')
         @data.verify('::window', 'height')
         @data.verify(@scope, 'width')
@@ -226,6 +244,25 @@ class Document extends Engine
         return computed[id] = window.getComputedStyle(element)
     return old
 
+  # Set or unset absolute position 
+  setAbsolutePosition: (element, property, value) ->
+    position = element.style.position
+    if element.positioned == undefined
+      element.positioned = + !!position
+    if position && position != 'absolute'
+      return
+    if element.style[property] == ''
+      if value? && value != ''
+        element.positioned = (element.positioned || 0) + 1
+    else 
+      if !value? || value == ''
+        element.positioned = (element.positioned || 0) - 1
+    if element.positioned == 1
+      element.style.position = 'absolute'
+    else if element.positioned == 0
+      element.style.position = ''
+
+
   setStyle: (element, property, value = '', continuation, operation) -> 
     switch property
       when "x"
@@ -233,29 +270,15 @@ class Document extends Engine
       when "y"
         property = "top"
 
-    return unless (prop = @data.properties[property])?.matcher
+    return unless prop = @output.properties[property]
     camel = @camelize property
     if typeof value != 'string'
       value = prop.format(value)
 
     if property == 'left' || property == 'top'
-      position = element.style.position
-      if element.positioned == undefined
-        element.positioned = + !!position
-      if position && position != 'absolute'
-        return
-      if element.style[camel] == ''
-        if value? && value != ''
-          element.positioned = (element.positioned || 0) + 1
-      else 
-        if !value? || value == ''
-          element.positioned = (element.positioned || 0) - 1
-      if element.positioned == 1
-        element.style.position = 'absolute'
-      else if element.positioned == 0
-        element.style.position = ''
+      @setAbsolutePosition(element, property, value)
 
-    if parent = operation
+    else if parent = operation
       while parent.parent
         parent = parent.parent
         if parent.command.type == 'Condition' && !parent.command.global
@@ -264,6 +287,7 @@ class Document extends Engine
       if parent.command.parse
         if parent.command.set @, operation, @Command::delimit(continuation), element, property, value
           return
+
     path = @getPath(element, 'intrinsic-' + property)
     if @watchers?[path]
       return
@@ -271,7 +295,7 @@ class Document extends Engine
 
     element.style[camel] = value
     return
- df 
+
   # Iterate elements and measure intrinsic offsets
   each: (parent, callback, x = 0,y = 0, a,r,g,s) ->
     scope = @engine.scope
@@ -328,20 +352,20 @@ class Document extends Engine
       if properties = @data.subscribers[id]
         for prop of properties
           switch prop
-            when "x", "intrinsic-x", "computed-x"
+            when "x",      "intrinsic-x",      "computed-x"
               @set id, prop, x + node.offsetLeft
-            when "y", "intrinsic-y", "computed-y"
+            when "y",      "intrinsic-y",      "computed-y"
               @set id, prop, y + node.offsetTop
-            when "width", "intrinsic-width", "computed-width"
+            when "width",  "intrinsic-width",  "computed-width"
               @set id, prop, node.offsetWidth
             when "height", "intrinsic-height", "computed-height"
               @set id, prop, node.offsetHeight
             else
               style = prop.replace(/^(?:computed|intrinsic)-/, '')
-              if @properties[style]?.matcher
-                @set id, prop, @getStyle(node, style)
-              else
+              if @properties[style]
                 @set id, prop, @get(node, style)
+              else if @output.properties[style]
+                @set id, prop, @getStyle(node, style)
 
     return
 

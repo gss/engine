@@ -1,4 +1,4 @@
-Variable = require('./Variable')
+Variable = require('../../engine/commands/Variable')
 
 class Unit extends Variable
   

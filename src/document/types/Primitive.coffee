@@ -1,4 +1,4 @@
-Command = require('../Command')
+Command = require('../../engine/Command')
 
 class Primitive extends Command
 

@@ -1,4 +1,4 @@
-Command = require ('../Command')
+Command = require ('../../engine/Command')
 
 class Matrix extends Command
   type: 'Matrix'
