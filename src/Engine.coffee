@@ -211,20 +211,17 @@ class Engine
           return update
 
       # Apply values to elements
-      if apply == false
-        @triggerEvent('flush', update.solution, update)
-      else
-        @console.start('Apply', update.solution)
-        @triggerEvent('apply', update.solution, update)
-        @triggerEvent('write', update.solution, update)
-        @triggerEvent('flush', update.solution, update)
-        @console.end(@values)
+      @console.start('Apply', update.solution)
+      @triggerEvent('apply', update.solution, update)
+      @triggerEvent('write', update.solution, update)
+      @triggerEvent('flush', update.solution, update)
+      @console.end(@values)
 
-        # Re-measure values
-        if update.solved || update.isDone()
-          @triggerEvent('validate', update.solution, update)
-      
-      
+      # Re-measure values
+      if update.solved || update.isDone()
+        @triggerEvent('validate', update.solution, update)
+    
+    
       update.commit()
 
     # Discard pure update 
