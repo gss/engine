@@ -68,7 +68,7 @@ describe 'Matrix', ->
         ])
       ).to.throw(/Undefined/)
 
-  describe 'when used with variables', ->
+  xdescribe 'when used with variables', ->
     it 'should update and recompute matrix', (done) ->
       expect(engine.solve([
         ['translateX', 3]

@@ -20,6 +20,26 @@ describe 'Stylesheet', ->
 
   describe 'with static rules', ->
     describe 'in top scope', ->
+      describe 'with custom selectors', ->
+        it 'should include generaeted rules', (done) ->
+          engine.then ->
+            expect(
+              for rule in engine.stylesheets[0].sheet.cssRules
+                rule.cssText
+            ).to.eql ['[matches~="#box2!+.box"] { width: 1px; }']
+            expect(engine.id('box1').getAttribute('matches')).to.eql '#box2!+.box'
+            expect(engine.id('box1').offsetWidth).to.eql 1
+            done()
+          container.innerHTML = """
+            <style type="text/gss" id="gss">
+              #box2 !+ .box {
+                width: 1px;
+              }
+            </style>
+            <div class="box" id="box1"></div>
+            <div class="box" id="box2"></div>
+          """
+            
       describe 'with simple selectors', ->
         it 'should include generaeted rules', (done) ->
           container.innerHTML = """
@@ -42,25 +62,7 @@ describe 'Stylesheet', ->
             expect(engine.id('box2').offsetWidth).to.eql 1
             done()
 
-      describe 'with custom selectors', ->
-        it 'should include generaeted rules', (done) ->
-          container.innerHTML = """
-            <style type="text/gss" id="gss">
-              #box2 !+ .box {
-                width: 1px;
-              }
-            </style>
-            <div class="box" id="box1"></div>
-            <div class="box" id="box2"></div>
-          """
-          engine.then ->
-            expect(
-              for rule in engine.stylesheets[0].sheet.cssRules
-                rule.cssText
-            ).to.eql ['[matches~="#box2!+.box"] { width: 1px; }']
-            expect(engine.id('box1').getAttribute('matches')).to.eql '#box2!+.box'
-            expect(engine.id('box1').offsetWidth).to.eql 1
-            done()
+
 
 
       xdescribe 'with self-referential selectors', ->
