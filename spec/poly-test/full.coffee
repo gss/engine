@@ -539,7 +539,7 @@ describe 'Full page tests', ->
   afterEach ->
     remove(container)
     engine.destroy()
-  @timeout 100000
+  @timeout 20000
 
   for type, index in ['With worker', 'Without worker']
     do (type, index) ->
@@ -640,9 +640,6 @@ describe 'Full page tests', ->
                         engine.then (solution) ->
                           expect(engine.values).to.eql {}
                           done()
-
-
-        @timeout 100000
         
         it 'gss1 demo', (done) ->
           container = document.createElement('div')

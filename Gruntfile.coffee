@@ -154,9 +154,9 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-connect'
   @loadNpmTasks 'grunt-saucelabs'
 
-  @registerTask 'build', ['browserify', 'uglify:engine', 'usebanner']
+  @registerTask 'build', ['browserify:spec', 'uglify:engine', 'usebanner']
   @registerTask 'test', ['coffeelint', 'build', 'phantom']
   @registerTask 'phantom', ['connect', 'mocha_phantomjs']
-  @registerTask 'crossbrowser', ['connect', 'mocha_phantomjs', 'saucelabs-mocha']
+  @registerTask 'crossbrowser', ['build', 'coffeelint', 'connect', 'mocha_phantomjs', 'saucelabs-mocha']
   @registerTask 'default', ['build']
   @registerTask 'nuke', ['clean']
