@@ -31,6 +31,10 @@
       mocha.setup('bdd');
       chai.config.includeStack = true;
       chai.config.showDiff = true;
+      if (String(location.port).indexOf(9999) > -1)
+        setInterval(function() {
+          window.scrollTo(0, Infinity)
+        }, 100)
     </script>
     <script src="./js/specs.js"></script>
     <script>
