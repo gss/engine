@@ -53,7 +53,7 @@ describe 'GSS engine', ->
       e.destroy()
       done()
     
-  describe 'GSS() - scopeless & no web workers', ->
+  xdescribe 'GSS() - scopeless & no web workers', ->
     e = null
     it 'should initialize', ->
       e = new GSS()
@@ -98,11 +98,6 @@ describe 'GSS engine', ->
           """
           engine = new GSS(container, useWorker || undefined)
           engine.compile()
-        after (done) ->
-          remove(container)
-          # have to manually destroy, otherwise there is some clash!
-          engine.destroy()
-          done()
     
         ast = [
           ['==', ['get', ['#','button1'], 'width'], ['get', ['#','button2'], 'width']]
@@ -115,13 +110,17 @@ describe 'GSS engine', ->
           expect(button2.getBoundingClientRect().width).to.be.above button1.getBoundingClientRect().width
         
         it 'after solving the buttons should be of equal width', (done) ->
+          count = 0
           onSolved = (values) ->
-            expect(values).to.be.an 'object'
-            expect(values['$button1'])
-            expect(Math.round(button1.getBoundingClientRect().width)).to.equal 100
-            expect(Math.round(button2.getBoundingClientRect().width)).to.equal 100
-            engine.removeEventListener 'solved', onSolved
-            done()
+            if ++count == 1
+              expect(values).to.be.an 'object'
+              expect(values['$button1'])
+              expect(Math.round(button1.getBoundingClientRect().width)).to.equal 100
+              expect(Math.round(button2.getBoundingClientRect().width)).to.equal 100
+              container.innerHTML = ""
+            else
+              engine.removeEventListener 'solved', onSolved
+              done()
           engine.addEventListener 'solved', onSolved
           engine.solve ast
           
@@ -145,12 +144,6 @@ describe 'GSS engine', ->
             <h1 id="text2" style="line-height:12px;font-size:12px;">Two</h1>
           """
           engine = new GSS(container, useWorker || undefined)
-          
-        after (done) ->
-          remove(container)
-          # have to manually destroy, otherwise there is some clash!
-          engine.destroy()
-          done()
     
         ast = [
             ['==', ['get',['tag','h1'],'line-height'], ['get',['tag','h1'],'font-size']]
@@ -166,17 +159,21 @@ describe 'GSS engine', ->
           assert text1.style['fontSize'] is "12px"
           assert text2.style['fontSize'] is "12px"          
         it 'after solving', (done) ->
+          count = 0
           onSolved = (e) ->
-            assert text1.style['lineHeight'] is "42px"
-            assert text2.style['lineHeight'] is "42px"
-            assert text1.style['fontSize'] is "42px"
-            assert text2.style['fontSize'] is "42px"
-            assert e.detail['$text1[line-height]'] is 42
-            assert e.detail['$text2[line-height]'] is 42
-            assert e.detail['$text1[font-size]'] is 42
-            assert e.detail['$text2[font-size]'] is 42
-            container.removeEventListener 'solved', onSolved
-            done()
+            if ++count == 1
+              assert text1.style['lineHeight'] is "42px"
+              assert text2.style['lineHeight'] is "42px"
+              assert text1.style['fontSize'] is "42px"
+              assert text2.style['fontSize'] is "42px"
+              assert e.detail['$text1[line-height]'] is 42
+              assert e.detail['$text2[line-height]'] is 42
+              assert e.detail['$text1[font-size]'] is 42
+              assert e.detail['$text2[font-size]'] is 42
+              container.innerHTML = ""
+            else
+              engine.removeEventListener 'solved', onSolved
+              done()
           container.addEventListener 'solved', onSolved
           engine.solve ast
           
@@ -217,13 +214,18 @@ describe 'GSS engine', ->
       assert engine.updated == undefined
     
     it 'after solving the buttons should have right', (done) ->
+      count = 0
       onSolved = (e) ->
-        w = Math.round(button1.getBoundingClientRect().width)
-        assert w is 111, "button1 width: #{w}"
-        w = Math.round(button2.getBoundingClientRect().width)
-        assert w is 222, "button2 width: #{w}"
-        container.removeEventListener 'solved', onSolved
-        done()
+        if ++count == 1
+          w = Math.round(button1.getBoundingClientRect().width)
+          assert w is 111, "button1 width: #{w}"
+          w = Math.round(button2.getBoundingClientRect().width)
+          assert w is 222, "button2 width: #{w}"
+          container.innerHTML = ""
+        else
+          engine.removeEventListener 'solved', onSolved
+          done()
+
       container.addEventListener 'solved', onSolved
       container.innerHTML = """
       <div>        
@@ -246,13 +248,6 @@ describe 'GSS engine', ->
         <div id="w">        
         </div>
       """
-    
-    after (done) ->
-      remove(container)
-      # have to manually destroy, otherwise there is some clash!
-      engine.destroy()
-      done()
-    
 
     ast = [
         ['==', ["get", ["#","b1"], "right"],  ["get",["#","b2"],"x"]]
@@ -267,15 +262,20 @@ describe 'GSS engine', ->
       ]
     
     it 'after solving should have right size', (done) ->
+      count = 0
+
       onSolved = (e) ->
-        w = Math.round(engine.id("w").getBoundingClientRect().width)
-        assert w is 200, "w width: #{w}"
-        w = Math.round(engine.id('b1').getBoundingClientRect().width)
-        assert w is 100, "button1 width: #{w}"
-        w = Math.round(engine.id('b2').getBoundingClientRect().width)
-        assert w is 100, "button2 width: #{w}"
-        container.removeEventListener 'solved', onSolved
-        done()
+        if ++count == 1
+          w = Math.round(engine.id("w").getBoundingClientRect().width)
+          assert w is 200, "w width: #{w}"
+          w = Math.round(engine.id('b1').getBoundingClientRect().width)
+          assert w is 100, "button1 width: #{w}"
+          w = Math.round(engine.id('b2').getBoundingClientRect().width)
+          assert w is 100, "button2 width: #{w}"
+          container.innerHTML = ""
+        else
+          container.removeEventListener 'solved', onSolved
+          done()
       document.getElementById('w').innerHTML = """
       <div>        
            <div id="b1"></div>

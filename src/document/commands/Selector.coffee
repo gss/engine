@@ -624,13 +624,16 @@ Selector.define
     Element: (parameter, engine, operation, continuation, scope) ->
       return engine.scope
 
+  # Return abstract reference to window
+  '::document':
+    Reference: ->
+      return document
+
 
   # Return abstract reference to window
   '::window':
     Reference: ->
-      return '::window' 
-      
-    stringy: true
+      return window
   
   'virtual':
     localizers: ['Selector', 'Iterator']

@@ -14846,8 +14846,6 @@ Document = (function(_super) {
 
     Input.prototype.Unit = require('./document/commands/Unit');
 
-    Input.prototype.helps = true;
-
     return Input;
 
   })(Document.prototype.Input);
@@ -15108,8 +15106,14 @@ Document = (function(_super) {
             return;
           }
           return _this.solve('Resize', id, function() {
-            this.data.verify(id, "width");
-            this.data.verify(id, "height");
+            if (this.scope._gss_id !== id) {
+              this.data.verify(id, "width");
+              this.data.verify(id, "height");
+            }
+            if (id !== '::document') {
+              this.data.verify(id, "width");
+              this.data.verify(id, "height");
+            }
             this.data.verify(this.scope, "width");
             this.data.verify(this.scope, "height");
             return this.data.commit();
@@ -15124,6 +15128,10 @@ Document = (function(_super) {
       }
       id = e.target && this.identify(e.target) || e;
       return this.solve('Scroll', id, function() {
+        if (id === '::window') {
+          this.data.verify('::document', "scroll-top");
+          this.data.verify('::document', "scroll-left");
+        }
         this.data.verify(id, "scroll-top");
         this.data.verify(id, "scroll-left");
         return this.data.commit();
@@ -15229,7 +15237,10 @@ Document = (function(_super) {
       }
     }
     path = this.getPath(element, 'intrinsic-' + property);
-    if ((_ref = this.watchers) != null ? _ref[path] : void 0) {
+    if (property === 'width' && (element._gss_id || element) === '$message') {
+      debugger;
+    }
+    if ((_ref = this.data.watchers) != null ? _ref[path] : void 0) {
       return;
     }
     element.style[camel] = value;
@@ -15626,7 +15637,7 @@ Engine = (function() {
           return update;
         }
       }
-      if (apply === false) {
+      if (apply === false && !update.domains.length) {
         this.triggerEvent('flush', update.solution, update);
       } else {
         this.console.start('Apply', update.solution);
@@ -15803,8 +15814,9 @@ Engine = (function() {
       return this.output.merge(solution);
     },
     remove: function(path) {
+      var _ref;
       this.output.remove(path);
-      return this.updating.remove(path);
+      return (_ref = this.updating) != null ? _ref.remove(path) : void 0;
     },
     destroy: function(e) {
       if (this.worker) {
@@ -15925,11 +15937,7 @@ Engine = (function() {
       return property;
     } else {
       if (typeof id !== 'string') {
-        if (id.nodeType) {
-          id = this.identify(id);
-        } else {
-          id = id.path;
-        }
+        id = this.identify(id);
       }
       if (id === ((_ref = this.scope) != null ? _ref._gss_id : void 0) && !this.data.check(id, property)) {
         return property;
@@ -16518,7 +16526,6 @@ Shorthand = (function() {
     switch (typeof operation) {
       case 'object':
         name = operation[0];
-        debugger;
         if ((_ref = this.styles.engine.signatures[name]) != null ? (_ref1 = _ref.Number) != null ? _ref1.resolved : void 0 : void 0) {
           return this.toExpressionString(key, operation[1], true) + name;
         } else {
@@ -17446,11 +17453,15 @@ Selector.define({
       return engine.scope;
     }
   },
+  '::document': {
+    Reference: function() {
+      return document;
+    }
+  },
   '::window': {
     Reference: function() {
-      return '::window';
-    },
-    stringy: true
+      return window;
+    }
   },
   'virtual': {
     localizers: ['Selector', 'Iterator'],
@@ -19445,7 +19456,6 @@ Measurement.Length = (function(_super) {
 
   Length.define({
     px: function(value) {
-      debugger;
       return value;
     },
     pt: function(value) {
@@ -19779,9 +19789,9 @@ module.exports = URL;
 
 },{"../../engine/Command":29}],29:[function(require,module,exports){
 var Command,
+  __slice = [].slice,
   __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  __slice = [].slice;
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 Command = (function() {
   var _i, _results;
@@ -20369,9 +20379,12 @@ Command = (function() {
     signature = engine.signatures[name];
     base = [name];
     return (_base = engine.engine)[name] != null ? _base[name] : _base[name] = function() {
-      var arg, args, command, extras, index, length, permutation, permuted, result, _j, _len, _ref;
+      var arg, args, command, extras, index, length, parent, permutation, permuted, result, _j, _len, _ref;
       args = Array.prototype.slice.call(arguments);
       command = Command.match(engine, base.concat(args)).prototype;
+      if (!(parent = command.constructor.__super__)) {
+        return engine.engine.solve([name].concat(__slice.call(arguments)));
+      }
       length = command.padding;
       if (command.hasOwnProperty('permutation')) {
         length += (permutation = command.permutation).length;
@@ -20396,12 +20409,12 @@ Command = (function() {
             }
           }
         }
-      }
-      if ((result = command.execute.apply(command, args)) != null) {
-        if (command.ascend !== command.constructor.__super__.ascend) {
-          command.ascend(engine, args, '', engine.scope, result);
+        if ((result = command.execute.apply(command, args)) != null) {
+          if (command.ascend !== parent.ascend) {
+            command.ascend(engine, args, '', engine.scope, result);
+          }
+          return result;
         }
-        return result;
       }
     };
   };
@@ -23650,9 +23663,9 @@ Constraint = Command.extend({
         engine.Constraint.prototype.undeclare(engine, constraint);
       }
     }
-    if (engine.solver._changed && engine.constrained && engine.unconstrained) {
-      engine.solver = void 0;
-      engine.setup();
+    if (engine.instance._changed && engine.constrained && engine.unconstrained) {
+      engine.instance = void 0;
+      engine.construct();
       if (editing = engine.editing) {
         engine.editing = void 0;
         for (property in editing) {
@@ -24134,6 +24147,8 @@ Input = (function(_super) {
 
   Input.prototype.url = void 0;
 
+  Input.prototype.helps = true;
+
   Input.prototype.Iterator = require('../commands/Iterator');
 
   Input.prototype.Condition = require('../commands/Condition');
@@ -24386,6 +24401,8 @@ Constraint = require('../commands/Constraint');
 
 c = require('cassowary');
 
+c.Strength.require = c.Strength.required;
+
 Linear = (function(_super) {
   __extends(Linear, _super);
 
@@ -24400,16 +24417,15 @@ Linear = (function(_super) {
   Linear.prototype.Engine = c;
 
   Linear.prototype.construct = function() {
-    this.paths = {};
+    if (this.paths == null) {
+      this.paths = {};
+    }
     this.instance = new c.SimplexSolver();
     this.instance.autoSolve = false;
-    this.instance._store = [];
     if (this.console.level > 2) {
       c.debug = true;
-      c.trace = true;
+      return c.trace = true;
     }
-    c.Strength.require = c.Strength.required;
-    return Linear.hack();
   };
 
   Linear.prototype.perform = function() {
@@ -24604,7 +24620,7 @@ Linear.prototype.Remove = Command.extend({
   }
 });
 
-Linear.hack = function() {
+(function() {
   var obj, property, set;
   if (c.isUnordered == null) {
     obj = {
@@ -24629,7 +24645,7 @@ Linear.hack = function() {
       };
     }
   }
-};
+})();
 
 module.exports = Linear;
 

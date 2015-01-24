@@ -8,7 +8,6 @@ class Document extends Engine
     Selector:     require('./document/commands/Selector')
     Stylesheet:   require('./document/commands/Stylesheet')
     Unit:         require('./document/commands/Unit')
-    helps: true
     
 
   class @::Output extends @::Output
@@ -191,8 +190,12 @@ class Document extends Engine
           @updating.resizing = 'scheduled'
           return
         @solve 'Resize', id, ->
-          @data.verify(id, "width")
-          @data.verify(id, "height")
+          if @scope._gss_id != id
+            @data.verify(id, "width")
+            @data.verify(id, "height")
+          if id != '::document'
+            @data.verify(id, "width")
+            @data.verify(id, "height")
           @data.verify(@scope, "width")
           @data.verify(@scope, "height")
           return @data.commit()
@@ -200,6 +203,9 @@ class Document extends Engine
     scroll: (e = '::window') ->
       id = e.target && @identify(e.target) || e
       @solve 'Scroll', id, ->
+        if id == '::window'
+          @data.verify('::document', "scroll-top")
+          @data.verify('::document', "scroll-left")
         @data.verify(id, "scroll-top")
         @data.verify(id, "scroll-left")
         return @data.commit()
@@ -289,7 +295,9 @@ class Document extends Engine
           return
 
     path = @getPath(element, 'intrinsic-' + property)
-    if @watchers?[path]
+    if property == 'width' && (element._gss_id || element) == '$message'
+      debugger
+    if @data.watchers?[path]
       return
 
 

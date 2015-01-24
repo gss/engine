@@ -88,7 +88,8 @@ describe 'Units', ->
               ["==", ["get", "a"], 50],
               [">=", ["get", "width"], ["vw", 10]], 
               [">=", ["get", "height"], ["vh", ["get", "a"]]],
-              [">=", ["get", "c"], ["vmax", 30]]
+              [">=", ["get", "c"], ["vmax", 30]],
+              [">=", ["get", "d"], ["vmin", 33]]
             ]]
           </style>
           <button id="button1"></button>
@@ -99,18 +100,31 @@ describe 'Units', ->
           expect(Math.round solution['$button1[width]']).to.eql(Math.round w / 10)
           expect(Math.round solution['$button1[height]']).to.eql(Math.round h / 2)
           expect(Math.round solution['$button1[c]']).to.eql(Math.round Math.max(w, h) * 0.3)
+          expect(Math.round solution['$button1[d]']).to.eql(Math.round Math.min(w, h) * 0.33)
           engine.then (solution) ->
             expect(Math.round solution['$button1[width]']).to.eql(Math.round 1000 / 10)
-            expect(Math.round solution['$button1[c]']).to.eql(Math.round Math.max(1000, h) * 0.3)
+            if h < 1000
+              expect(Math.round solution['$button1[c]']).to.eql(Math.round 1000 * 0.3)
+            else
+              expect(Math.round solution['$button1[d]']).to.eql(1000 * 0.33)
+
+            engine.then (solution) ->
+              expect(Math.round solution['$button1[d]']).to.eql(100 * 0.33)
+
+              remove(engine.id('button1'))
             
-            remove(engine.id('button1'))
-          
-            engine.then (solution)->
-              expect(solution['$button1[width]']).to.eql null
-              expect(solution['$button1[height]']).to.eql null
-              expect(solution['$button1[c]']).to.eql null
-              expect(Object.keys(engine.data.watchers)).to.eql []
-              done()
+              engine.then (solution)->
+                expect(solution['$button1[width]']).to.eql null
+                expect(solution['$button1[height]']).to.eql null
+                expect(solution['$button1[c]']).to.eql null
+                expect(Object.keys(engine.data.watchers)).to.eql []
+                done()
+
+            engine.data.properties['::window[height]'] = ->
+              return 100
+            engine.data.set('::window', 'height', 100)
+
+            
           engine.data.properties['::window[width]'] = ->
             return 1000
 

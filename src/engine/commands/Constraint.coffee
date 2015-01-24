@@ -94,10 +94,11 @@ Constraint = Command.extend
 
 
     # Throw old solver away and make another when replacing constraints
-    # To recumpute things from a clean state
-    if engine.solver._changed && engine.constrained && engine.unconstrained
-      engine.solver = undefined
-      engine.setup()
+    # To recompute things from a clean state
+    
+    if engine.instance._changed && engine.constrained && engine.unconstrained
+      engine.instance = undefined
+      engine.construct()
       if editing = engine.editing
         engine.editing = undefined
 

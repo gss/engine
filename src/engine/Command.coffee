@@ -519,6 +519,9 @@ class Command
     engine.engine[name] ?= ->
       args = Array.prototype.slice.call(arguments)
       command = Command.match(engine, base.concat(args)).prototype
+      unless parent = command.constructor.__super__
+        return engine.engine.solve([name, arguments...])
+
       length =  command.padding
       if command.hasOwnProperty('permutation')
         length += (permutation = command.permutation).length
@@ -538,11 +541,11 @@ class Command
             args.push('')
             if extras > 3
               args.push(engine.scope)
+        if (result = command.execute.apply(command, args))?
+          unless command.ascend == parent.ascend
+            command.ascend(engine, args, '', engine.scope, result)
+          return result
 
-      if (result = command.execute.apply(command, args))?
-        unless command.ascend == command.constructor.__super__.ascend
-          command.ascend(engine, args, '', engine.scope, result)
-        return result
 
 
   ###

@@ -8,6 +8,7 @@ Constraint  = require('../commands/Constraint')
 class Input extends Domain
   displayName: 'Input'
   url: undefined
+  helps: true
 
   Iterator:   require('../commands/Iterator')
   Condition:  require('../commands/Condition')

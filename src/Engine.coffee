@@ -164,7 +164,7 @@ class Engine
           return update
 
       # Apply values to elements
-      if apply == false
+      if apply == false && !update.domains.length
         @triggerEvent('flush', update.solution, update)
       else
         @console.start('Apply', update.solution)
@@ -318,7 +318,7 @@ class Engine
     # Dispatch remove command
     remove: (path) ->
       @output.remove(path)
-      @updating.remove(path)
+      @updating?.remove(path)
 
     # Unsubscribe from worker and forget the engine
     destroy: (e) ->
@@ -427,10 +427,8 @@ class Engine
       return property
     else
       if typeof id != 'string'
-        if id.nodeType
-          id = @identify(id)
-        else
-          id = id.path
+        id = @identify(id)
+
       if id == @scope?._gss_id && !@data.check(id, property)
         return property
       if id.substring(0, 2) == '$"'

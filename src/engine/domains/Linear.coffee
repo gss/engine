@@ -4,6 +4,8 @@ Variable   = require('../commands/Variable')
 Constraint = require('../commands/Constraint')
 c          = require('cassowary')
 
+c.Strength.require = c.Strength.required
+
 class Linear extends Domain
   displayName: 'Linear'
   
@@ -12,16 +14,13 @@ class Linear extends Domain
   Engine:  c
 
   construct: () ->
-    @paths    = {}
+    @paths    ?= {}
     @instance = new c.SimplexSolver()
     @instance.autoSolve = false
-    @instance._store = []
+    #@instance._store = []
     if @console.level > 2
       c.debug = true
       c.trace = true
-    c.Strength.require = c.Strength.required
-
-    Linear.hack()
 
   perform: ->
     if @constrained
@@ -193,7 +192,7 @@ Linear::Remove = Command.extend {
 
 # Phantom js doesnt enforce order of numerical keys in plain objects.
 # The hack enforces arrays as base structure.
-Linear.hack = ->
+do ->
   unless c.isUnordered?
     obj = {'10': 1, '9': 1}
     for property of obj

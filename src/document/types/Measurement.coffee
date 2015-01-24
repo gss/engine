@@ -30,7 +30,6 @@ class Measurement.Length extends Measurement
     # Static lengths
 
     px: (value) ->
-      debugger
       return value
 
     pt: (value) ->
