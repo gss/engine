@@ -39,7 +39,7 @@ describe 'Nested Rules', ->
         
         engine.solve(rules)
 
-    xdescribe 'sequential selectors', ->
+    describe 'sequential selectors', ->
       it 'should support mixed selectors', (done) ->
         rules = [
           ['==', 
@@ -78,7 +78,45 @@ describe 'Nested Rules', ->
             ]
           ]]]
           engine.id('d').setAttribute('class', '')
-          #done()
+          engine.then (s) ->
+            expect(stringify(engine.updated.getProblems())).to.eql stringify([
+              [['remove', "div .gizoogle$h2↑!>!>.d"]]
+              [['remove', "div .gizoogle$h2↑!>!>.d"]]
+            ])
+            engine.id('d').setAttribute('class', 'd')    
+            
+            engine.then (s) ->
+              expect(engine.updated.getProblems()).to.eql [[[
+                key: "div .gizoogle$h2↑!>!>.d"
+                ['==', 
+                  ["get", "$d[width]"]
+                  , 100
+                ]
+              ]]]
+
+              engine.id('h2').setAttribute('class', '')
+              
+              engine.then (s) ->
+                expect(stringify(engine.updated.getProblems())).to.eql stringify([
+                  [
+                    ['remove', "div .gizoogle$h2↑!>!>.d"]
+                    ['remove', "div .gizoogle$h2↑!>!>"]
+                    ['remove', "div .gizoogle$h2↑!>"]
+                    ['remove', "div .gizoogle$h2"]
+                  ]
+                  [['remove', "div .gizoogle$h2↑!>!>.d"]]
+                ])
+                engine.id('h2').setAttribute('class', 'gizoogle')
+                
+                engine.then (s) ->
+                  expect(engine.updated.getProblems()).to.eql [[[
+                    key: "div .gizoogle$h2↑!>!>.d"
+                    ['==', 
+                      ["get", "$d[width]"]
+                      , 100
+                    ]
+                  ]]]
+                  done()
 
         engine.solve(rules)
 
@@ -1466,7 +1504,7 @@ describe 'Nested Rules', ->
               "target-width":900
               "$box1[width]":50
               "$box2[width]":50
-            engine.solved.merge 'target-width': 1000
+            engine.output.merge 'target-width': 1000
           else if counter is 3
             window.xxx = true
             expect(stringify(engine.values)).to.eql stringify
@@ -1476,7 +1514,7 @@ describe 'Nested Rules', ->
               "target-width":1000
               "$box1[width]":500
               "$box2[width]":500
-            engine.solved.merge 'target-width': 900
+            engine.output.merge 'target-width': 900
           else if counter is 4
             expect(stringify(engine.values)).to.eql stringify
               "big":500
@@ -1485,7 +1523,7 @@ describe 'Nested Rules', ->
               "target-width":900
               "$box1[width]":50
               "$box2[width]":50
-            engine.solved.merge 'target-width': 300
+            engine.output.merge 'target-width': 300
           else if counter is 5
             expect(stringify(engine.values)).to.eql stringify
               "big":500
@@ -1511,7 +1549,7 @@ describe 'Nested Rules', ->
               "med":50
               "small":5
               "target-width":300
-            engine.solved.merge 'target-width': 1000
+            engine.output.merge 'target-width': 1000
             engine.id('box2').setAttribute('class', 'box')
           else if counter is 8
             expect(stringify(engine.values)).to.eql stringify
@@ -1534,8 +1572,8 @@ describe 'Nested Rules', ->
               "small":5
               "target-width":1000
             expect(Object.keys(engine.values).length).to.eql(4)
-            expect(Object.keys(engine.solved.watchers).length).to.eql(0)
-            expect(Object.keys(engine.solved.watched).length).to.eql(0)
+            expect(Object.keys(engine.output.watchers).length).to.eql(0)
+            expect(Object.keys(engine.output.watched).length).to.eql(0)
             expect((k = Object.keys(engine.observers)).length).to.eql(1)
             expect(Object.keys(engine.observers[k[0]]).length).to.eql(9)
 

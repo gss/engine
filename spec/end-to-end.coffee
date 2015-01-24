@@ -1690,7 +1690,7 @@ describe 'End - to - End', ->
   
   describe 'External .gss files', ->
     
-    @timeout 4000
+    @timeout 10000
     describe "single file", ->
     
       it 'should compute', (done) ->
@@ -1797,7 +1797,34 @@ describe 'End - to - End', ->
     
     describe 'basic', ->
       engine = null
-    
+  
+      it 'in regular stylesheet with global rule ', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <div id="ship"></div>
+          <style type="text/gss" id="gss">
+            "mast" {
+              height: == ($ #ship)[height];
+            }
+            #ship {
+              "mast"[top] == 0;
+              "mast"[bottom] == 100;
+              "mast"[left] == 10;
+              "mast"[right] == 20;
+              &"mast"[z] == 1;
+            }
+          </style>
+          """
+        engine.once 'solve', (e) ->
+          expect((engine.values)).to.eql 
+            '$gss"mast"[height]': 100
+            '$gss"mast"[x]': 10
+            '$gss"mast"[width]': 10
+            '$gss"mast"[y]': 0
+            '$ship[height]': 100
+            '$ship"mast"[z]': 1
+          done()
+        
       it 'in regular stylesheet', (done) ->
         engine = GSS(container)
         container.innerHTML =  """
@@ -2181,7 +2208,7 @@ describe 'End - to - End', ->
     describe '|| and :: in condition', ->
       it 'should compute values', (done) ->
         
-        engine.assumed.merge '$button1[t]': 500, '$button2[t]': 400
+        engine.data.merge '$button1[t]': 500, '$button2[t]': 400
 
         engine.once 'solve', ->     
           expect(engine.values).to.eql 
@@ -2205,9 +2232,9 @@ describe 'End - to - End', ->
                 "$button2[t]": 400
               done()   
 
-            engine.assumed.merge '$button2[t]': 400
+            engine.data.merge '$button2[t]': 400
 
-          engine.assumed.merge '$button1[t]': 400, '$button2[t]': 100
+          engine.data.merge '$button1[t]': 400, '$button2[t]': 100
 
         container.innerHTML =  """
             <style type="text/gss">
@@ -2228,7 +2255,7 @@ describe 'End - to - End', ->
     describe '|| over two variables', ->
       it 'should compute values', (done) ->
         
-        engine.assumed.merge A: 200, B: 200
+        engine.data.merge A: 200, B: 200
 
         engine.once 'solve', ->     
           expect(engine.values).to.eql 
@@ -2288,13 +2315,13 @@ describe 'End - to - End', ->
                         "x": 1
                       done()
                       
-                    engine.assumed.merge A: 200, B: 200
-                  engine.assumed.merge A: 500, B: 500
-                engine.assumed.merge B: 200
-              engine.assumed.merge B: 500
-            engine.assumed.merge A: 200
+                    engine.data.merge A: 200, B: 200
+                  engine.data.merge A: 500, B: 500
+                engine.data.merge B: 200
+              engine.data.merge B: 500
+            engine.data.merge A: 200
 
-          engine.assumed.merge A: 500
+          engine.data.merge A: 500
     
         container.innerHTML =  """
             <style type="text/gss" scoped>
@@ -2315,7 +2342,7 @@ describe 'End - to - End', ->
     describe '&& over two variables', ->
       it 'should compute values', (done) ->
         
-        engine.assumed.merge input: 200
+        engine.data.merge input: 200
 
         engine.once 'solve', ->     
           expect(engine.values).to.eql 
@@ -2339,9 +2366,9 @@ describe 'End - to - End', ->
                 "z": 200
 
               done()
-            engine.assumed.merge input: 200
+            engine.data.merge input: 200
 
-          engine.assumed.merge input: 500
+          engine.data.merge input: 500
     
         container.innerHTML =  """
             <style type="text/gss" scoped>

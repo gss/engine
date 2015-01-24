@@ -20,6 +20,26 @@ describe 'Stylesheet', ->
 
   describe 'with static rules', ->
     describe 'in top scope', ->
+      describe 'with custom selectors', ->
+        it 'should include generaeted rules', (done) ->
+          engine.then ->
+            expect(
+              for rule in engine.stylesheets[0].sheet.cssRules
+                rule.cssText
+            ).to.eql ['[matches~="#box2!+.box"] { width: 1px; }']
+            expect(engine.id('box1').getAttribute('matches')).to.eql '#box2!+.box'
+            expect(engine.id('box1').offsetWidth).to.eql 1
+            done()
+          container.innerHTML = """
+            <style type="text/gss" id="gss">
+              #box2 !+ .box {
+                width: 1px;
+              }
+            </style>
+            <div class="box" id="box1"></div>
+            <div class="box" id="box2"></div>
+          """
+            
       describe 'with simple selectors', ->
         it 'should include generaeted rules', (done) ->
           container.innerHTML = """
@@ -42,25 +62,7 @@ describe 'Stylesheet', ->
             expect(engine.id('box2').offsetWidth).to.eql 1
             done()
 
-      describe 'with custom selectors', ->
-        it 'should include generaeted rules', (done) ->
-          container.innerHTML = """
-            <style type="text/gss" id="gss">
-              #box2 !+ .box {
-                width: 1px;
-              }
-            </style>
-            <div class="box" id="box1"></div>
-            <div class="box" id="box2"></div>
-          """
-          engine.then ->
-            expect(
-              for rule in engine.stylesheets[0].sheet.cssRules
-                rule.cssText
-            ).to.eql ['[matches~="#box2!+.box"] { width: 1px; }']
-            expect(engine.id('box1').getAttribute('matches')).to.eql '#box2!+.box'
-            expect(engine.id('box1').offsetWidth).to.eql 1
-            done()
+
 
 
       xdescribe 'with self-referential selectors', ->
@@ -148,9 +150,9 @@ describe 'Stylesheet', ->
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
             ).to.eql [".outer .box { width: 1px; }"]
-            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer' + GSS::Command::DESCEND + '.box'
+            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer' + GSS.Engine::Command::DESCEND + '.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
-            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer' + GSS::Command::DESCEND + '.box'
+            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer' + GSS.Engine::Command::DESCEND + '.box'
             expect(engine.id('box2').offsetWidth).to.eql 1
             done()
 
@@ -173,8 +175,8 @@ describe 'Stylesheet', ->
             expect(
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
-            ).to.eql ['[matches~=".outer' + GSS::Command::DESCEND + '#box2!+.box"] { width: 1px; }']
-            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer' + GSS::Command::DESCEND + '#box2!+.box'
+            ).to.eql ['[matches~=".outer' + GSS.Engine::Command::DESCEND + '#box2!+.box"] { width: 1px; }']
+            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer' + GSS.Engine::Command::DESCEND + '#box2!+.box'
             expect(engine.id('box1').offsetWidth).to.eql 
             
             done()
@@ -200,7 +202,7 @@ describe 'Stylesheet', ->
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
             ).to.eql ["#box1.box { width: 1px; }"]
-            expect(engine.id('box1').getAttribute('matches')).to.eql '#box1 #box1' + GSS::Command::DESCEND + '&.box'
+            expect(engine.id('box1').getAttribute('matches')).to.eql '#box1 #box1' + GSS.Engine::Command::DESCEND + '&.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
             expect(engine.id('box2').getAttribute('matches')).to.eql null
             expect(engine.id('box2').offsetWidth).to.not.eql 1
@@ -229,9 +231,9 @@ describe 'Stylesheet', ->
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
             ).to.eql [".outer .box, .outer .zox { width: 1px; }"]
-            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer' + GSS::Command::DESCEND + '.box,.zox'
+            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer' + GSS.Engine::Command::DESCEND + '.box,.zox'
             expect(engine.id('box1').offsetWidth).to.eql 1
-            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer' + GSS::Command::DESCEND + '.box,.zox'
+            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer' + GSS.Engine::Command::DESCEND + '.box,.zox'
             expect(engine.id('box2').offsetWidth).to.eql 1
             
             done()
@@ -255,10 +257,10 @@ describe 'Stylesheet', ->
             expect(
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
-            ).to.eql ['.outer .box, .outer.zox, [matches~=".outer' + GSS::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']
-            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer' + GSS::Command::DESCEND + '.box,&.zox,!+.box'
+            ).to.eql ['.outer .box, .outer.zox, [matches~=".outer' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']
+            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
-            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer' + GSS::Command::DESCEND + '.box,&.zox,!+.box'
+            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box'
             expect(engine.id('box2').offsetWidth).to.eql 1
             done()
 
@@ -285,9 +287,9 @@ describe 'Stylesheet', ->
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
             ).to.eql [".outer .box, .zouter .box { width: 1px; }"]
-            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,.zouter' + GSS::Command::DESCEND + '.box'
+            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,.zouter' + GSS.Engine::Command::DESCEND + '.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
-            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,.zouter' + GSS::Command::DESCEND + '.box'
+            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,.zouter' + GSS.Engine::Command::DESCEND + '.box'
             expect(engine.id('box2').offsetWidth).to.eql 1
             done()
 
@@ -310,8 +312,8 @@ describe 'Stylesheet', ->
             expect(
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
-            ).to.eql ['[matches~=".outer,.zouter' + GSS::Command::DESCEND + '#box2!+.box"] { width: 1px; }']
-            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,.zouter' + GSS::Command::DESCEND + '#box2!+.box'
+            ).to.eql ['[matches~=".outer,.zouter' + GSS.Engine::Command::DESCEND + '#box2!+.box"] { width: 1px; }']
+            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,.zouter' + GSS.Engine::Command::DESCEND + '#box2!+.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
             expect(engine.id('box2').getAttribute('matches')).to.eql null
             expect(engine.id('box2').offsetWidth).to.not.eql 1
@@ -338,7 +340,7 @@ describe 'Stylesheet', ->
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
             ).to.eql ["#box1.box, .outer.box { width: 1px; }"]
-            expect(engine.id('box1').getAttribute('matches')).to.eql '#box1,.outer #box1,.outer' + GSS::Command::DESCEND + '&.box'
+            expect(engine.id('box1').getAttribute('matches')).to.eql '#box1,.outer #box1,.outer' + GSS.Engine::Command::DESCEND + '&.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
             expect(engine.id('box2').getAttribute('matches')).to.eql null
             expect(engine.id('box2').offsetWidth).to.not.eql 1
@@ -366,9 +368,9 @@ describe 'Stylesheet', ->
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
             ).to.eql [".outer .box, .zouter .box, .outer .zox, .zouter .zox { width: 1px; }"]
-            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,.zouter'+ GSS::Command::DESCEND + '.box,.zox'
+            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,.zouter'+ GSS.Engine::Command::DESCEND + '.box,.zox'
             expect(engine.id('box1').offsetWidth).to.eql 1
-            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,.zouter'+ GSS::Command::DESCEND + '.box,.zox'
+            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,.zouter'+ GSS.Engine::Command::DESCEND + '.box,.zox'
             expect(engine.id('box2').offsetWidth).to.eql 1
             done()
 
@@ -391,10 +393,10 @@ describe 'Stylesheet', ->
             expect(
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
-            ).to.eql ['.outer .box, .zouter .box, .outer.zox, .zouter.zox, [matches~=".outer,.zouter' + GSS::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']
-            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,.zouter' + GSS::Command::DESCEND + '.box,&.zox,!+.box'
+            ).to.eql ['.outer .box, .zouter .box, .outer.zox, .zouter.zox, [matches~=".outer,.zouter' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']
+            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,.zouter' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
-            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,.zouter' + GSS::Command::DESCEND + '.box,&.zox,!+.box'
+            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,.zouter' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box'
             expect(engine.id('box2').offsetWidth).to.eql 1
             done()
 
@@ -419,9 +421,9 @@ describe 'Stylesheet', ->
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
             ).to.eql ['.outer .box, [matches~=".outer,div!+div"] .box { width: 1px; }']
-            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,div!+div .outer,div!+div' + GSS::Command::DESCEND + '.box'
+            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,div!+div .outer,div!+div' + GSS.Engine::Command::DESCEND + '.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
-            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,div!+div' + GSS::Command::DESCEND + '.box'
+            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,div!+div' + GSS.Engine::Command::DESCEND + '.box'
             expect(engine.id('box2').offsetWidth).to.eql 1
             
             done()
@@ -445,8 +447,8 @@ describe 'Stylesheet', ->
             expect(
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
-            ).to.eql ['[matches~=".outer,div!+div' + GSS::Command::DESCEND + '#box2!+.box"] { width: 1px; }']
-            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,div!+div .outer,div!+div' + GSS::Command::DESCEND + '#box2!+.box'
+            ).to.eql ['[matches~=".outer,div!+div' + GSS.Engine::Command::DESCEND + '#box2!+.box"] { width: 1px; }']
+            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,div!+div .outer,div!+div' + GSS.Engine::Command::DESCEND + '#box2!+.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
             expect(engine.id('box2').getAttribute('matches')).to.eql null
             expect(engine.id('box2').offsetWidth).to.not.eql 1
@@ -473,10 +475,9 @@ describe 'Stylesheet', ->
               for rule in engine.stylesheets[0].sheet.cssRules
                 normalizeSelector(rule.cssText)
             ).to.eql ['#box2.box, [matches~="#box2,div!+div"].box { width: 1px; }']
-
-            expect(engine.id('box1').getAttribute('matches')).to.eql '#box2,div!+div #box2,div!+div' + GSS::Command::DESCEND + '&.box'
+            expect(engine.id('box1').getAttribute('matches')).to.eql '#box2,div!+div #box2,div!+div' + GSS.Engine::Command::DESCEND + '&.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
-            expect(engine.id('box2').getAttribute('matches')).to.eql '#box2,div!+div #box2,div!+div' + GSS::Command::DESCEND + '&.box'
+            expect(engine.id('box2').getAttribute('matches')).to.eql '#box2,div!+div #box2,div!+div' + GSS.Engine::Command::DESCEND + '&.box'
             expect(engine.id('box2').offsetWidth).to.eql 1
             done()
 
@@ -502,9 +503,9 @@ describe 'Stylesheet', ->
               for rule in engine.stylesheets[0].sheet.cssRules
                 rule.cssText
             ).to.eql ['.outer .box, [matches~=".outer,div!+div"] .box, .outer .zox, [matches~=".outer,div!+div"] .zox { width: 1px; }']
-            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,div!+div .outer,div!+div' + GSS::Command::DESCEND + '.box,.zox'
+            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,div!+div .outer,div!+div' + GSS.Engine::Command::DESCEND + '.box,.zox'
             expect(engine.id('box1').offsetWidth).to.eql 1
-            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,div!+div' + GSS::Command::DESCEND + '.box,.zox'
+            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,div!+div' + GSS.Engine::Command::DESCEND + '.box,.zox'
             expect(engine.id('box2').offsetWidth).to.eql 1
             
             done()
@@ -528,10 +529,11 @@ describe 'Stylesheet', ->
             expect(
               for rule in engine.stylesheets[0].sheet.cssRules
                 normalizeSelector rule.cssText
-            ).to.eql ['.outer .box, [matches~=".outer,div!+div"] .box, .outer.zox, [matches~=".outer,div!+div"].zox, [matches~=".outer,div!+div' + GSS::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']
-            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,div!+div .outer,div!+div' + GSS::Command::DESCEND + '.box,&.zox,!+.box'
+            ).to.eql ['.outer .box, [matches~=".outer,div!+div"] .box, .outer.zox, [matches~=".outer,div!+div"].zox, [matches~=".outer,div!+div' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']
+            expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,div!+div .outer,div!+div' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box'
+
             expect(engine.id('box1').offsetWidth).to.eql 1
-            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,div!+div' + GSS::Command::DESCEND + '.box,&.zox,!+.box'
+            expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,div!+div' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box'
             expect(engine.id('box2').offsetWidth).to.eql 1
             
             done()

@@ -3,130 +3,84 @@
 Engine is a base class for scripting environment.
 It initializes and orchestrates all moving parts.
 
-It operates with workers and domains. Workers are
+It operates over workers and domains. Workers are
 separate engines running in web worker thread. 
 Domains are either independent constraint graphs or
-pseudo-solvers like intrinsic measurements.
-
-###
-
+pseudo-solvers like DOM measurements. ###
+  
 class Engine
 
-  Command:      require('./Command')
-
+  Command:   require('./engine/Command')
+  Domain:    require('./engine/Domain')
+  Update:    require('./engine/Update')
+  Query:     require('./engine/Query')
   
-  Domain:       require('./Domain')
-  Update:       require('./Update')
-  Query:        require('./Query')
+  Solver:    require('./engine/domains/Linear')
+  Input:     require('./engine/domains/Input')
+  Data:      require('./engine/domains/Data')
+  Output:    require('./engine/domains/Output')
     
-  Console:      require('./utilities/Console')
-  Inspector:    require('./utilities/Inspector')
-  Exporter:     require('./utilities/Exporter')
+  Console:   require('./engine/utilities/Console')
+  Inspector: require('./engine/utilities/Inspector')
+  Exporter:  require('./engine/utilities/Exporter')
 
-  Domains: 
-    Document:   require('./domains/Document')
-    Abstract:   require('./domains/Abstract')
-    Intrinsic:  require('./domains/Intrinsic')
-    Numeric:    require('./domains/Numeric')
-    Linear:     require('./domains/Linear')
-    Finite:     require('./domains/Finite')
-    Boolean:    require('./domains/Boolean')
+  constructor: (data, url) -> #(scope, url, data)
+    @engine = @
 
-  constructor: () -> #(scope, url, data)
-    for argument, index in arguments
-      continue unless argument
-      switch typeof argument
-        when 'object'
-          if argument.nodeType
-            if @Command
-              @scope = scope = @getScopeElement(argument)
-              Engine[Engine.identify(argument)] = @
-            else
-              scope = argument
-              while scope
-                if id = Engine.identity.find(scope)
-                  if engine = Engine[id]
-                    return engine
-                break unless scope.parentNode
-                scope = scope.parentNode
-          else
-            assumed = argument
-        when 'string', 'boolean'
-          url = argument
-
-    # **GSS()** creates new Engine at the root, 
-    # if there is no engine assigned to it yet
-    unless @Command
-      return new Engine(arguments[0], arguments[1], arguments[2])
-
+    # Attempt to initialize worker
     if url? && Worker?
       @url = @getWorkerURL(url)
-
+    
+    # Assign and manage event handlers
+    @eventHandler = @handleEvent.bind(@)
     @listeners = {}
+    for events in [@events, @$events, @$$events]
+      @addListeners(events)
+
+    # Manage and observe queries
     @observers = {}
     @queries   = {}
 
+    # Register pairing selectors
     @lefts = []
     @pairs = {}
-    
-    @eventHandler = @handleEvent.bind(@)
-    @addListeners(@$events)
-    @addListeners(@events)
 
-
+    # Track variables and dependency graphs
     @variables    = {}
     @domains      = []
+
+    # Bookkeep parsed stylesheets
     @stylesheets  = []
     @imported     = {}
-    @engine       = @
+
+    # Initialize utilities
     @inspector    = new @Inspector(@)
     @exporter     = new @Exporter(@)
 
-    @precompile()
- 
-    # Known suggested values
-    @assumed = new @Numeric
-    @assumed.displayName = 'Assumed'
-    @assumed.static = true
-    @assumed.setup()
+    # Subclass Update and Domains to point to this engine
+    @update = @Update.compile(@)
+    @Domain.compile(@)
+    
+    # Find and register commands in I/O domains
+    @data.setup()
+    @output.setup()
 
-    # Final values, used in conditions
-    @solved = new @Boolean
-    @solved.displayName = 'Solved'
-    @solved.priority = -200
-    @solved.finalized = true
-    @solved.setup()
+    # Link solved values and use given data
+    @values = @output.values
+    if data
+      for property, value of data
+        @data.values[property] = @values[property] = value
 
-    @values = @solved.values
+    # Bypass input domain for worker solver
+    unless window?
+      @strategy = 'update'
 
-    for property, value of assumed
-      @assumed.values[property] = @values[property] = value
-
-    # Cassowary is a default solver for all unknown variables
-    @domain = @linear
-
-
-    @strategy = 
-      unless window?
-        'evaluate'
-      else if @scope
-        'document'
-      else
-        'abstract'
-
-    #if @ready
-    #  @compile()
-    window?.addEventListener 'error', @eventHandler
+    # Listen for errors to flush buffered console
+    self.addEventListener 'error', @eventHandler
 
     return @
 
-  # Evaluate bypassing abstract domain
-  # So queries will not be executed, 
-  # and variable names will be used as given 
-  evaluate: (expressions) ->
-    @update(expressions)
-
-  # engine.solve({}) - solve with given constants
+  # engine.solve({}) - solve with given data
   # engine.solve([]) - evaluate commands
   # engine.solve(function(){}) - buffer and solve changes of state within callback
   solve: () ->
@@ -136,13 +90,13 @@ class Engine
 
     args = @transact.apply(@, arguments)
 
-
     if typeof args[0] == 'function'
       if result = args.shift().apply(@, args) 
         @updating.apply result
         apply = false
     else if args[0]?
-      strategy = @[@strategy]
+      strategy = @[@strategy || 'input']
+        
       if strategy.solve
         @console.start(strategy.displayName, args)
         result = strategy.solve.apply(strategy, args)
@@ -164,8 +118,6 @@ class Engine
 
     args = Array.prototype.slice.call(arguments, +reason? + +arg?)
 
-
-    
     unless @updating
       @console.start(reason || (@updated && 'Update' || 'Initialize'), arg || args)
       @updating = new @update
@@ -187,10 +139,11 @@ class Engine
 
     return args
 
-  # Run solution in multiple ticks
+  # Start a solving tick, may cause others
   commit: (solution, update = @updating, apply) ->
     return if update.blocking
     
+    # Start with given solution
     if solution && Object.keys(solution).length
       @triggerEvent('resume', solution, update)
         
@@ -211,20 +164,22 @@ class Engine
           return update
 
       # Apply values to elements
-      @console.start('Apply', update.solution)
-      @triggerEvent('apply', update.solution, update)
-      @triggerEvent('write', update.solution, update)
-      @triggerEvent('flush', update.solution, update)
-      @console.end(@values)
+      if apply == false && !update.domains.length
+        @triggerEvent('flush', update.solution, update)
+      else
+        @console.start('Apply', update.solution)
+        @triggerEvent('apply', update.solution, update)
+        @triggerEvent('write', update.solution, update)
+        @triggerEvent('flush', update.solution, update)
+        @console.end(@values)
 
-      # Re-measure values
-      if update.solved || update.isDone()
-        @triggerEvent('validate', update.solution, update)
-    
-    
+        # Re-measure values
+        if update.solved || update.isDone()
+          @triggerEvent('validate', update.solution, update)
+      
       update.commit()
 
-    # Discard pure update 
+    # Discard update if it did nothing 
     unless update.hadSideEffects(solution)
       @updating = undefined
       @console.end()
@@ -249,7 +204,6 @@ class Engine
       update.postMessage domain, problems
       update.await(domain.url)
       return domain
-
 
     for problem, index in problems
       if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
@@ -290,7 +244,7 @@ class Engine
         else
           others.push(problem)
    
-    for other, i in [@assumed, @solved].concat(@domains)
+    for other, i in [@data, @output].concat(@domains)
       locals = []
       other.changes = undefined
       for remove in removes
@@ -321,20 +275,12 @@ class Engine
       update.push working, worker, true
     return
 
-  # Compile initial domains and shared engine features 
-  precompile: ->
-    @Domain.compile(@Domains,   @)
-    @update = Engine::Update.compile(@)
-    @triggerEvent('precompile')
 
   # Compile all static definitions in the engine
   compile: () ->
-    for name of @Domains
-      if domain = @[name.toLowerCase()]
-        domain.compile()
-    @assumed.compile()
-    @solved.compile()
-    @console.compile(@)
+    for name, domain of @
+      if domain != @ && domain.engine
+        domain.compile?(@)
     @running = true
     @triggerEvent('compile', @)
 
@@ -343,10 +289,7 @@ class Engine
     @triggerEvent(name, data, object)
     if @scope
       @dispatchEvent(@scope, name, data, object)
-
-  # Alias `engine.then(callback)` to `engine.once('solve', callback)`
-  DONE: 'solve'
-
+      
   # Builtin event handlers
   $events:
 
@@ -356,31 +299,28 @@ class Engine
       @Query::repair(@)
       @Query::branch(@)
       
-      for domain in [@intrinsic, @assumed]
-        if values = domain.commit()
-          @updating.apply(values)
-      
+      if values = @data.commit()
+        @updating.apply(values)
+    
       return
 
     # Merge results into a solved domain (updates engine.values)
     flush: (solution) ->
-      @solved.merge solution
+      @output.merge solution
 
     # Apply given values to current update object and solved domain
     resume: (solution, update) ->
       if update.solution != solution
         update.apply(solution)
-      @solved.merge(solution)
+      @output.merge(solution)
 
     # Dispatch remove command
     remove: (path) ->
-      @solved.remove(path)
-      @updating.remove(path)
+      @output.remove(path)
+      @updating?.remove(path)
 
     # Unsubscribe from worker and forget the engine
     destroy: (e) ->
-      if @scope
-        Engine[@scope._gss_id] = undefined
       if @worker
         @worker.removeEventListener 'message', @eventHandler
         @worker.removeEventListener 'error', @eventHandler
@@ -430,7 +370,7 @@ class Engine
             `<script src="my-custom-path/my-gss.js"></script>`
 
           - or provide worker path explicitly: 
-            `GSS(document, "http://absolute.path/to/worker")`
+            `GSS(<scope>, "http://absolute.path/to/worker")`
         """
 
       return url
@@ -468,15 +408,35 @@ class Engine
     if (i = path.indexOf('[')) > -1
       property = path.substring(i + 1, path.length - 1)
     
-    if @assumed.values.hasOwnProperty(path)
-      return @assumed
-    else if property && (intrinsic = @intrinsic)
-      if props = intrinsic.properties
+    if @data.values.hasOwnProperty(path)
+      return @data
+    else if property
+      if props = @data.properties
         if (props[path]? || (props[property] && !props[property].matcher))
-          return intrinsic
+          return @data
       if property.indexOf('computed-') == 0 || property.indexOf('intrinsic-') == 0
-        return intrinsic
+        return @data
 
+  # Produce string representation of id-property pair
+  getPath: (id, property) ->
+    unless property
+      property = id
+      id = undefined
+    if property.indexOf('[') > -1 || !id
+      return property
+    else
+      if typeof id != 'string'
+        id = @identify(id)
+
+      if id == @scope?._gss_id && !@data.check(id, property)
+        return property
+      if id.substring(0, 2) == '$"'
+        id = id.substring(1)
+      return id + '[' + property + ']'
+
+  
+  url: false
+  
   # Return domain that should be used to evaluate given variable
   # For unknown variables, it creates a domain instance 
   # that will hold all dependent constraints and variables.
@@ -490,10 +450,10 @@ class Engine
     if op = @variables[operation[1]]?.constraints?[0]?.operations[0]?.domain
       return op
 
-    if @domain.url
-      return @domain
+    if @solver.url
+      return @solver
     else
-      return @domain.maybe()
+      return @solver.maybe()
 
   # Normalize scope element
   getScopeElement: (node) ->
@@ -515,8 +475,6 @@ class Engine
     
   destroy: ->
     @triggerEvent('destroy')
-    if @scope
-      @dispatchEvent(@scope, 'destroy')
     @removeListeners(@events) if @events
 
 
@@ -581,7 +539,7 @@ class Engine
     @triggerEvent(e.type, e)
 
   then: (callback) ->
-    @once @DONE, callback
+    @once 'solve', callback
 
 class Engine::Identity
   @uid: 0
@@ -626,7 +584,7 @@ class Engine::Identity
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
     unless engine = Engine.messenger
-      engine = Engine.messenger = Engine()
+      engine = Engine.messenger = new Engine()
     data = e.data
     values = undefined
     commands = []
@@ -649,7 +607,7 @@ if !self.window && self.onmessage != undefined
           @broadcast(@updating.problems[0])
           @updating.index++
       if values
-        @assumed.merge(values)
+        @data.merge(values)
       if commands.length
         @solve(commands)
 
@@ -661,18 +619,16 @@ if !self.window && self.onmessage != undefined
         result[property] = value
     if !engine.domains.length
       engine.variables = {}
-      engine.linear.operations = undefined
+      engine.solver.operations = undefined
     postMessage(result)
 
-Engine.Engine   = Engine
-
 # Identity and console modules are shared between engines
-Engine.identity = Engine::identity = new Engine::Identity
-Engine.identify = Engine::identify = Engine.identity.set
-Engine.console  = Engine::console  = new Engine::Console
+Engine::console  = new Engine::Console
+Engine::identity = new Engine::Identity
+Engine::identify =     Engine::identity.set
 
-  # Slice arrays recursively to remove the meta data
-Engine.clone    = Engine::clone = (object) -> 
+# Slice arrays recursively to remove the meta data
+Engine::clone    = (object) -> 
   if object && object.map
     return object.map @clone, @
   return object

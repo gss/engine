@@ -36,7 +36,7 @@ describe 'Domain', ->
         result: 0
         a: -5
 
-  describe 'solving and assumed domains together', ->
+  describe 'solving and input domains together', ->
     it 'should calculate simplified expression', ->
       window.$engine = engine = new GSS({
         a: 666
@@ -155,8 +155,9 @@ describe 'Domain', ->
       ]).to.eql
         result: 0
         a: -1
-
+      
       GSS.console.error('A=666')
+      
       expect(engine.solve
         a: 666
       ).to.eql
@@ -270,13 +271,22 @@ describe 'Domain', ->
         ]
       ]
 
-      engine.solve problem, (solution) ->
+      engine.solve problem, 'my_funny_tracker_path', (solution) ->
         expect(solution).to.eql 
           a: -1
           result: 0
           b: 1001
-        done()
 
+        engine.remove('my_funny_tracker_path')
+        engine.then (solution) ->
+          expect(solution).to.eql 
+            a: null
+            result: null
+            b: null
+
+          done()
+
+          
   xdescribe 'framed domains', (done) ->
     it 'should not merge expressions of a framed domain in worker', ->
       window.$engine = engine =  new GSS true

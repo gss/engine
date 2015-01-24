@@ -14,13 +14,13 @@ module.exports = ->
     browserify:
       dist:
         files:
-          'dist/gss.js': ['src/Engine.coffee']
+          'dist/gss.js': ['dist/document.parser.coffee']
         options:
           transform: ['coffeeify']
           browserifyOptions:
             extensions: ['.coffee']
             fullPaths: false
-            standalone: 'GSS'
+            #standalone: 'GSS'
       spec:
         files:
           'spec/js/specs.js': ['spec/specs.coffee']
