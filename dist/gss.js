@@ -6591,6 +6591,8 @@ var ErrorReporter,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 ErrorReporter = (function() {
+  toString = Object.prototype.toString
+  
   ErrorReporter.prototype._sourceCode = null;
 
   function ErrorReporter(sourceCode) {

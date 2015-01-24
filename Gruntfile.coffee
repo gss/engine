@@ -157,6 +157,6 @@ module.exports = ->
   @registerTask 'build', ['browserify', 'uglify:engine', 'usebanner']
   @registerTask 'test', ['coffeelint', 'build', 'phantom']
   @registerTask 'phantom', ['connect', 'mocha_phantomjs']
-  @registerTask 'crossbrowser', ['build', 'coffeelint', 'connect', 'mocha_phantomjs', 'saucelabs-mocha']
+  @registerTask 'crossbrowser', ['connect', 'mocha_phantomjs', 'saucelabs-mocha']
   @registerTask 'default', ['build']
   @registerTask 'nuke', ['clean']
