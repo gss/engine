@@ -118,7 +118,6 @@ describe 'GSS commands', ->
           scope.appendChild(box2)
 
           engine.then (solution) ->
-
             expect(engine.updated.getProblems()).to.eql [
               [[key: '.box$34222→#box1$box1', ['<=',['get', '$34222[width]'],['get','$box1[width]']]]]
             ]
@@ -127,7 +126,6 @@ describe 'GSS commands', ->
             box1.parentNode.removeChild(box1)
 
             engine.then (solution) ->
-
               expect(engine.updated.getProblems()).to.eql [
                 [
                   ['remove', '#box1'], 

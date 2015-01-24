@@ -81,7 +81,6 @@ class Stylesheet extends Command.List
       
       text = text.substring(0, i) + prop + text.substring(j)
       
-      console.error(text)
       sheet.deleteRule(index)
       index = sheet.insertRule(text, index)
 
