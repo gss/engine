@@ -785,6 +785,7 @@ describe 'Full page tests', ->
                       
         for type, j in ['with intrinsic condition', 'with linear condition']
           do (type, j) ->
+            expectation = !!window.MSInputMethodContext && 544 || 480
             describe type, ->
               it 'Adaptive aspect', (done) ->
                 container = document.createElement('div')
@@ -803,7 +804,7 @@ describe 'Full page tests', ->
                   
                 engine.then (solution) ->
                   expect(solution['$article[height]']).to.eql 600
-                  expect(solution['$article[width]']).to.eql 480
+                  expect(solution['$article[width]']).to.eql expectation
                   expect(solution['$footer[height]']).to.eql 600
                   expect(solution['$footer[width]']).to.eql 72
                   expect(solution['$header[height]']).to.eql 600
@@ -825,7 +826,7 @@ describe 'Full page tests', ->
                     engine.then (solution) ->
                       expect(solution['article-gap']).to.eql 20
                       expect(solution['$article[height]']).to.eql 600
-                      expect(solution['$article[width]']).to.eql 480
+                      expect(solution['$article[width]']).to.eql expectation
                       expect(solution['$footer[height]']).to.eql 600
                       expect(solution['$footer[width]']).to.eql 72
                       expect(solution['$header[height]']).to.eql 600

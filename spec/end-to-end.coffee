@@ -327,7 +327,7 @@ describe 'End - to - End', ->
   describe 'Vanilla CSS', ->  
     getSource = (style) ->
       Array.prototype.slice.call(style.sheet.cssRules).map (rule) ->
-        return rule.cssText.replace(/^\s+|\s+$|\n|\t|\s*({|}|:|;)\s*|(\s+)/g, '$1$2')
+        return rule.cssText.replace(/^\s+|\s+$|\n|\t|\s*({|}|:|;)\s*|(\s+)/g, '$1$2').replace(/\='/g, '="').replace(/'\]/g, '"]')
       .join('\n')
     
     describe 'just CSS', ->
@@ -543,6 +543,7 @@ describe 'End - to - End', ->
             }
           </style>
           """
+        zIndexAndHeight = window.MSInputMethodContext && 'height:200px;z-index:5;' || 'z-index:5;height:200px;'
         engine.once 'solve', ->
           expect(getSource(engine.tag('style')[1])).to.equal """
             .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
@@ -559,13 +560,13 @@ describe 'End - to - End', ->
             , ->
               expect(getSource(engine.tag('style')[1])).to.equal """
                 [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
-                .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
                 """
               engine.solve
                 A: 0
               , ->
                 expect(getSource(engine.tag('style')[1])).to.equal """
-                  .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                  .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
                   """
                 engine.solve
                   B: 0
@@ -577,14 +578,14 @@ describe 'End - to - End', ->
                     B: 1
                   , ->
                     expect(getSource(engine.tag('style')[1])).to.equal """
-                      .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                      .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
                       """
                     engine.solve
                       A: 1
                     , ->
                       expect(getSource(engine.tag('style')[1])).to.equal """
                         [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
-                        .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                        .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
                         """
                       engine.solve
                         B: 0
@@ -626,6 +627,7 @@ describe 'End - to - End', ->
             }
           </style>
           """
+        zIndexAndHeight = window.MSInputMethodContext && 'height:200px;z-index:5;' || 'z-index:5;height:200px;'
         engine.once 'solve', ->
           expect(getSource(engine.tag('style')[1])).to.equal """
             .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
@@ -641,14 +643,14 @@ describe 'End - to - End', ->
               B: 1
             , ->
               expect(getSource(engine.tag('style')[1])).to.equal """
-                .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
                 [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
                 """
               engine.solve
                 A: 0
               , ->
                 expect(getSource(engine.tag('style')[1])).to.equal """
-                  .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                  .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
                   """
                 engine.solve
                   B: 0
@@ -660,13 +662,13 @@ describe 'End - to - End', ->
                     B: 1
                   , ->
                     expect(getSource(engine.tag('style')[1])).to.equal """
-                      .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                      .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
                       """
                     engine.solve
                       A: 1
                     , ->
                       expect(getSource(engine.tag('style')[1])).to.equal """
-                        .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
+                        .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
                         [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
                         """
                       engine.solve
@@ -2641,8 +2643,8 @@ describe 'End - to - End', ->
           expect(engine.id("box2").style.paddingTop).to.eql '' 
           expect(engine.id("box1").style.marginTop).to.eql ''
           expect(engine.id("box2").style.marginTop).to.eql ''   
-          expect(engine.id("box1").style.zIndex).to.eql '1'
-          expect(engine.id("box2").style.zIndex).to.eql '2'     
+          expect(String engine.id("box1").style.zIndex).to.eql '1'
+          expect(String engine.id("box2").style.zIndex).to.eql '2'     
           done()          
     
         container.innerHTML =  """
