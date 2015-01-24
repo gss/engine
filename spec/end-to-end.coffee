@@ -543,7 +543,7 @@ describe 'End - to - End', ->
             }
           </style>
           """
-        zIndexAndHeight = window.MSInputMethodContext && 'height:200px;z-index:5;' || 'z-index:5;height:200px;'
+        zIndexAndHeight = document.body.style.msTouchAction? && 'height:200px;z-index:5;' || 'z-index:5;height:200px;'
         engine.once 'solve', ->
           expect(getSource(engine.tag('style')[1])).to.equal """
             .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
@@ -627,7 +627,7 @@ describe 'End - to - End', ->
             }
           </style>
           """
-        zIndexAndHeight = window.MSInputMethodContext && 'height:200px;z-index:5;' || 'z-index:5;height:200px;'
+        zIndexAndHeight = document.body.style.msTouchAction? && 'height:200px;z-index:5;' || 'z-index:5;height:200px;'
         engine.once 'solve', ->
           expect(getSource(engine.tag('style')[1])).to.equal """
             .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}

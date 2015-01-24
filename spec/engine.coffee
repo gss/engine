@@ -221,7 +221,8 @@ describe 'GSS engine', ->
           assert w is 111, "button1 width: #{w}"
           w = Math.round(button2.getBoundingClientRect().width)
           assert w is 222, "button2 width: #{w}"
-          container.innerHTML = ""
+          remove button1
+          remove button2
         else
           engine.removeEventListener 'solved', onSolved
           done()

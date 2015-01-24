@@ -2,6 +2,7 @@
 expect = chai.expect
 assert = chai.assert
 
+IE10 = document.body.style.msTouchAction? && !window.MSInputMethodContext 
 
 describe 'Stylesheet', ->
   engine = container = null
@@ -260,7 +261,12 @@ describe 'Stylesheet', ->
             expect(
               for rule in engine.stylesheets[0].sheet.cssRules
                 normalizeSelector rule.cssText
-            ).to.eql ['.outer .box, .outer.zox, [matches~=".outer' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']
+            ).to.eql [
+              if IE10
+                '.outer .box, .zox.outer, [matches~=".outer' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }'
+              else
+                '.outer .box, .outer.zox, [matches~=".outer' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }'
+              ]
             expect(engine.id('box1').getAttribute('matches')).to.eql '.outer' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
             expect(engine.id('box2').getAttribute('matches')).to.eql '.outer' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box'
@@ -342,7 +348,11 @@ describe 'Stylesheet', ->
             expect(
               for rule in engine.stylesheets[0].sheet.cssRules
                 normalizeSelector rule.cssText
-            ).to.eql ["#box1.box, .outer.box { width: 1px; }"]
+            ).to.eql [
+              if IE10
+                "#box1.box, .box.outer { width: 1px; }"
+              else
+                "#box1.box, .outer.box { width: 1px; }"]
             expect(engine.id('box1').getAttribute('matches')).to.eql '#box1,.outer #box1,.outer' + GSS.Engine::Command::DESCEND + '&.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
             expect(engine.id('box2').getAttribute('matches')).to.eql null
@@ -396,7 +406,13 @@ describe 'Stylesheet', ->
             expect(
               for rule in engine.stylesheets[0].sheet.cssRules
                 normalizeSelector rule.cssText
-            ).to.eql ['.outer .box, .zouter .box, .outer.zox, .zouter.zox, [matches~=".outer,.zouter' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']
+            ).to.eql [
+              if IE10
+                '.outer .box, .zouter .box, .zox.outer, .zox.zouter, [matches~=".outer,.zouter' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }'
+              else
+                '.outer .box, .zouter .box, .outer.zox, .zouter.zox, [matches~=".outer,.zouter' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }'
+            ]
+
             expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,.zouter' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box'
             expect(engine.id('box1').offsetWidth).to.eql 1
             expect(engine.id('box2').getAttribute('matches')).to.eql '.outer,.zouter' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box'
@@ -532,7 +548,12 @@ describe 'Stylesheet', ->
             expect(
               for rule in engine.stylesheets[0].sheet.cssRules
                 normalizeSelector rule.cssText
-            ).to.eql ['.outer .box, [matches~=".outer,div!+div"] .box, .outer.zox, [matches~=".outer,div!+div"].zox, [matches~=".outer,div!+div' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']
+            ).to.eql [
+              if IE10
+                '.outer .box, [matches~=".outer,div!+div"] .box, .zox.outer, [matches~=".outer,div!+div"].zox, [matches~=".outer,div!+div' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }'
+              else
+                '.outer .box, [matches~=".outer,div!+div"] .box, .outer.zox, [matches~=".outer,div!+div"].zox, [matches~=".outer,div!+div' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box"] { width: 1px; }'
+              ]
             expect(engine.id('box1').getAttribute('matches')).to.eql '.outer,div!+div .outer,div!+div' + GSS.Engine::Command::DESCEND + '.box,&.zox,!+.box'
 
             expect(engine.id('box1').offsetWidth).to.eql 1

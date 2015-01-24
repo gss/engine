@@ -59,7 +59,7 @@ class Stylesheet extends Command.List
           break
         else if other != rule && previous.indexOf(other) == -1
           previous.push(other)
-    rules = sheet.rules || sheet.cssRules
+    rules = sheet.cssRules || sheet.rules
     
     # Update rule
     index = previous.length
@@ -204,7 +204,7 @@ class Stylesheet extends Command.List
   @export: ->
     sheet = []
     for id, style of engine.stylesheets
-      for rule in (style.sheet.rules || style.sheet.cssRules)
+      for rule in (style.sheet.cssRules || style.sheet.rules)
         text = rule.cssText.replace /\[matches~="(.*?)"\]/g, (m, selector) ->
           selector.replace(/@[^↓]+/g, '').replace(/↓&/g, '').replace(/↓/g, ' ')
         sheet.push text
@@ -378,7 +378,7 @@ class Stylesheet.Import extends Query
         node = undefined
       else
         unless src = @getUrl(node)
-          text = node.innerText || node.textContent
+          text = node.textContent || node.innerText
 
         type ||= node.getAttribute?('type')
 
