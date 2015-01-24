@@ -4,13 +4,13 @@ class Document extends Engine
   @Measurement:   require('./document/types/Measurement')
   @Primitive:     require('./document/types/Primitive')
 
-  class @::Input extends @::Input
+  class Document::Input extends Engine::Input
     Selector:     require('./document/commands/Selector')
     Stylesheet:   require('./document/commands/Stylesheet')
     Unit:         require('./document/commands/Unit')
     
 
-  class @::Output extends @::Output
+  class Document::Output extends Engine::Output
     Style:        require('./document/Style')
     Properties:   require('./document/properties/Styles')
     Unit:         require('./document/commands/Unit')
@@ -36,7 +36,7 @@ class Document extends Engine
     
 
   
-  class @::Data extends @::Data
+  class Document::Data extends Engine::Data
     immediate:    true
     Properties:   require('./document/properties/Getters')
 

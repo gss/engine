@@ -14848,7 +14848,7 @@ Document = (function(_super) {
 
     return Input;
 
-  })(Document.prototype.Input);
+  })(Engine.prototype.Input);
 
   Document.prototype.Output = (function(_super1) {
     __extends(Output, _super1);
@@ -14897,7 +14897,7 @@ Document = (function(_super) {
 
     return Output;
 
-  })(Document.prototype.Output);
+  })(Engine.prototype.Output);
 
   Document.prototype.Data = (function(_super1) {
     __extends(Data, _super1);
@@ -14985,7 +14985,7 @@ Document = (function(_super) {
 
     return Data;
 
-  })(Document.prototype.Data);
+  })(Engine.prototype.Data);
 
   function Document(data, url, scope) {
     var state;
