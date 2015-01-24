@@ -628,17 +628,6 @@ class Query extends Command
           @pair engine, property, pair, pairs[index + 1], pairs[index + 2], reversed
     engine.updating.pairs = undefined
     engine.console.end()
-  ###
-  match: (collection, node, scope) ->
-    if (index = collection.indexOf(node)) > -1
-      if collection.scopes[index] == scope
-        return true
-      index = -1
-      if dups = collection.duplicates
-        while (index = dups.indexOf(node, index + 1)) > -1
-          if collection.scopes[index + collection.length] == scope
-            return true
-  ###
 
   count: (value) ->
     if value?.push 
@@ -935,7 +924,7 @@ class Query extends Command
     return unless watchers = engine.observers[id]
     if continuation
       path = @getCanonicalPath(continuation)
-    
+
     for operation, index in watchers by 3
       if groupped = operation.command[group]
         contd = watchers[index + 1]

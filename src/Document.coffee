@@ -295,11 +295,11 @@ class Document extends Engine
           return
 
     path = @getPath(element, 'intrinsic-' + property)
-    if property == 'width' && (element._gss_id || element) == '$message'
-      debugger
+
     if @data.watchers?[path]
       return
 
+    console.error(camel, path, property, element)
 
     element.style[camel] = value
     return

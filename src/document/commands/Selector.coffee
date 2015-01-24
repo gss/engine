@@ -231,14 +231,15 @@ class Selector extends Query
     # Generate map of qualifiers to invalidate (to re-query native selectors)
     update = {}
     for node in allChanged
-      for attribute in node.attributes
-        switch attribute.name
-          when 'class'
-            for kls in node.classList || node.className.split(/\s+/)
-              @index update, ' .', kls
-          when 'id'
-            @index update, ' #', attribute.value
+      if node.className
+        for kls in node.classList || node.className.split(/\s+/)
+          @index update, ' .', kls
+      if node.id
+        @index update, ' #', node.id
 
+      for attribute in node.attributes
+        if attribute.name == 'class' || attribute.name == 'id'
+          continue
         @index update, ' attribute', attribute.name
       prev = next = node  
       while prev = prev.previousSibling

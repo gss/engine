@@ -25,6 +25,251 @@ describe 'End - to - End', ->
     
 
 
+  # Virtual Elements
+  # ===========================================================
+  
+  describe 'Virtual Elements', ->  
+    
+    describe 'basic', ->
+      engine = null
+  
+      it 'in regular stylesheet with global rule ', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <div id="ship"></div>
+          <style type="text/gss" id="gss">
+            "mast" {
+              height: == ($ #ship)[height];
+            }
+            #ship {
+              "mast"[top] == 0;
+              "mast"[bottom] == 100;
+              "mast"[left] == 10;
+              "mast"[right] == 20;
+              &"mast"[z] == 1;
+            }
+          </style>
+          """
+        engine.once 'solve', (e) ->
+          expect((engine.values)).to.eql 
+            '$gss"mast"[height]': 100
+            '$gss"mast"[x]': 10
+            '$gss"mast"[width]': 10
+            '$gss"mast"[y]': 0
+            '$ship[height]': 100
+            '$ship"mast"[z]': 1
+          done()
+        
+      it 'in regular stylesheet', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <div id="ship"></div>
+          <style type="text/gss" id="gss">
+            #ship {
+              "mast"[top] == 0;
+              "mast"[bottom] == 100;
+              "mast"[left] == 10;
+              "mast"[right] == 20;
+              &"mast"[z] == 1;
+            }
+            #ship[height] == "mast"[height];
+          </style>
+          """
+        engine.once 'solve', (e) ->
+          expect((engine.values)).to.eql 
+            '$gss"mast"[height]': 100
+            '$gss"mast"[x]': 10
+            '$gss"mast"[width]': 10
+            '$gss"mast"[y]': 0
+            '$ship[height]': 100
+            '$ship"mast"[z]': 1
+          done()
+
+      it 'in scoped stylesheet', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <div id="ship"></div>
+          <style scoped type="text/gss" id="gss">
+            #ship {
+              "mast"[top] == 0;
+              "mast"[bottom] == 100;
+              "mast"[left] == 10;
+              "mast"[right] == 20;
+              &"mast"[z] == 1;
+            }
+            #ship[height] == "mast"[height];
+          </style>
+          """
+        engine.once 'solve', (e) ->
+          expect((engine.values)).to.eql 
+            '"mast"[height]': 100
+            '"mast"[x]': 10
+            '"mast"[width]': 10
+            '"mast"[y]': 0
+            '$ship[height]': 100
+            '$ship"mast"[z]': 1
+          done()
+
+      it 'in mixed stylesheets', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <div id="ship"></div>
+          <style type="text/gss" id="gss1">
+            [b] == 10; // &
+
+            ^ {
+              "mast" {
+                x: == [b]; // ^^
+              }
+            }
+            ^"mast" {
+              d: == 100; // &
+              bottom: == [d]; // &
+            } 
+          </style>
+          <style scoped type="text/gss" id="gss2">
+            [e] == 1; // $
+            #ship {
+              [c] == 20; // &
+              "mast"[top] == 0; // $
+              "mast"[right] == [c]; // $, &
+              &"mast"[z] == [e]; // &
+            }
+            #ship[height] == "mast"[height]; // $
+          </style>
+          """
+        engine.once 'solve', (e) ->
+          expect((engine.values)).to.eql 
+            '"mast"[height]': 100
+            '"mast"[x]': 10
+            '"mast"[width]': 10
+            '"mast"[y]': 0
+            '"mast"[d]': 100
+            '$ship[height]': 100
+            '$ship"mast"[z]': 1
+            '$ship[c]': 20
+            '$gss1[b]': 10
+            'e': 1
+          done()
+
+    it 'in VFL', (done) ->
+      engine = window.$engine = GSS(container)
+      container.style.width = '400px'
+      container.style.height = '100px'
+      container.innerHTML = """
+
+        <button id="box" class="box foo" onclick="this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')"></button>
+    
+        <style type="text/gss">
+          [col-gap] == 16;
+          $[size] == $[intrinsic-size];
+          $[left] == 0;
+        
+          @h |($"col-1...8")-[col-gap]-...| in($) !require {
+            width: == $[col-width] !require;
+          }
+          
+          .box {          
+            @v |(&)| in(::window);
+            &.bar {
+              @h |(&)| in($"col-6");
+            }
+            &.foo {
+              @h |(&)| in($"col-3");
+            }
+          }
+        </style>
+        
+      """
+      engine.then (solution) ->
+        expect(Math.floor solution["col-width"]).to.eql (400 - 16 * 7) / 8
+        expect(Math.floor solution["$box[width]"]).to.eql (400 - 16 * 7) / 8
+        expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 2
+
+        engine.id('box').click()
+
+        engine.then (solution) ->
+          expect(Math.floor solution["$box[width]"]).to.eql (400 - 16 * 7) / 8
+          expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 5
+          done()
+
+
+
+    it 'in comma', (done) ->
+      engine = window.$engine = GSS(container)
+      container.style.width = '400px'
+      container.style.height = '100px'
+      container.innerHTML = """
+        <div id="a1" class="a"></div>
+        <div id="a2" class="a"></div>
+        <div id="b1" class="b"></div>
+        <div id="b2" class="b"></div>
+        <style type="text/gss" scoped>
+          "c", .a, "z", .b {
+            &:next[x] == 10;
+          }
+        </style>
+      """
+      engine.then (solution) ->
+        expect(solution).to.eql
+          "$a1[x]": 10
+          "$a2[x]": 10
+          "\"z\"[x]": 10
+          "$b1[x]": 10
+          "$b2[x]": 10
+
+        lefts = 
+          for item in engine.class('a') by -1
+            item.parentNode.removeChild(item)
+            item
+
+        engine.then (solution) ->
+          expect(solution).to.eql
+            '$a1[x]': null
+            "$a2[x]": null
+
+          for item in lefts by -1
+            engine.scope.insertBefore(item, engine.id('b2'))
+
+          engine.then (solution) ->
+            expect(solution).to.eql
+              '$a1[x]': 10
+              "$a2[x]": 10
+
+            items = 
+              for item in engine.tag('div') by -1
+                item.parentNode.removeChild(item)
+                item
+
+            engine.then (solution) ->
+              expect(solution).to.eql
+                '$b1[x]': null
+                "$b2[x]": null
+                '$a1[x]': null
+                "$a2[x]": null
+                done()
+
+  describe 'Edge cases', ->
+
+    it 'should handle identical constraints', (done) ->
+      engine.then ->
+        expect(engine.domains.length).to.eql 1
+        expect(engine.domains[0].constraints.length).to.eql 1
+        expect(engine.domains[0].constraints[0].operations.length).to.eql 3
+        done()
+      container.innerHTML = """
+        <style type="text/gss">
+          button {
+            $[b] == 1;
+          }
+        </style>
+        <button id="button1"></button>
+        <button id="button2"></button>
+        <button id="button3"></button>
+      """
+
+  
+
   
   # Config
   # ===========================================================
@@ -870,6 +1115,7 @@ describe 'End - to - End', ->
         describe 'length properties', ->
           it 'should compute linear equasions', (done) ->                                 
             engine.once 'solve', (e) ->
+              console.log(engine.values)
               expect(stringify engine.values).to.eql stringify
                 "$b1[border-left-width]": -2
                 "$a1[intrinsic-border-top-width]": 2
@@ -1788,250 +2034,6 @@ describe 'End - to - End', ->
             </style>
             <link rel="stylesheet" id="external" type="text/gss" href="./fixtures/external-file-2-3.gss" scoped></link>
           """
-
-  
-  # Virtual Elements
-  # ===========================================================
-  
-  describe 'Virtual Elements', ->  
-    
-    describe 'basic', ->
-      engine = null
-  
-      it 'in regular stylesheet with global rule ', (done) ->
-        engine = GSS(container)
-        container.innerHTML =  """
-          <div id="ship"></div>
-          <style type="text/gss" id="gss">
-            "mast" {
-              height: == ($ #ship)[height];
-            }
-            #ship {
-              "mast"[top] == 0;
-              "mast"[bottom] == 100;
-              "mast"[left] == 10;
-              "mast"[right] == 20;
-              &"mast"[z] == 1;
-            }
-          </style>
-          """
-        engine.once 'solve', (e) ->
-          expect((engine.values)).to.eql 
-            '$gss"mast"[height]': 100
-            '$gss"mast"[x]': 10
-            '$gss"mast"[width]': 10
-            '$gss"mast"[y]': 0
-            '$ship[height]': 100
-            '$ship"mast"[z]': 1
-          done()
-        
-      it 'in regular stylesheet', (done) ->
-        engine = GSS(container)
-        container.innerHTML =  """
-          <div id="ship"></div>
-          <style type="text/gss" id="gss">
-            #ship {
-              "mast"[top] == 0;
-              "mast"[bottom] == 100;
-              "mast"[left] == 10;
-              "mast"[right] == 20;
-              &"mast"[z] == 1;
-            }
-            #ship[height] == "mast"[height];
-          </style>
-          """
-        engine.once 'solve', (e) ->
-          expect((engine.values)).to.eql 
-            '$gss"mast"[height]': 100
-            '$gss"mast"[x]': 10
-            '$gss"mast"[width]': 10
-            '$gss"mast"[y]': 0
-            '$ship[height]': 100
-            '$ship"mast"[z]': 1
-          done()
-
-      it 'in scoped stylesheet', (done) ->
-        engine = GSS(container)
-        container.innerHTML =  """
-          <div id="ship"></div>
-          <style scoped type="text/gss" id="gss">
-            #ship {
-              "mast"[top] == 0;
-              "mast"[bottom] == 100;
-              "mast"[left] == 10;
-              "mast"[right] == 20;
-              &"mast"[z] == 1;
-            }
-            #ship[height] == "mast"[height];
-          </style>
-          """
-        engine.once 'solve', (e) ->
-          expect((engine.values)).to.eql 
-            '"mast"[height]': 100
-            '"mast"[x]': 10
-            '"mast"[width]': 10
-            '"mast"[y]': 0
-            '$ship[height]': 100
-            '$ship"mast"[z]': 1
-          done()
-
-      it 'in mixed stylesheets', (done) ->
-        engine = GSS(container)
-        container.innerHTML =  """
-          <div id="ship"></div>
-          <style type="text/gss" id="gss1">
-            [b] == 10; // &
-
-            ^ {
-              "mast" {
-                x: == [b]; // ^^
-              }
-            }
-            ^"mast" {
-              d: == 100; // &
-              bottom: == [d]; // &
-            } 
-          </style>
-          <style scoped type="text/gss" id="gss2">
-            [e] == 1; // $
-            #ship {
-              [c] == 20; // &
-              "mast"[top] == 0; // $
-              "mast"[right] == [c]; // $, &
-              &"mast"[z] == [e]; // &
-            }
-            #ship[height] == "mast"[height]; // $
-          </style>
-          """
-        engine.once 'solve', (e) ->
-          expect((engine.values)).to.eql 
-            '"mast"[height]': 100
-            '"mast"[x]': 10
-            '"mast"[width]': 10
-            '"mast"[y]': 0
-            '"mast"[d]': 100
-            '$ship[height]': 100
-            '$ship"mast"[z]': 1
-            '$ship[c]': 20
-            '$gss1[b]': 10
-            'e': 1
-          done()
-
-    it 'in VFL', (done) ->
-      engine = window.$engine = GSS(container)
-      container.style.width = '400px'
-      container.style.height = '100px'
-      container.innerHTML = """
-
-        <button id="box" class="box foo" onclick="this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')"></button>
-    
-        <style type="text/gss">
-          [col-gap] == 16;
-          $[size] == $[intrinsic-size];
-          $[left] == 0;
-        
-          @h |($"col-1...8")-[col-gap]-...| in($) !require {
-            width: == $[col-width] !require;
-          }
-          
-          .box {          
-            @v |(&)| in(::window);
-            &.bar {
-              @h |(&)| in($"col-6");
-            }
-            &.foo {
-              @h |(&)| in($"col-3");
-            }
-          }
-        </style>
-        
-      """
-      engine.then (solution) ->
-        expect(Math.floor solution["col-width"]).to.eql (400 - 16 * 7) / 8
-        expect(Math.floor solution["$box[width]"]).to.eql (400 - 16 * 7) / 8
-        expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 2
-
-        engine.id('box').click()
-
-        engine.then (solution) ->
-          expect(Math.floor solution["$box[width]"]).to.eql (400 - 16 * 7) / 8
-          expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 5
-          done()
-
-
-
-    it 'in comma', (done) ->
-      engine = window.$engine = GSS(container)
-      container.style.width = '400px'
-      container.style.height = '100px'
-      container.innerHTML = """
-        <div id="a1" class="a"></div>
-        <div id="a2" class="a"></div>
-        <div id="b1" class="b"></div>
-        <div id="b2" class="b"></div>
-        <style type="text/gss" scoped>
-          "c", .a, "z", .b {
-            &:next[x] == 10;
-          }
-        </style>
-      """
-      engine.then (solution) ->
-        expect(solution).to.eql
-          "$a1[x]": 10
-          "$a2[x]": 10
-          "\"z\"[x]": 10
-          "$b1[x]": 10
-          "$b2[x]": 10
-
-        lefts = 
-          for item in engine.class('a') by -1
-            item.parentNode.removeChild(item)
-            item
-
-        engine.then (solution) ->
-          expect(solution).to.eql
-            '$a1[x]': null
-            "$a2[x]": null
-
-          for item in lefts by -1
-            engine.scope.insertBefore(item, engine.id('b2'))
-
-          engine.then (solution) ->
-            expect(solution).to.eql
-              '$a1[x]': 10
-              "$a2[x]": 10
-
-            items = 
-              for item in engine.tag('div') by -1
-                item.parentNode.removeChild(item)
-                item
-
-            engine.then (solution) ->
-              expect(solution).to.eql
-                '$b1[x]': null
-                "$b2[x]": null
-                '$a1[x]': null
-                "$a2[x]": null
-                done()
-
-  describe 'Edge cases', ->
-
-    it 'should handle identical constraints', (done) ->
-      engine.then ->
-        expect(engine.domains.length).to.eql 1
-        expect(engine.domains[0].constraints.length).to.eql 1
-        expect(engine.domains[0].constraints[0].operations.length).to.eql 3
-        done()
-      container.innerHTML = """
-        <style type="text/gss">
-          button {
-            $[b] == 1;
-          }
-        </style>
-        <button id="button1"></button>
-        <button id="button2"></button>
-        <button id="button3"></button>
-      """
 
   
   

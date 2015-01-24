@@ -15237,12 +15237,10 @@ Document = (function(_super) {
       }
     }
     path = this.getPath(element, 'intrinsic-' + property);
-    if (property === 'width' && (element._gss_id || element) === '$message') {
-      debugger;
-    }
     if ((_ref = this.data.watchers) != null ? _ref[path] : void 0) {
       return;
     }
+    console.error(camel, path, property, element);
     element.style[camel] = value;
   };
 
@@ -16961,19 +16959,21 @@ Selector = (function(_super) {
     update = {};
     for (_p = 0, _len7 = allChanged.length; _p < _len7; _p++) {
       node = allChanged[_p];
-      _ref4 = node.attributes;
-      for (_q = 0, _len8 = _ref4.length; _q < _len8; _q++) {
-        attribute = _ref4[_q];
-        switch (attribute.name) {
-          case 'class':
-            _ref5 = node.classList || node.className.split(/\s+/);
-            for (_r = 0, _len9 = _ref5.length; _r < _len9; _r++) {
-              kls = _ref5[_r];
-              this.index(update, ' .', kls);
-            }
-            break;
-          case 'id':
-            this.index(update, ' #', attribute.value);
+      if (node.className) {
+        _ref4 = node.classList || node.className.split(/\s+/);
+        for (_q = 0, _len8 = _ref4.length; _q < _len8; _q++) {
+          kls = _ref4[_q];
+          this.index(update, ' .', kls);
+        }
+      }
+      if (node.id) {
+        this.index(update, ' #', node.id);
+      }
+      _ref5 = node.attributes;
+      for (_r = 0, _len9 = _ref5.length; _r < _len9; _r++) {
+        attribute = _ref5[_r];
+        if (attribute.name === 'class' || attribute.name === 'id') {
+          continue;
         }
         this.index(update, ' attribute', attribute.name);
       }
@@ -22158,19 +22158,6 @@ Query = (function(_super) {
     engine.updating.pairs = void 0;
     return engine.console.end();
   };
-
-
-  /*
-  match: (collection, node, scope) ->
-    if (index = collection.indexOf(node)) > -1
-      if collection.scopes[index] == scope
-        return true
-      index = -1
-      if dups = collection.duplicates
-        while (index = dups.indexOf(node, index + 1)) > -1
-          if collection.scopes[index + collection.length] == scope
-            return true
-   */
 
   Query.prototype.count = function(value) {
     if (value != null ? value.push : void 0) {
