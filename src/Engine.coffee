@@ -532,7 +532,8 @@ class Engine
         evt
       window.CustomEvent:: = window.Event::
 
-    element.dispatchEvent new window.CustomEvent(type, {detail,bubbles,cancelable})
+    event = new window.CustomEvent(type, {detail,bubbles,cancelable})
+    element.dispatchEvent event
 
   # Catch-all event listener 
   handleEvent: (e) ->
