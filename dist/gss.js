@@ -15240,7 +15240,6 @@ Document = (function(_super) {
     if ((_ref = this.data.watchers) != null ? _ref[path] : void 0) {
       return;
     }
-    console.error(camel, path, property, element);
     element.style[camel] = value;
   };
 

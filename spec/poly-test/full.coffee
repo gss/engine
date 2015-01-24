@@ -752,14 +752,12 @@ describe 'Full page tests', ->
             container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0')
  
             engine.then (solution) ->
- 
-              roughAssert(solution['$follow[x]'], 435)
+              roughAssert(solution['$follow[x]'], 435, 20)
               roughAssert(solution['$follow[y]'], 537)
               container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
  
  
-              engine.then (solution) ->
- 
+              engine.then (solution) -> 
                 roughAssert(solution['flex-gap'], 109)
                 roughAssert(solution['$follow[y]'], 728)
                 roughAssert(solution['$follow[x]'], 240)

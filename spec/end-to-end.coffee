@@ -1115,7 +1115,6 @@ describe 'End - to - End', ->
         describe 'length properties', ->
           it 'should compute linear equasions', (done) ->                                 
             engine.once 'solve', (e) ->
-              console.log(engine.values)
               expect(stringify engine.values).to.eql stringify
                 "$b1[border-left-width]": -2
                 "$a1[intrinsic-border-top-width]": 2

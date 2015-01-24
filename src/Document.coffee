@@ -299,8 +299,6 @@ class Document extends Engine
     if @data.watchers?[path]
       return
 
-    console.error(camel, path, property, element)
-
     element.style[camel] = value
     return
 
