@@ -522,13 +522,13 @@ class Engine
 
     try
       event = new window.CustomEvent(type, {detail,bubbles,cancelable})
-    catch
+    catch e
       unless window.CustomEvent
         window.CustomEvent = (event, params) ->
           params = params or
             bubbles: false
             cancelable: false
-            detail: `undefined`
+            detail: undefined
 
           evt = document.createEvent "CustomEvent"
           evt.initCustomEvent event, params.bubbles, params.cancelable, params.detail

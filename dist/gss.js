@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2015-01-24) - http://gridstylesheets.org */
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 (function (global){
 global.GSS = require('../src/GSS');
@@ -16063,7 +16064,7 @@ Engine = (function() {
   };
 
   Engine.prototype.dispatchEvent = function(element, type, data, bubbles, cancelable) {
-    var detail, event, prop, value;
+    var detail, e, event, prop, value;
     if (!this.scope) {
       return;
     }
@@ -16081,13 +16082,14 @@ Engine = (function() {
         cancelable: cancelable
       });
     } catch (_error) {
+      e = _error;
       if (!window.CustomEvent) {
         window.CustomEvent = function(event, params) {
           var evt;
           params = params || {
             bubbles: false,
             cancelable: false,
-            detail: undefined
+            detail: void 0
           };
           evt = document.createEvent("CustomEvent");
           evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail);
