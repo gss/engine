@@ -520,19 +520,22 @@ class Engine
     for prop, value of data
       detail[prop] = value
 
-    unless window.CustomEvent
-      window.CustomEvent = (event, params) ->
-        params = params or
-          bubbles: false
-          cancelable: false
-          detail: `undefined`
+    try
+      event = new window.CustomEvent(type, {detail,bubbles,cancelable})
+    catch
+      unless window.CustomEvent
+        window.CustomEvent = (event, params) ->
+          params = params or
+            bubbles: false
+            cancelable: false
+            detail: `undefined`
 
-        evt = document.createEvent "CustomEvent"
-        evt.initCustomEvent event, params.bubbles, params.cancelable, params.detail
-        evt
-      window.CustomEvent:: = window.Event::
+          evt = document.createEvent "CustomEvent"
+          evt.initCustomEvent event, params.bubbles, params.cancelable, params.detail
+          evt
+        window.CustomEvent:: = window.Event::
+      event = new window.CustomEvent(type, {detail,bubbles,cancelable})
 
-    event = new window.CustomEvent(type, {detail,bubbles,cancelable})
     element.dispatchEvent event
 
   # Catch-all event listener 
