@@ -398,6 +398,7 @@ class Engine
     worker = (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)
     worker.url ||= url
     worker.addEventListener 'message', @engine.eventHandler
+    worker.addEventListener 'error', @engine.eventHandler
     return worker
 
   # Try to apply conventional wisdom to dispatch variable

@@ -196,6 +196,9 @@ describe 'Domain', ->
 
 
   describe 'solvers in worker', ->
+    @timeout 60000
+
+
     it 'should receieve measurements from document to make substitutions', (done) ->
       root = document.createElement('div')
       root.innerHTML = """
