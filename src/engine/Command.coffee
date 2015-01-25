@@ -796,7 +796,6 @@ class Command.Sequence extends Command
   unlog: ->
 
   execute: (result) ->
-    console.log(result)
     return result
 
   yield: (result, engine, operation, continuation, scope, ascender, ascending) ->

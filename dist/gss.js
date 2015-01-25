@@ -6598,7 +6598,7 @@ ErrorReporter = (function() {
     if (sourceCode == null) {
       throw new Error('Source code not provided');
     }
-    if (toString.call(sourceCode) !== '[object String]') {
+    if (Object.prototype.toString.call(sourceCode) !== '[object String]') {
       throw new TypeError('Source code must be a string');
     }
     this._sourceCode = sourceCode;
@@ -6609,7 +6609,7 @@ ErrorReporter = (function() {
     if (message == null) {
       throw new Error('Message not provided');
     }
-    if (toString.call(message) !== '[object String]') {
+    if (Object.prototype.toString.call(message) !== '[object String]') {
       throw new TypeError('Message must be a string');
     }
     if (message.length === 0) {
@@ -6618,7 +6618,7 @@ ErrorReporter = (function() {
     if (lineNumber == null) {
       throw new Error('Line number not provided');
     }
-    if (toString.call(lineNumber) !== '[object Number]') {
+    if (Object.prototype.toString.call(lineNumber) !== '[object Number]') {
       throw new TypeError('Line number must be a number');
     }
     if (lineNumber <= 0) {
@@ -6627,7 +6627,7 @@ ErrorReporter = (function() {
     if (columnNumber == null) {
       throw new Error('Column number not provided');
     }
-    if (toString.call(columnNumber) !== '[object Number]') {
+    if (Object.prototype.toString.call(columnNumber) !== '[object Number]') {
       throw new TypeError('Column number must be a number');
     }
     if (columnNumber <= 0) {
@@ -20742,7 +20742,6 @@ Command.Sequence = (function(_super) {
   Sequence.prototype.unlog = function() {};
 
   Sequence.prototype.execute = function(result) {
-    console.log(result);
     return result;
   };
 

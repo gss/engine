@@ -2,7 +2,7 @@
 expect = chai.expect
 assert = chai.assert
 
-IE10 = document.body.style.msTouchAction? && !window.MSInputMethodContext 
+IE10 = document.all && !window.atob
 
 describe 'Stylesheet', ->
   engine = container = null
@@ -258,6 +258,7 @@ describe 'Stylesheet', ->
             </div>
           """
           engine.then ->
+            alert(engine.stylesheets[0].sheet.cssRules[0].cssText)
             expect(
               for rule in engine.stylesheets[0].sheet.cssRules
                 normalizeSelector rule.cssText

@@ -280,7 +280,6 @@ describe 'Domain', ->
           result: 0
           b: 1001
 
-        engine.remove('my_funny_tracker_path')
         engine.then (solution) ->
           expect(solution).to.eql 
             a: null
@@ -288,6 +287,7 @@ describe 'Domain', ->
             b: null
 
           done()
+        engine.remove('my_funny_tracker_path')
 
           
   xdescribe 'framed domains', (done) ->

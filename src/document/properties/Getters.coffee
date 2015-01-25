@@ -26,6 +26,7 @@ class Getters
     scroll:
       height: ->
         return document.body.scrollHeight
+
       width: ->
         return document.body.scrollWidth
 

@@ -450,7 +450,7 @@ button {
       background-color: hsl(0,0%,99%);
       padding: 72px;
       -webkit-column-width: 400px;
-      overflow-x: auto;
+      overflow-x: #{window.atab && 'auto' || 'hidden'};
       font-size: 20px;
       line-height: 30px;
     }
@@ -525,6 +525,8 @@ button {
 DEMOS.ADAPTIVE_ASPECT_LINEAR = DEMOS.ADAPTIVE_ASPECT.
   replace('$[intrinsic-width] < $[intrinsic-height]', '$[width] < $[height]')
 
+roughAssert = (a, b, threshold = 15) ->
+  expect(Math.abs(a - b) < threshold).to.eql true
 
 assert = chai.assert
 expect = chai.expect
@@ -539,7 +541,7 @@ describe 'Full page tests', ->
   afterEach ->
     remove(container)
     engine.destroy()
-  @timeout 20000
+  @timeout 100000
 
   for type, index in ['With worker', 'Without worker']
     do (type, index) ->
@@ -640,6 +642,9 @@ describe 'Full page tests', ->
                         engine.then (solution) ->
                           expect(engine.values).to.eql {}
                           done()
+
+
+        @timeout 100000
         
         it 'gss1 demo', (done) ->
           container = document.createElement('div')
@@ -739,8 +744,6 @@ describe 'Full page tests', ->
  
           engine.then (solution) ->
             # phantom gives slightly different measurements
-            roughAssert = (a, b, threshold = 15) ->
-              expect(Math.abs(a - b) < threshold).to.eql true
 
             roughAssert(solution['$follow[y]'], 540)
             roughAssert(solution['$follow[x]'], 329.5)
@@ -789,7 +792,8 @@ describe 'Full page tests', ->
                 container.style.height = '640px'
                 container.style.width = '640px'
                 container.style.position = 'absolute'
-                container.style.overflow = 'auto'
+                overflow = window.atab && 'auto' || 'hidden'
+                container.style.overflow = overflow
                 container.style.left = 0
                 container.style.top = 0
                 window.$engine = engine = new GSS(container, index == 0)
@@ -801,13 +805,13 @@ describe 'Full page tests', ->
                   
                 engine.then (solution) ->
                   expect(solution['$article[height]']).to.eql 600
-                  expect(solution['$article[width]']).to.eql expectation
+                  expect(solution['$article[width]']).to.eql 480
                   expect(solution['$footer[height]']).to.eql 600
                   expect(solution['$footer[width]']).to.eql 72
                   expect(solution['$header[height]']).to.eql 600
                   expect(solution['$header[width]']).to.eql 72
                   expect(solution['article-gap']).to.eql 20
-                  container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
+                  container.setAttribute('style', "height: 800px; width: 640px; position: absolute; overflow: #{overflow}; left: 0; top: 0")
 
                   engine.then (solution) ->
                     expect(solution['$article[height]'] > 1400).to.eql true
@@ -817,18 +821,17 @@ describe 'Full page tests', ->
                     expect(solution['$footer[width]']).to.eql 608
                     expect(solution['$header[height]']).to.eql 72
                     expect(solution['$header[width]']).to.eql 608
-
-                    container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
+                    container.setAttribute('style', "height: 640px; width: 640px; position: absolute; overflow: #{overflow}; left: 0; top: 0")
 
                     engine.then (solution) ->
                       expect(solution['article-gap']).to.eql 20
                       expect(solution['$article[height]']).to.eql 600
-                      expect(solution['$article[width]']).to.eql expectation
+                      expect(solution['$article[width]']).to.eql 480
                       expect(solution['$footer[height]']).to.eql 600
                       expect(solution['$footer[width]']).to.eql 72
                       expect(solution['$header[height]']).to.eql 600
                       expect(solution['$header[width]']).to.eql 72
-                      container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
+                      container.setAttribute('style', "height: 800px; width: 640px; position: absolute; overflow: #{overflow}; left: 0; top: 0")
                       engine.then (solution) ->
                         expect(solution['$article[height]'] > 1400).to.eql true
                         expect(solution['$article[width]']).to.eql 608
@@ -838,7 +841,7 @@ describe 'Full page tests', ->
                         expect(solution['$header[width]']).to.eql 608
                         expect(solution['article-gap']).to.eql 16
 
-                        container.setAttribute('style', 'height: 800px; width: 600px; position: absolute; overflow: auto; left: 0; top: 0')
+                        container.setAttribute('style', "height: 800px; width: 600px; position: absolute; overflow: #{overflow}; left: 0; top: 0")
                         
                         engine.then (solution) ->
                           expect(solution['$article[height]'] > 1400).to.eql true
@@ -849,5 +852,4 @@ describe 'Full page tests', ->
                           engine.then ->
                             expect(engine.values).to.eql {}
                             done()
-                      ###
  

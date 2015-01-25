@@ -22,7 +22,102 @@ describe 'End - to - End', ->
     
   afterEach ->
     remove(container)
-    
+  
+  
+  describe 'intrinsic properties', ->
+    it 'should bind to scrolling', (done) ->
+      engine.once 'solve', (e) ->
+        expect(stringify engine.values).to.eql stringify
+          "$scroller[scroll-top]": 0
+          "$floater[x]": 0
+
+        engine.once 'solve', (e) ->
+          expect(stringify engine.values).to.eql stringify
+            "$scroller[scroll-top]": 20
+            "$floater[x]": 20
+
+          engine.once 'solve', (e) ->
+            expect(stringify engine.values).to.eql stringify
+              "$scroller[scroll-top]": 0
+              "$floater[x]": 0
+
+            done()
+
+          engine.id('scroller').scrollTop = 0
+        engine.id('scroller').scrollTop = 20
+      container.innerHTML =  """
+        <style>
+          #scroller {
+            height: 50px;
+            overflow: scroll;
+            font-size: 300px;
+          }
+        </style>
+        <style type="text/gss"> 
+          #floater[x] == #scroller[scroll-top]
+        </style>
+        <div class="a" id="scroller">content</div>
+        <div class="b" id="floater"></div>
+      """
+      
+    it 'should bind to element visibility', (done) ->
+      id = container._gss_id
+
+      container.style.height = '50px'
+      container.style.overflow = 'scroll'
+      container.style.fontSize = '300px'
+      container.style.position = 'relative'
+      container.innerHTML =  """
+        <style type="text/gss">
+          
+          #floater {
+            y: == 100;
+            height: == 25;
+            
+            :visible-y {
+              x: == 200;
+            } 
+          }
+        </style>
+        <div class="b" id="floater"></div>
+        <div style="width: 10px; height: 200px;"></div>
+      """
+      
+      
+      engine.once 'solve', (e) ->
+        expect(e["#{id}[scroll-top]"]).to.eql 0
+        expect(e["#{id}[computed-height]"]).to.eql 50
+        expect(e["$floater[y]"]).to.eql 100
+        expect(e["$floater[height]"]).to.eql 25
+        expect(e["$floater[computed-y]"]).to.eql 100
+        expect(e["$floater[computed-height]"]).to.eql 25
+
+        engine.once 'solve', (e) -> # Still not visible
+          expect(e["#{id}[scroll-top]"]).to.eql 50
+          engine.once 'solve', (e) -> # Visible
+            expect(e["#{id}[scroll-top]"]).to.eql 100
+            expect(e["$floater[x]"]).to.eql 200
+            engine.once 'solve', (e) -> # still visible
+              expect(e["#{id}[scroll-top]"]).to.eql 110
+              expect(e["$floater[x]"]).to.eql undefined
+              engine.once 'solve', (e) -> # Hidden now
+                expect(e["#{id}[scroll-top]"]).to.eql 125
+                expect(e["$floater[x]"]).to.eql null
+                engine.once 'solve', (e) -> # Still hidden
+                  expect(e["#{id}[scroll-top]"]).to.eql 150
+                  expect(e["$floater[x]"]).to.eql undefined
+                  engine.once 'solve', (e) -> # Unsbubscribed
+                    expect(e["$floater[y]"]).to.eql null
+                    expect(e["$floater[height]"]).to.eql null
+                    expect(e["$floater[computed-y]"]).to.eql null
+                    expect(e["$floater[computed-height]"]).to.eql null
+                    done()
+                  remove engine.id('floater')
+                container.scrollTop = 150
+              container.scrollTop = 125
+            container.scrollTop = 110
+          container.scrollTop = 100
+        container.scrollTop = 50
 
 
   # Virtual Elements
@@ -543,7 +638,7 @@ describe 'End - to - End', ->
             }
           </style>
           """
-        zIndexAndHeight = document.body.style.msTouchAction? && 'height:200px;z-index:5;' || 'z-index:5;height:200px;'
+        zIndexAndHeight = document.all && !window.atob && 'height:200px;z-index:5;' || 'z-index:5;height:200px;'
         engine.once 'solve', ->
           expect(getSource(engine.tag('style')[1])).to.equal """
             .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
@@ -627,7 +722,7 @@ describe 'End - to - End', ->
             }
           </style>
           """
-        zIndexAndHeight = document.body.style.msTouchAction? && 'height:200px;z-index:5;' || 'z-index:5;height:200px;'
+        zIndexAndHeight = document.all && !window.atob && 'height:200px;z-index:5;' || 'z-index:5;height:200px;'
         engine.once 'solve', ->
           expect(getSource(engine.tag('style')[1])).to.equal """
             .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
@@ -983,100 +1078,6 @@ describe 'End - to - End', ->
                       expect(engine.values).to.eql {}
 
                       done()
-    describe 'intrinsic properties', ->
-      it 'should bind to scrolling', (done) ->
-        engine.once 'solve', (e) ->
-          expect(stringify engine.values).to.eql stringify
-            "$scroller[scroll-top]": 0
-            "$floater[x]": 0
-
-          engine.once 'solve', (e) ->
-            expect(stringify engine.values).to.eql stringify
-              "$scroller[scroll-top]": 20
-              "$floater[x]": 20
-
-            engine.once 'solve', (e) ->
-              expect(stringify engine.values).to.eql stringify
-                "$scroller[scroll-top]": 0
-                "$floater[x]": 0
-
-              done()
-
-            engine.id('scroller').scrollTop = 0
-          engine.id('scroller').scrollTop = 20
-        container.innerHTML =  """
-          <style>
-            #scroller {
-              height: 50px;
-              overflow: scroll;
-              font-size: 300px;
-            }
-          </style>
-          <style type="text/gss"> 
-            #floater[x] == #scroller[scroll-top]
-          </style>
-          <div class="a" id="scroller">content</div>
-          <div class="b" id="floater"></div>
-        """
-        
-      it 'should bind to element visibility', (done) ->
-        id = container._gss_id
-
-        container.style.height = '50px'
-        container.style.overflow = 'scroll'
-        container.style.fontSize = '300px'
-        container.style.position = 'relative'
-        container.innerHTML =  """
-          <style type="text/gss">
-            
-            #floater {
-              y: == 100;
-              height: == 25;
-              
-              :visible-y {
-                x: == 200;
-              } 
-            }
-          </style>
-          <div class="b" id="floater"></div>
-          <div style="width: 10px; height: 200px;"></div>
-        """
-        
-        
-        engine.once 'solve', (e) ->
-          expect(e["#{id}[scroll-top]"]).to.eql 0
-          expect(e["#{id}[computed-height]"]).to.eql 50
-          expect(e["$floater[y]"]).to.eql 100
-          expect(e["$floater[height]"]).to.eql 25
-          expect(e["$floater[computed-y]"]).to.eql 100
-          expect(e["$floater[computed-height]"]).to.eql 25
-
-          engine.once 'solve', (e) -> # Still not visible
-            expect(e["#{id}[scroll-top]"]).to.eql 50
-            engine.once 'solve', (e) -> # Visible
-              expect(e["#{id}[scroll-top]"]).to.eql 100
-              expect(e["$floater[x]"]).to.eql 200
-              engine.once 'solve', (e) -> # still visible
-                expect(e["#{id}[scroll-top]"]).to.eql 110
-                expect(e["$floater[x]"]).to.eql undefined
-                engine.once 'solve', (e) -> # Hidden now
-                  expect(e["#{id}[scroll-top]"]).to.eql 125
-                  expect(e["$floater[x]"]).to.eql null
-                  engine.once 'solve', (e) -> # Still hidden
-                    expect(e["#{id}[scroll-top]"]).to.eql 150
-                    expect(e["$floater[x]"]).to.eql undefined
-                    engine.once 'solve', (e) -> # Unsbubscribed
-                      expect(e["$floater[y]"]).to.eql null
-                      expect(e["$floater[height]"]).to.eql null
-                      expect(e["$floater[computed-y]"]).to.eql null
-                      expect(e["$floater[computed-height]"]).to.eql null
-                      done()
-                    remove engine.id('floater')
-                  container.scrollTop = 150
-                container.scrollTop = 125
-              container.scrollTop = 110
-            container.scrollTop = 100
-          container.scrollTop = 50
     describe 'css binding', ->
       describe 'simple', ->
         describe 'numerical properties', ->
