@@ -140,9 +140,7 @@ module.exports = ->
             platform: "OS X 10.10"
             version: '8.0'
           ,
-            browserName: ''
-            platform: "Android"
-            version: '4.4'
+            browserName: "android"
           ]
           build: process.env.TRAVIS_JOB_ID
           testname: 'GSS browser tests'
