@@ -132,6 +132,9 @@ module.exports = ->
           ,
             browserName: 'internet explorer'
             version: '10'
+          ,
+            browserName: 'internet explorer'
+            version: '9'
           ]
           build: process.env.TRAVIS_JOB_ID
           testname: 'GSS browser tests'
