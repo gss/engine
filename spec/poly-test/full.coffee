@@ -786,7 +786,7 @@ describe 'Full page tests', ->
                       
         for type, j in ['with intrinsic condition', 'with linear condition']
           do (type, j) ->
-            expectation = !window.atob && 544 || 480
+            expectation = document.all && !document.body.style.msTouchAction? && 544 || 480
             describe type, ->
               it 'Adaptive aspect', (done) ->
                 container = document.createElement('div')
