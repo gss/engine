@@ -2,7 +2,7 @@
 expect = chai.expect
 assert = chai.assert
 
-IE10 = document.all && !window.atob
+IE10 = (!+"\v1")
 
 describe 'Stylesheet', ->
   engine = container = null
