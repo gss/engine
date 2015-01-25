@@ -806,7 +806,7 @@ describe 'Full page tests', ->
                   
                 engine.then (solution) ->
                   expect(solution['$article[height]']).to.eql 600
-                  expect(solution['$article[width]']).to.eql 480
+                  expect(solution['$article[width]']).to.eql expectation
                   expect(solution['$footer[height]']).to.eql 600
                   expect(solution['$footer[width]']).to.eql 72
                   expect(solution['$header[height]']).to.eql 600
@@ -827,7 +827,7 @@ describe 'Full page tests', ->
                     engine.then (solution) ->
                       expect(solution['article-gap']).to.eql 20
                       expect(solution['$article[height]']).to.eql 600
-                      expect(solution['$article[width]']).to.eql 480
+                      expect(solution['$article[width]']).to.eql expectation
                       expect(solution['$footer[height]']).to.eql 600
                       expect(solution['$footer[width]']).to.eql 72
                       expect(solution['$header[height]']).to.eql 600
