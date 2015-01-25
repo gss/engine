@@ -145,7 +145,7 @@ module.exports = ->
           build: process.env.TRAVIS_JOB_ID
           testname: 'GSS browser tests'
           tunnelTimeout: 5
-          concurrency: 8
+          concurrency: 6
 
   # Grunt plugins used for building
   @loadNpmTasks 'grunt-browserify'
