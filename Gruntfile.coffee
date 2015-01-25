@@ -135,6 +135,14 @@ module.exports = ->
           ,
             browserName: 'internet explorer'
             version: '9'
+          ,
+            browserName: 'iPhone'
+            platform: "OS X 10.10"
+            version: '8.0'
+          ,
+            browserName: ''
+            platform: "Android"
+            version: '4.4'
           ]
           build: process.env.TRAVIS_JOB_ID
           testname: 'GSS browser tests'
