@@ -2,7 +2,7 @@
 expect = chai.expect
 assert = chai.assert
 
-IE10 = (!+"\v1")
+IE10 = !!window.ActiveXObject
 
 describe 'Stylesheet', ->
   engine = container = null
@@ -258,7 +258,6 @@ describe 'Stylesheet', ->
             </div>
           """
           engine.then ->
-            alert(engine.stylesheets[0].sheet.cssRules[0].cssText)
             expect(
               for rule in engine.stylesheets[0].sheet.cssRules
                 normalizeSelector rule.cssText
