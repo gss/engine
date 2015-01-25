@@ -450,6 +450,7 @@ button {
       background-color: hsl(0,0%,99%);
       padding: 72px;
       -webkit-column-width: 400px;
+      column-width: 400px;
       overflow-x: #{window.atab && 'auto' || 'hidden'};
       font-size: 20px;
       line-height: 30px;
@@ -752,7 +753,7 @@ describe 'Full page tests', ->
             container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0')
  
             engine.then (solution) ->
-              roughAssert(solution['$follow[x]'], 435, 20)
+              roughAssert(solution['$follow[x]'], 435, 25)
               roughAssert(solution['$follow[y]'], 537)
               container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
  
