@@ -1938,7 +1938,7 @@ describe 'End - to - End', ->
   
   describe 'External .gss files', ->
     
-    @timeout 20000
+    @timeout 40000
     describe "single file", ->
     
       it 'should compute', (done) ->

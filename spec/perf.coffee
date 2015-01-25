@@ -9,7 +9,6 @@ expect = chai.expect
 assert = chai.assert
 
 describe 'Perf', ->
-  this.timeout(15000)
   ['with worker', 'without worker'].forEach (title, i) ->
     describe title, ->
       scope = null
@@ -25,6 +24,8 @@ describe 'Perf', ->
         remove(scope)
         engine.destroy()
         done()
+
+      @timeout 15000
 
 
       describe 'live command perfs1', ->
