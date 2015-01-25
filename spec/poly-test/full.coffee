@@ -451,7 +451,7 @@ button {
       padding: 72px;
       -webkit-column-width: 400px;
       column-width: 400px;
-      overflow-x: #{window.atab && 'auto' || 'hidden'};
+      overflow-x: #{window.atob && 'auto' || 'hidden'};
       font-size: 20px;
       line-height: 30px;
     }
@@ -786,14 +786,14 @@ describe 'Full page tests', ->
                       
         for type, j in ['with intrinsic condition', 'with linear condition']
           do (type, j) ->
-            expectation = document.all && !document.body.style.msTouchAction? && 544 || 480
+            expectation = !window.atob && 544 || 480
             describe type, ->
               it 'Adaptive aspect', (done) ->
                 container = document.createElement('div')
                 container.style.height = '640px'
                 container.style.width = '640px'
                 container.style.position = 'absolute'
-                overflow = window.atab && 'auto' || 'hidden'
+                overflow = window.atob && 'auto' || 'hidden'
                 container.style.overflow = overflow
                 container.style.left = 0
                 container.style.top = 0
