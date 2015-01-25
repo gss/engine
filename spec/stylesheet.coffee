@@ -2,7 +2,7 @@
 expect = chai.expect
 assert = chai.assert
 
-IE10 = !!window.ActiveXObject
+IE10 = !!window.ActiveXObject || document.body.style.msTouchAction?
 
 describe 'Stylesheet', ->
   engine = container = null
