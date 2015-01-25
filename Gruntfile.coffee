@@ -146,7 +146,6 @@ module.exports = ->
           testname: 'GSS browser tests'
           tunnelTimeout: 5
           concurrency: 8
-          timeout: 360
 
   # Grunt plugins used for building
   @loadNpmTasks 'grunt-browserify'
