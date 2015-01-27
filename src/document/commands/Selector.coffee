@@ -178,9 +178,10 @@ class Selector extends Query
         else
           removed.push(child)
     changed = added.concat(removed)
+    if target.tagName == 'STYLE' && mutation.addedNodes[0]?.nodeType != 1
+      @mutateCharacterData(engine, target, target)
     if !changed.length
       return
-    @mutateCharacterData(engine, target, target)
 
     changedTags = []
     for node in changed

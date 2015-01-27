@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2015-01-27) - http://gridstylesheets.org */
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 (function (global){
 global.GSS = require('../src/GSS');
@@ -16871,7 +16872,7 @@ Selector = (function(_super) {
   };
 
   Selector.mutateChildList = function(engine, target, mutation) {
-    var added, allAdded, allChanged, allMoved, allRemoved, attribute, changed, changedTags, child, el, firstNext, firstPrev, id, index, j, kls, moved, next, node, parent, prev, prop, queries, removed, tag, update, value, values, _i, _j, _k, _l, _len, _len1, _len10, _len11, _len12, _len13, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _s, _t, _u, _v;
+    var added, allAdded, allChanged, allMoved, allRemoved, attribute, changed, changedTags, child, el, firstNext, firstPrev, id, index, j, kls, moved, next, node, parent, prev, prop, queries, removed, tag, update, value, values, _i, _j, _k, _l, _len, _len1, _len10, _len11, _len12, _len13, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _s, _t, _u, _v;
     added = [];
     removed = [];
     _ref = mutation.addedNodes;
@@ -16893,10 +16894,12 @@ Selector = (function(_super) {
       }
     }
     changed = added.concat(removed);
+    if (target.tagName === 'STYLE' && ((_ref2 = mutation.addedNodes[0]) != null ? _ref2.nodeType : void 0) !== 1) {
+      this.mutateCharacterData(engine, target, target);
+    }
     if (!changed.length) {
       return;
     }
-    this.mutateCharacterData(engine, target, target);
     changedTags = [];
     for (_k = 0, _len2 = changed.length; _k < _len2; _k++) {
       node = changed[_k];
@@ -16940,18 +16943,18 @@ Selector = (function(_super) {
       child = added[_l];
       this.prototype.match(engine, child, '!>', void 0, target);
       allAdded.push(child);
-      _ref2 = child.getElementsByTagName('*');
-      for (_m = 0, _len4 = _ref2.length; _m < _len4; _m++) {
-        el = _ref2[_m];
+      _ref3 = child.getElementsByTagName('*');
+      for (_m = 0, _len4 = _ref3.length; _m < _len4; _m++) {
+        el = _ref3[_m];
         allAdded.push(el);
       }
     }
     for (_n = 0, _len5 = removed.length; _n < _len5; _n++) {
       child = removed[_n];
       allRemoved.push(child);
-      _ref3 = child.getElementsByTagName('*');
-      for (_o = 0, _len6 = _ref3.length; _o < _len6; _o++) {
-        el = _ref3[_o];
+      _ref4 = child.getElementsByTagName('*');
+      for (_o = 0, _len6 = _ref4.length; _o < _len6; _o++) {
+        el = _ref4[_o];
         allRemoved.push(el);
       }
     }
@@ -16960,18 +16963,18 @@ Selector = (function(_super) {
     for (_p = 0, _len7 = allChanged.length; _p < _len7; _p++) {
       node = allChanged[_p];
       if (node.className) {
-        _ref4 = node.classList || node.className.split(/\s+/);
-        for (_q = 0, _len8 = _ref4.length; _q < _len8; _q++) {
-          kls = _ref4[_q];
+        _ref5 = node.classList || node.className.split(/\s+/);
+        for (_q = 0, _len8 = _ref5.length; _q < _len8; _q++) {
+          kls = _ref5[_q];
           this.index(update, ' .', kls);
         }
       }
       if (node.id) {
         this.index(update, ' #', node.id);
       }
-      _ref5 = node.attributes;
-      for (_r = 0, _len9 = _ref5.length; _r < _len9; _r++) {
-        attribute = _ref5[_r];
+      _ref6 = node.attributes;
+      for (_r = 0, _len9 = _ref6.length; _r < _len9; _r++) {
+        attribute = _ref6[_r];
         if (attribute.name === 'class' || attribute.name === 'id') {
           continue;
         }
