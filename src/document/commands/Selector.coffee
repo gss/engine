@@ -177,10 +177,10 @@ class Selector extends Query
           added.splice index, 1
         else
           removed.push(child)
-    @mutateCharacterData(engine, target, target)
     changed = added.concat(removed)
     if !changed.length
       return
+    @mutateCharacterData(engine, target, target)
 
     changedTags = []
     for node in changed

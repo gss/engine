@@ -16890,11 +16890,11 @@ Selector = (function(_super) {
         }
       }
     }
-    this.mutateCharacterData(engine, target, target);
     changed = added.concat(removed);
     if (!changed.length) {
       return;
     }
+    this.mutateCharacterData(engine, target, target);
     changedTags = [];
     for (_k = 0, _len2 = changed.length; _k < _len2; _k++) {
       node = changed[_k];
@@ -25668,6 +25668,9 @@ Inspector = (function() {
     ruler.style.width = width + 'px';
     ruler.style.height = height + 'px';
     if (inside) {
+      if (!element.offsetHeight) {
+        element = element.parentNode;
+      }
       element.appendChild(ruler);
       if (property === 'height' && (this.engine.values[id + '[width]'] != null)) {
         return ruler.style.width = this.engine.values[id + '[width]'] + 'px';
@@ -25697,7 +25700,7 @@ Inspector = (function() {
   };
 
   Inspector.prototype.draw = function(id, data) {
-    var bits, clientLeft, clientTop, element, left, offsetLeft, offsetTop, prop, scope, top, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8;
+    var bits, clientLeft, clientTop, element, left, offsetLeft, offsetTop, parenting, prop, scope, top, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8;
     if ((bits = id.split('"')).length > 1) {
       scope = bits[0];
     } else {
@@ -25705,6 +25708,11 @@ Inspector = (function() {
     }
     if (((_ref = (element = this.engine.identity[scope])) != null ? _ref.nodeType : void 0) === 1) {
       if (scope !== id) {
+        if (!element.offsetHeight && !element.offsetTop) {
+          element = element.parentNode;
+          scope = this.engine.identify(element);
+          parenting = true;
+        }
         top = (_ref1 = data[scope + '[y]']) != null ? _ref1 : 0;
         left = (_ref2 = data[scope + '[x]']) != null ? _ref2 : 0;
         clientTop = (_ref3 = data[id + '[y]']) != null ? _ref3 : 0;
@@ -25715,11 +25723,13 @@ Inspector = (function() {
         top = element.offsetTop;
         left = element.offsetLeft;
       }
-      if ((_ref5 = element.offsetWidth !== data[scope + '[width]']) != null ? _ref5 : data[scope + '[intrinsic-width]']) {
-        clientLeft = left + element.clientLeft;
-      }
-      if ((_ref6 = element.offsetHeight !== data[scope + '[height]']) != null ? _ref6 : data[scope + '[intrinsic-height]']) {
-        clientTop = top + element.clientTop;
+      if (!parenting) {
+        if ((_ref5 = element.offsetWidth !== data[scope + '[width]']) != null ? _ref5 : data[scope + '[intrinsic-width]']) {
+          clientLeft = left + element.clientLeft;
+        }
+        if ((_ref6 = element.offsetHeight !== data[scope + '[height]']) != null ? _ref6 : data[scope + '[intrinsic-height]']) {
+          clientTop = top + element.clientTop;
+        }
       }
     } else {
       element = document.body;

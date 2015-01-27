@@ -536,10 +536,12 @@ class Inspector
     ruler.style.height = height + 'px'
 
     if inside
+      unless element.offsetHeight
+        element = element.parentNode
+
       element.appendChild(ruler)
       if property == 'height' && @engine.values[id + '[width]']?
         ruler.style.width = @engine.values[id + '[width]'] + 'px'
-
 
     else
       element.parentNode.appendChild(ruler)
@@ -559,7 +561,11 @@ class Inspector
     else
       scope = id
     if (element = @engine.identity[scope])?.nodeType == 1
-      if scope != id
+      if scope != id 
+        if !element.offsetHeight && !element.offsetTop
+          element = element.parentNode
+          scope = @engine.identify(element)
+          parenting = true
         top = data[scope + '[y]'] ? 0
         left = data[scope + '[x]'] ? 0
         clientTop = data[id + '[y]'] ? 0
@@ -570,10 +576,11 @@ class Inspector
         top = element.offsetTop
         left = element.offsetLeft
 
-      if element.offsetWidth != data[scope + '[width]'] ? data[scope + '[intrinsic-width]']
-        clientLeft = left + element.clientLeft
-      if element.offsetHeight != data[scope + '[height]'] ? data[scope + '[intrinsic-height]']
-        clientTop = top + element.clientTop
+      unless parenting
+        if element.offsetWidth != data[scope + '[width]'] ? data[scope + '[intrinsic-width]']
+          clientLeft = left + element.clientLeft
+        if element.offsetHeight != data[scope + '[height]'] ? data[scope + '[intrinsic-height]']
+          clientTop = top + element.clientTop
 
     else
       element = document.body
