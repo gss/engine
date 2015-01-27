@@ -420,6 +420,8 @@ describe 'GSS engine', ->
     after ->
       remove(container)
 
+    @timeout 4000
+
     describe 'Asynchronous existentialism (one engine for life of container)', ->
       engine1 = null
     
