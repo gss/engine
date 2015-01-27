@@ -8,21 +8,21 @@ DEMOS =
 
     </section>
 
-    <style type="text/gss">
+    <style type="text/gss" scoped>
       [md] == 72 !require;
       [md-sub] == 8;
-      ::scope[width] == ::scope[intrinsic-width];
+      $[width] == $[intrinsic-width];
 
 
       .demo {
-        @if ::scope[width] < 500 {
+        @if $[width] < 500 {
           .title {
-            margin-top: == [md-sub];
+            &margin-top == [md-sub];
           }
         } @else {
           .title {
-            margin-top: == [md];
-            padding-top: == ([md-sub] * 6) - 8;
+            &margin-top == [md];
+            &padding-top == ([md-sub] * 6) - 8;
           }
         }
 
@@ -32,19 +32,19 @@ DEMOS =
 
   """
   SCOPING: """
-    <div id="box1" class="box w-virtual" onclick="
+    <button id="box1" class="box w-virtual" onclick="
       this.setAttribute('class', 
-        this.className = 'box ' + (this.className.indexOf('wo') > -1 ? 'w-virtual' : 'wo-virtual'))">
+        'box ' + (this.className.indexOf('wo') > -1 ? 'w-virtual' : 'wo-virtual'))">
       <div class="innie" id="innie1" ></div>
-    </div>
-    <div id="box2" class="box wo-virtual" onclick="this.setAttribute('class', 
-      this.className = 'box ' + (this.className.indexOf('wo') > -1 && 'w-virtual' || 'wo-virtual'))">
+    </button>
+    <button id="box2" class="box wo-virtual" onclick="this.setAttribute('class', 
+      'box ' + (this.className.indexOf('wo') > -1 && 'w-virtual' || 'wo-virtual'))">
       <div class="innie" id="innie2" ></div>
-    </div>
-    <div id="box3" class="box w-virtual" onclick="this.setAttribute('class', 
-      this.className = 'box ' + (this.className.indexOf('wo') > -1 && 'w-virtual' || 'wo-virtual'))">
+    </button>
+    <button id="box3" class="box w-virtual" onclick="this.setAttribute('class', 
+      'box ' + (this.className.indexOf('wo') > -1 && 'w-virtual' || 'wo-virtual'))">
       <div class="innie" id="innie3" ></div>
-    </div>
+    </button>
     
     <style>
     * {
@@ -79,10 +79,10 @@ DEMOS =
     <style type="text/gss">
 
     
-    ::scope[left] == 0;
-    ::scope[top] == 0;
-    ::scope[height] == ::scope[intrinsic-height];
-    ::scope[width] == ::scope[intrinsic-width];
+    $[left] == 0;
+    $[top] == 0;
+    $[height] == $[intrinsic-height];
+    $[width] == $[intrinsic-width];
 
     .box.w-virtual {
       @h |-(&"zone")-| in(&) gap(20);
@@ -95,9 +95,9 @@ DEMOS =
       @v |-(& .innie)-| in(&) gap(20);
     }
 
-    @v |-10-(.box)-20-... in(::scope) {
+    @v |-10-(.box)-20-... in($) {
             
-      @h |~100~(&)~100~| in(::scope);
+      @h |~100~(&)~100~| in($);
       
       &[x] + 20 == &:next[x];
       &[right] - 20 == &:next[right];
@@ -140,7 +140,7 @@ DEMOS =
         top: 5px;
       }
     </style>
-    <style type="text/gss">
+    <style type="text/gss" scoped>
       // plural selectors can be used as singular, a la jQ
       [left-margin] == (main)[right];
 
@@ -153,34 +153,32 @@ DEMOS =
       header {
         ::[left] == 0;
         // condition inside css rule
-        @if (::scope[intrinsic-width] > ::scope[intrinsic-height]) {
-          ::[width] == ::scope[intrinsic-width] / 4;
+        @if ($[intrinsic-width] > $[intrinsic-height]) {
+          ::[width] == $[intrinsic-width] / 4;
           opacity: 0.5;
         } @else {
-          ::[width] == ::scope[intrinsic-width] / 2;
+          ::[width] == $[intrinsic-width] / 2;
           opacity: 0.75;
         }
       }
       footer {
-        ::[top] == (main)[height]; 
-        ::[height] == ::scope[intrinsic-height] * 2;
+        ::[top] == ($ main)[height]; 
+        ::[height] == $[intrinsic-height] * 2;
       }
 
       aside {
-        ::[left] == (main)[right];
+        ::[left] == ($ main)[right];
         ::[height] == 100;
-        ::[top] == (header)[intrinsic-height] + (header)[intrinsic-y];
+        ::[top] == ($ header)[intrinsic-height] + ($ header)[intrinsic-y];
       }
 
       main {
         // Bind things to scroll position
-        ::[top] == ::scope[scroll-top];// + (header)[intrinsic-y];
-        ::[width] == (aside)[intrinsic-width];
-        ::[left] == (header)[right];
+        ::[top] == $[scroll-top];// + (header)[intrinsic-y];
+        ::[width] == ($ aside)[intrinsic-width];
+        ::[left] == ($ header)[right];
 
-        // use intrinsic-height to avoid binding. Should be:
-        // height: :window[height] - (header)[height];
-        ::[height] == ::scope[intrinsic-height] - (header)[intrinsic-height];
+        ::[height] == $[intrinsic-height] - ($ header)[intrinsic-height];
       } 
       // Custom combinators
       ul li !~ li {
@@ -194,11 +192,10 @@ DEMOS =
       // Chains
       ul li {
         // justify by using variable
-        ::[width] == [li-width];
-
-        (&:previous)[right] == &[left];
-        (&:last)[right] == ::scope[intrinsic-width] - 16;
-        (&:first)[left] == 0;
+        ::[width] == $[li-width];
+        :previous[right] == &[left];
+        :last[right] == $[intrinsic-width] - 16;
+        :first[left] == 0;
       }
     </style>
 
@@ -298,52 +295,52 @@ DEMOS =
         box-shadow: 0 5px 8px hsla(0,0%,0%,.3);  
       }
     </style>
-    <style type="text/gss">
-      /* vars */
-      [gap] == 20 !required;
-      [flex-gap] >= [gap] * 2 !required;
-      [radius] == 10 !required;
-      [outer-radius] == [radius] * 2 !required;
+<style type="text/gss" scoped>
+/* vars */
+[gap] == 20 !required;
+[flex-gap] >= [gap] * 2 !required;
+[radius] == 10 !required;
+[outer-radius] == [radius] * 2 !required;
 
-      /* scope-as-window for tests */
-      ::scope[left] == 0;
-      ::scope[top] == 0;
-      ::scope[width] == ::scope[intrinsic-width] !require;
-      ::scope[height] == ::scope[intrinsic-height] !require;
+/* scope-as-window for tests */
+$[left] == 0;
+$[top] == 0;
+$[width] == $[intrinsic-width] !require;
+$[height] == $[intrinsic-height] !require;
 
-      /* elements */
-      #profile-card {      
-        width: == ::scope[intrinsic-width] - 480;            
-        height: == ::scope[intrinsic-height] - 350;
-        center-x: == ::scope[center-x];
-        center-y: == ::scope[center-y];        
-        border-radius: == [outer-radius];
-      }
+/* elements */
+#profile-card {      
+  &width == $[width] - 480;            
+  &height == $[height] - 480;
+  &[center-x] == $[center-x];
+  &[center-y] == $[center-y];        
+  &border-radius == [outer-radius];
+}
 
-      #avatar {
-        height: == 160 !required;
-        width: == ::[height];
-        border-radius: == ::[height] / 2;        
-      }
+#avatar {
+  &height == 160 !required;
+  &width == ::[height];
+  &border-radius == ::[height] / 2;        
+}
 
-      #name {
-        height: == ::[intrinsic-height] !required;
-        width: == ::[intrinsic-width] !required;
-      }
+#name {
+  &height == ::[intrinsic-height] !required;
+  &width == ::[intrinsic-width] !required;
+}
 
-      #cover {
-        border-radius: == [radius];
-      }
+#cover {
+  &border-radius == [radius];
+}
 
-      button {
-        width: == ::[intrinsic-width] !required;
-        height: == ::[intrinsic-height] !required;        
-        padding: == [gap];
-        padding-top: == [gap] / 2;
-        padding-bottom: == [gap] / 2;
-        border-radius: == [radius];
-      }
-      
+button {
+  &width == ::[intrinsic-width] !required;
+  &height == ::[intrinsic-height] !required;        
+  &padding == [gap];
+  &padding-top == [gap] / 2;
+  &padding-bottom == [gap] / 2;
+  &border-radius == [radius];
+}
+
 
 @h |~-~(#name)~-~| in(#cover) gap([gap]*2) !strong;
 
@@ -359,7 +356,7 @@ DEMOS =
      |
     in(#cover)
     gap([gap]) outer-gap([flex-gap]) {
-      center-x: == #cover[center-x];
+      &[center-x] == ($ #cover)[center-x];
   }
 
   @h |-10-(#cover)-10-|
@@ -381,7 +378,7 @@ DEMOS =
     in(#profile-card)
     gap([gap])
     !strong {
-      &[top] == &:next[top];
+      :next[top] == &top;
     }
 }
 
@@ -405,11 +402,11 @@ DEMOS =
     in(#cover)
     gap([gap])
     outer-gap([flex-gap]) !strong {
-      center-x: == #profile-card[center-x];
+      &[center-x] == ($ #profile-card)[center-x];
   }
 
-  @h |-10-(#cover)-10-| in(#profile-card);
-  @v |-10-(#cover)-10-| in(#profile-card);
+  @h |-10-(#cover)-10-| in(#profile-card) !strong;
+  @v |-10-(#cover)-10-| in(#profile-card) !strong;
 }
 
     </style>
@@ -453,7 +450,8 @@ DEMOS =
       background-color: hsl(0,0%,99%);
       padding: 72px;
       -webkit-column-width: 400px;
-      overflow-x: auto;
+      column-width: 400px;
+      overflow-x: #{window.atob && 'auto' || 'hidden'};
       font-size: 20px;
       line-height: 30px;
     }
@@ -474,17 +472,14 @@ DEMOS =
     <style type="text/gss">
     // vertical article
       
-    ::scope[left] == 0;
-    ::scope[top] == 0;
-    ::scope[height] == ::scope[intrinsic-height];
-    ::scope[width] == ::scope[intrinsic-width];
+    $[left] == 0;
+    $[top] == 0;
+    $[height] == $[intrinsic-height];
+    $[width] == $[intrinsic-width];
+    $[article-gap] >= 16;
 
-    @if ::scope[intrinsic-width] < ::scope[intrinsic-height] {
-      
-      [article-gap] >= 16; // centers article
-      
-      [article-gap] >= 16; // centers article
-      @h |-(article)-| gap([article-gap]) in(::scope) {
+    @if $[intrinsic-width] < $[intrinsic-height] {
+      @h |-(article)-| gap($[article-gap]) in($) {
         height: == &[intrinsic-height];
         width: <= 800;        
       }
@@ -494,20 +489,17 @@ DEMOS =
         (article)
         (footer)
         
-        in(::scope);
+        in($);
       
       header, footer {
         height: == 72;
-        @h |(&)| in(article);
+        @h |(&)| in($ article);
       }
     }
     
     // horizontal article
     @else {
-      
-      
-      [article-gap] >= 16; // centers article
-      @v |-(article)-| gap([article-gap]) in(::scope) {
+      @v |-(article)-| gap($[article-gap]) in($) {
         width: == &[intrinsic-width];
         height: <= 600;   
       }
@@ -518,11 +510,11 @@ DEMOS =
         (footer)
         (article)        
         
-        in(::scope);
+        in($);
       
       header, footer {
         width: == 72;
-        @v |(&)| in(article);
+        @v |(&)| in($ article);
       }
     }
 
@@ -532,17 +524,13 @@ DEMOS =
   """
 
 DEMOS.ADAPTIVE_ASPECT_LINEAR = DEMOS.ADAPTIVE_ASPECT.
-  replace('::scope[intrinsic-width] < ::scope[intrinsic-height]', '::scope[width] < ::scope[height]')
+  replace('$[intrinsic-width] < $[intrinsic-height]', '$[width] < $[height]')
 
+roughAssert = (a, b, threshold = 15) ->
+  expect(Math.abs(a - b) < threshold).to.eql true
 
 assert = chai.assert
 expect = chai.expect
-
-$  = () ->
-  return document.querySelector arguments...
-  
-$$ = () -> 
-  return document.querySelectorAll arguments...
 
 remove = (el) ->
   el?.parentNode?.removeChild(el)
@@ -569,7 +557,7 @@ describe 'Full page tests', ->
           container.style.left = 0
           container.style.top = 0
           window.$engine = engine = new GSS(container, index == 0)
-          $('#fixtures').appendChild container
+          document.getElementById('fixtures').appendChild container
 
           container.innerHTML = DEMOS.SCOPING
           engine.then (solution) ->
@@ -615,37 +603,37 @@ describe 'Full page tests', ->
             for expect, value in expectation
               assert(engine.values[expect]).to.eql value
 
-            engine.$id('box1').onclick()
+            engine.id('box1').click()
             engine.then (solution) ->
               expect(solution['$box1"zone"[height]']).to.eql null
               expect(solution['$box1"zone"[width]']).to.eql null
               expect(solution['$box1"zone"[x]']).to.eql null
               expect(solution['$box1"zone"[y]']).to.eql null
-              engine.$id('box1').onclick()
+              engine.id('box1').click()
               engine.then (solution) ->
                 expect(solution['$box1"zone"[height]']).to.eql 260
                 expect(solution['$box1"zone"[width]']).to.eql 760
                 expect(solution['$box1"zone"[x]']).to.eql 120
                 expect(solution['$box1"zone"[y]']).to.eql 30
-                engine.$id('box2').onclick()
+                engine.id('box2').click()
                 engine.then (solution) ->
                   expect(solution['$box2"zone"[height]']).to.eql 260
                   expect(solution['$box2"zone"[width]']).to.eql 720
                   expect(solution['$box2"zone"[x]']).to.eql 140
                   expect(solution['$box2"zone"[y]']).to.eql 350
-                  engine.$id('box2').onclick()
+                  engine.id('box2').click()
                   engine.then (solution) ->
                     expect(solution['$box2"zone"[height]']).to.eql null
                     expect(solution['$box2"zone"[width]']).to.eql null
                     expect(solution['$box2"zone"[x]']).to.eql null
                     expect(solution['$box2"zone"[y]']).to.eql null
-                    engine.$id('box3').onclick()
+                    engine.id('box3').click()
                     engine.then (solution) ->
                       expect(solution['$box3"zone"[height]']).to.eql null
                       expect(solution['$box3"zone"[width]']).to.eql null
                       expect(solution['$box3"zone"[x]']).to.eql null
                       expect(solution['$box3"zone"[y]']).to.eql null
-                      engine.$id('box3').onclick()
+                      engine.id('box3').click()
                       engine.then (solution) ->
                         expect(solution['$box3"zone"[height]']).to.eql 260
                         expect(solution['$box3"zone"[width]']).to.eql 680
@@ -668,15 +656,14 @@ describe 'Full page tests', ->
           container.style.left = 0
           container.style.top = 0
           window.$engine = engine = new GSS(container, index == 0)
-          $('#fixtures').appendChild container
+          document.getElementById('fixtures').appendChild container
 
           container.innerHTML = DEMOS.GSS1
           engine.then (solution) ->
             expect(solution['li-width']).to.eql((640 - 16) / 3)
             expect(solution['$aside[x]']).to.eql(640 / 2 + 100)
             expect(solution['$header[width]']).to.eql(Math.round(640 / 2)) 
-
-            li = engine.$first('ul li:last-child')
+            li = engine.scope.querySelector('ul li:last-child')
             clone = li.cloneNode()
             clone.id = 'li4'
             clone.innerHTML = '4'
@@ -685,7 +672,7 @@ describe 'Full page tests', ->
             engine.then (solution) ->
 
               expect(Math.round(solution['li-width'])).to.eql((640 - 16) / 4)
-              li = engine.$first('ul li:first-child')
+              li = engine.scope.querySelector('ul li:first-child')
               li.parentNode.removeChild(li)
 
               engine.then (solution) ->
@@ -709,11 +696,11 @@ describe 'Full page tests', ->
                 container.id = 'face-demo'
 
                 window.$engine = engine = new GSS(container, index == 0)
-                $('#fixtures').appendChild container
+                document.getElementById('fixtures').appendChild container
 
                 html = DEMOS.FACE_DETECTION_SECTION
                 if j == 0
-                  html = html.replace('::scope[width] < 500', '::scope[intrinsic-width] < 500')
+                  html = html.replace('$[width] < 500', '$[intrinsic-width] < 500')
                 container.innerHTML = html
                 container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
         
@@ -751,99 +738,103 @@ describe 'Full page tests', ->
           container.id = 'profile-card-demo'
 
           window.$engine = engine = new GSS(container, index == 0)
-          $('#fixtures').appendChild container
+          document.getElementById('fixtures').appendChild container
 
           container.innerHTML = DEMOS.PROFILE_CARD
           container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
  
           engine.then (solution) ->
             # phantom gives slightly different measurements
-            roughAssert = (a, b, threshold = 15) ->
-              expect(Math.abs(a - b) < threshold).to.eql true
-
-            GSS.console.log(JSON.stringify solution)
-
 
             roughAssert(solution['$follow[y]'], 540)
             roughAssert(solution['$follow[x]'], 329.5)
-            roughAssert(solution['flex-gap'], 95)
- 
+            roughAssert(solution['flex-gap'], 40)
+
             container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0')
  
             engine.then (solution) ->
-              GSS.console.log(solution)
-              roughAssert(solution['$follow[x]'], 435)
+              roughAssert(solution['$follow[x]'], 435, 25)
               roughAssert(solution['$follow[y]'], 537)
               container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
  
  
-              engine.then (solution) ->
-                GSS.console.log(solution)
-                roughAssert(solution['flex-gap'], 95)
-                roughAssert(solution['$follow[y]'], 540)
-                roughAssert(solution['$follow[x]'], 329.5)
- 
-                container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0')
-                
+              engine.then (solution) -> 
+                roughAssert(solution['flex-gap'], 109)
+                roughAssert(solution['$follow[y]'], 728)
+                roughAssert(solution['$follow[x]'], 240)
+
+                container.setAttribute('style', 'height: 1280px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
+   
                 engine.then (solution) ->
-                  roughAssert(solution['$follow[x]'], 435)
-                  roughAssert(solution['$follow[y]'], 537)
- 
-                  container.innerHTML = ""
+   
+                  roughAssert(solution['$follow[y]'], 668)
+                  roughAssert(solution['$follow[x]'], 329.5)
+                  roughAssert(solution['flex-gap'], 158)
+       
+   
+                  container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
+                  
                   engine.then (solution) ->
-                    done()
+                    roughAssert(solution['$follow[y]'], 540)
+                    roughAssert(solution['flex-gap'], 40)
+   
+                    container.innerHTML = ""
+                    engine.then (solution) ->
+                      expect(engine.values).to.eql {}
+                      done()
+
+                      
         for type, j in ['with intrinsic condition', 'with linear condition']
           do (type, j) ->
+            expectation = window.atob && document.body.style.msTouchAction? && 544 || 480
             describe type, ->
               it 'Adaptive aspect', (done) ->
                 container = document.createElement('div')
                 container.style.height = '640px'
                 container.style.width = '640px'
                 container.style.position = 'absolute'
-                container.style.overflow = 'auto'
+                overflow = window.atob && 'auto' || 'hidden'
+                container.style.overflow = overflow
                 container.style.left = 0
                 container.style.top = 0
                 window.$engine = engine = new GSS(container, index == 0)
-                $('#fixtures').appendChild container
+                document.getElementById('fixtures').appendChild container
                 if j == 0
                   container.innerHTML = DEMOS.ADAPTIVE_ASPECT
                 else
                   container.innerHTML = DEMOS.ADAPTIVE_ASPECT_LINEAR
-                GSS.console.log(container.innerHTML)
                   
                 engine.then (solution) ->
                   expect(solution['$article[height]']).to.eql 600
-                  expect(solution['$article[width]']).to.eql 480
+                  expect(solution['$article[width]']).to.eql expectation
                   expect(solution['$footer[height]']).to.eql 600
                   expect(solution['$footer[width]']).to.eql 72
                   expect(solution['$header[height]']).to.eql 600
                   expect(solution['$header[width]']).to.eql 72
                   expect(solution['article-gap']).to.eql 20
-                  container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
+                  container.setAttribute('style', "height: 800px; width: 640px; position: absolute; overflow: #{overflow}; left: 0; top: 0")
 
                   engine.then (solution) ->
-                    expect(solution['$article[height]'] > 1500).to.eql true
+                    expect(solution['$article[height]'] > 1400).to.eql true
+                    expect(solution['article-gap']).to.eql 16
                     expect(solution['$article[width]']).to.eql 608
                     expect(solution['$footer[height]']).to.eql 72
                     expect(solution['$footer[width]']).to.eql 608
                     expect(solution['$header[height]']).to.eql 72
                     expect(solution['$header[width]']).to.eql 608
-                    expect(solution['article-gap']).to.eql 16
-
-                    container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
+                    container.setAttribute('style', "height: 640px; width: 640px; position: absolute; overflow: #{overflow}; left: 0; top: 0")
 
                     engine.then (solution) ->
+                      expect(solution['article-gap']).to.eql 20
                       expect(solution['$article[height]']).to.eql 600
-                      expect(solution['$article[width]']).to.eql 480
+                      expect(solution['$article[width]']).to.eql expectation
                       expect(solution['$footer[height]']).to.eql 600
                       expect(solution['$footer[width]']).to.eql 72
                       expect(solution['$header[height]']).to.eql 600
                       expect(solution['$header[width]']).to.eql 72
-                      expect(solution['article-gap']).to.eql 20
-                      container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
-
+                      container.setAttribute('style', "height: 800px; width: 640px; position: absolute; overflow: #{overflow}; left: 0; top: 0")
                       engine.then (solution) ->
-                        expect(solution['$article[height]'] > 1500).to.eql true
+                        expect(solution['$article[height]'] > 1400).to.eql true
                         expect(solution['$article[width]']).to.eql 608
                         expect(solution['$footer[height]']).to.eql 72
                         expect(solution['$footer[width]']).to.eql 608
@@ -851,10 +842,10 @@ describe 'Full page tests', ->
                         expect(solution['$header[width]']).to.eql 608
                         expect(solution['article-gap']).to.eql 16
 
-                        container.setAttribute('style', 'height: 800px; width: 600px; position: absolute; overflow: auto; left: 0; top: 0')
+                        container.setAttribute('style', "height: 800px; width: 600px; position: absolute; overflow: #{overflow}; left: 0; top: 0")
                         
                         engine.then (solution) ->
-                          expect(solution['$article[height]'] > 1500).to.eql true
+                          expect(solution['$article[height]'] > 1400).to.eql true
                           expect(solution['$article[width]']).to.eql 568
                           expect(solution['$footer[width]']).to.eql 568
                           expect(solution['$header[width]']).to.eql 568

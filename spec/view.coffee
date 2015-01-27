@@ -1,15 +1,6 @@
 assert = chai.assert
 expect = chai.expect
 
-stringify = (o) ->
-  return JSON.stringify o, 1, 1
-
-$  = () ->
-  return document.querySelector arguments...
-  
-$$ = () -> 
-  return document.querySelectorAll arguments...
-
 remove = (el) ->
   el?.parentNode?.removeChild(el)
 
@@ -21,10 +12,9 @@ describe "GSS.View", ->
   beforeEach ->
     container = document.createElement 'div'
     engine = new GSS(container)
-    $('#fixtures').appendChild container
+    document.getElementById('fixtures').appendChild container
     
   afterEach ->
-    console.log "after"
     remove(container)
     engine.destroy()
   
@@ -39,7 +29,7 @@ describe "GSS.View", ->
         done()
       container.addEventListener 'solved', onSolved
       engine.solve [
-          ['==', ['get',['$class', 'target'],   'width'], 88]
+          ['==', ['get',['.', 'target'],   'width'], 88]
         ]
 
       container.innerHTML = """
@@ -56,8 +46,8 @@ describe "GSS.View", ->
           </div>
         </div>        
       """            
-      target1 = engine.$class('target')[0]
-      target2 = engine.$class('target')[1]
+      target1 = engine.class('target')[0]
+      target2 = engine.class('target')[1]
       assert target1.style['width'] is "10px"
       assert target2.style['width'] is "10px"
   
@@ -71,7 +61,7 @@ describe "GSS.View", ->
         </div>  
       """          
       ast = [
-          ['==', ['get',['$class','target'],'y'], 100]
+          ['==', ['get',['.','target'],'y'], 100]
         ]        
 
       q = document.getElementsByClassName('target')
@@ -93,18 +83,18 @@ describe "GSS.View", ->
 
       ast = ['==', 
               ['get',
-                ['$id', 'floater'],
+                ['#', 'floater'],
                 'y'], 
               ['+', 
                 ['get',
-                  ['$id', 'anchor'],
+                  ['#', 'anchor'],
                   'intrinsic-y'], 
                 3]]        
       
         
       engine.once 'solved', ->
         expect(engine.values['$floater[y]']).to.eql 20
-        engine.$id('pusher').setAttribute('style', 'padding-top: 11px; height: 17px;') 
+        engine.id('pusher').setAttribute('style', 'padding-top: 11px; height: 17px;') 
 
         engine.once 'solved', ->  
           expect(engine.values['$floater[y]']).to.eql 31        
@@ -122,7 +112,7 @@ describe "GSS.View", ->
     it 'after solving', (done) ->   
         
       engine.solve [
-          ['==', ['get',['$class', 'target'],'y'], 100]
+          ['==', ['get',['.', 'target'],'y'], 100]
         ]
       
       
@@ -153,22 +143,22 @@ describe "GSS.View", ->
   xdescribe 'printCss', ->
     it 'prints css', (done) ->
       container.innerHTML = """
-        <style type="text/gss">
-          .target[y] == 100;
-          .target[margin-right] == 55;
-          .target {
-            height: 33px;
-            height: == ::[intrinsic-height];
-          }
-        </style>
-        <div id="ignore1">
-          <div id="target1" class="target">
-            <div id="ignore2"> 
-              <div id="target2" class="target">
-              </div>
+      <style type="text/gss">
+        .target[y] == 100;
+        .target[margin-right] == 55;
+        .target {
+          height: 33px;
+          height: == ::[intrinsic-height];
+        }
+      </style>
+      <div id="ignore1">
+        <div id="target1" class="target">
+          <div id="ignore2"> 
+            <div id="target2" class="target">
             </div>
-          </div>  
-        </div>
+          </div>
+        </div>  
+      </div>
       """                        
 
       q = document.getElementsByClassName('target')
@@ -188,7 +178,9 @@ describe "GSS.View", ->
         expectedCss2 = "#target2{position:absolute;margin:0px;top:0px;left:0px;#{GSS._.dasherize(GSS._.transformPrefix)}:#{m2};margin-right:55px;}"
         assert css1 is expectedCss1,"wrong css1 #{css1}"
         assert css2 is expectedCss2,"wrong css2 #{css2}"
-        assert( cssRoot is (expectedCss1 + expectedCss2), "wrong cssRoot, #{cssRoot}")        
+        assert( cssRoot is (expectedCss1 + expectedCss2), "wrong cssRoot, #{cssRoot}")
+        
         done()
+      
 
       

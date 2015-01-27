@@ -76,14 +76,17 @@ describe 'Cassowary Thread', ->
     chai.expect(thread.values).to.eql
       "target-width": 100
       "actual-width": 101
+      pad: 1
 
     thread.solve 
       pad: 2
     chai.expect(thread.updated.solution).to.eql
+      "pad": 2
       "actual-width": 102
     thread.solve 
       pad: 4
     chai.expect(thread.updated.solution).to.eql
+      "pad": 4
       "actual-width": 104
     done()
   
@@ -97,8 +100,10 @@ describe 'Cassowary Thread', ->
         ['==', ['get','width'],['get','intrinsic-width'], 'require']
       ]
     chai.expect(thread.values).to.eql
+      'intrinsic-width': 999
       "width": 999
     done()
+  
   
   it 'intrinsic var is immutable with suggestion', () ->
     #c.trace = true
@@ -112,160 +117,26 @@ describe 'Cassowary Thread', ->
     chai.expect(thread.values).to.eql
       "width": 120
       "hgap": 20
+      'intrinsic-width': 100
     #done()
   
   it 'tracking & removing by get tracker', (done) ->
     thread = new GSS()
     thread.solve [
-        ['==', ['get', 'x', '', 'x-tracker'],100,'strong']
-        ['==', ['get','x'],10,'weak']
-      ]
+        ['==', ['get', 'x'],100,'strong']
+      ], 'x-tracker'
+    thread.solve [
+      ['==', ['get','x'],10,'weak']
+    ]
     chai.expect(thread.values).to.eql
       "x": 100
+
     thread.solve ['remove', 'x-tracker']
     chai.expect(thread.values).to.eql
       "x": 10
     done()
   
     
-    describe 'simulated cropping demo', ->
-      
-      thread = new Thread {
-        defaultStrength: "weak"
-      }
-      
-      it 'initial layout', () ->        
-        thread.execute
-          commands:[
-            # window            
-            ['suggest',['get','[window]'],1000,'require']
-            
-            # weak layout
-            ['eq',['get','[frame-w]'],['divide',['get','[window]'],10],'weak']
-            ['eq',['get','[frame-h]'],['divide',['get','[window]'],10],'weak']           
-            
-            # cropping
-            # -----------------------------------
-            
-            # stays            
-            ['stay',['get','[frame-w]'],'strong']
-            ['stay',['get','[frame-h]'],'strong']            
-            
-            # required 2x1 landscape aspect ratio
-            ['eq',['get','[bg-w]'],['multiply',['get','[bg-h]'],2],'require']
-            
-            # bg weakly is size of frame
-            ['eq',['get','[frame-w]'],['get','[bg-w]'],'weak']
-            ['eq',['get','[frame-h]'],['get','[bg-h]'],'weak']
-            
-            # bg required to cover frame
-            ['lte',['get','[frame-w]'],['get','[bg-w]'],'require']
-            ['lte',['get','[frame-h]'],['get','[bg-h]'],'require']            
-          ]          
-        expect(thread.getValues()).to.eql
-          "[window]": 1000
-          "[frame-w]": 100
-          "[frame-h]": 100
-          "[bg-w]": 200
-          "[bg-h]": 100
-          
-      #it 'screensize changes', () ->        
-      #  thread.execute
-      #    commands:[
-      #      # window
-      #      ['suggest',['get','[window]'],2000,'require']           
-      #    ]          
-      #
-      #  expect(thread.getValues()).to.eql
-      #    "[window]": 2000
-      #    "[frame-w]": 200
-      #    "[frame-h]": 200
-      #    "[bg-w]": 400
-      #    "[bg-h]": 200
-  
-  
-  #describe 'Scoped Commands', ->
-  #
-  #  describe 'PENDING: simulated cropping demo', ->
-  #    
-  #    thread = new Thread {
-  #      defaultStrength: "weak"
-  #    }
-  #    
-  #    it 'initial layout', () ->        
-  #      thread.execute
-  #        commands:[
-  #          # window            
-  #          ['suggest',['get','[window]'],1000,'require']
-  #          
-  #          # weak layout
-  #          ['eq',['get','[frame-w]'],['divide',['get','[window]'],10],'weak']
-  #          ['eq',['get','[frame-h]'],['divide',['get','[window]'],10],'weak']           
-  #          
-  #          # cropping
-  #          # -----------------------------------
-  #          
-  #          ['$scope',             
-  #            
-  #            '$frame', # scope id
-  #                          
-  #            [ # commands
-  #            
-  #              # import vars?
-  #              #['stay',['get','[frame-w]'],'strong']
-  #              #['stay',['get','[frame-h]'],'strong']            
-  #          
-  #              # required 2x1 landscape aspect ratio
-  #              ['eq',['get','[bg-w]'],['multiply',['get','[bg-h]'],2],'require']
-  #          
-  #              # bg weakly is size of frame
-  #              ['eq',['get','[frame-w]'],['get','[bg-w]'],'weak']
-  #              ['eq',['get','[frame-h]'],['get','[bg-h]'],'weak']
-  #          
-  #              # bg required to cover frame
-  #              ['lte',['get','[frame-w]'],['get','[bg-w]'],'require']
-  #              ['lte',['get','[frame-h]'],['get','[bg-h]'],'require']
-  #            ]
-  #          ]         
-  #        ]          
-  #      expect(thread.getValues()).to.eql
-  #        "[window]": 1000
-  #        "[frame-w]": 100
-  #        "[frame-h]": 100
-  #        "[bg-w]": 200
-  #        "[bg-h]": 100
-  #        
-  #    it 'screensize changes 1', () ->        
-  #      thread.execute
-  #        commands:[
-  #          # window
-  #          ['suggest',['get','[window]'],2000,'require']           
-  #        ]          
-  #
-  #      expect(thread.getValues()).to.eql
-  #        "[window]": 2000
-  #        "[frame-w]": 200
-  #        "[frame-h]": 200
-  #        "[bg-w]": 400
-  #        "[bg-h]": 200
-  #    
-  #    it 'screensize changes 2', () ->        
-  #      thread.execute
-  #        commands:[
-  #          # window
-  #          ['suggest',['get','[window]'],100,'require']           
-  #        ]          
-  #
-  #      expect(thread.getValues()).to.eql
-  #        "[window]": 100
-  #        "[frame-w]": 10
-  #        "[frame-h]": 10
-  #        "[bg-w]": 20
-  #        "[bg-h]": 10
-  #    
-  #
-  
-  
   # DOM Prop Helpers
   # ---------------------------------------------------------------------
   
@@ -274,8 +145,8 @@ describe 'Cassowary Thread', ->
     it 'varexp - right', () ->
       thread = new GSS()
       thread.solve [
-          ['==', ['get','$112', 'x', '.box'],10]
-          ['==', ['get','$112', 'right','.box'],100]
+          ['==', ['get','$112[x]'],10]
+          ['==', ['get','$112', 'right'],100]
         ]
       expect(thread.values).to.eql
         "$112[x]": 10
@@ -284,8 +155,8 @@ describe 'Cassowary Thread', ->
     it 'varexp - center-x', () ->
       thread = new GSS()
       thread.solve [
-          ['==', ['get', '$112', 'x','.box'],10]
-          ['==', ['get','$112','center-x','.box'],110]
+          ['==', ['get', '$112[x]'],10]
+          ['==', ['get','$112', 'center-x'],110]
         ]
       expect(thread.values).to.eql
         "$112[x]": 10
@@ -294,8 +165,8 @@ describe 'Cassowary Thread', ->
     it 'varexp - bottom', () ->
       thread = new GSS()
       thread.solve [
-          ['==', ['get','$112','height','.box'],10]
-          ['==', ['get','$112','bottom','.box'],100]
+          ['==', ['get','$112[height]'],10]
+          ['==', ['get','$112', 'bottom'],100]
         ]
       expect(thread.values).to.eql
         "$112[height]": 10
@@ -304,8 +175,8 @@ describe 'Cassowary Thread', ->
     it 'varexp - center-y', () ->
       thread = new GSS()
       thread.solve [
-          ['==', ['get', '$112', 'height', '.box'],100]
-          ['==', ['get', '$112', 'center-y','.box'],51]
+          ['==', ['get', '$112[height]'],100]
+          ['==', ['get', '$112', 'center-y'],51]
         ]
       expect(thread.values).to.eql
         "$112[height]": 100
@@ -321,11 +192,14 @@ describe 'Cassowary Thread', ->
     it 'tracking by path', () ->
       thread = new GSS(document.createElement('div'))
       thread.solve [
-          ['==', ['get', '$222', 'line-height'], 1.6]
-          ['==', ['get', '$112', 'x','.box'],10]
-          ['==', ['get', '$112', 'right','.box'],100]
-        ]
-      expect(thread.updated.solution).to.eql
+          ['==', ['get', '$222[line-height]'], 1.6]
+      ]
+      thread.solve [
+          ['==', ['get', '$112[x]'],10]
+          ['==', ['get', '$112', 'right'],100]
+        ], '.box'
+
+      expect(thread.values).to.eql
         "$222[line-height]": 1.6
         "$112[x]": 10
         "$112[width]": 90
@@ -340,13 +214,16 @@ describe 'Cassowary Thread', ->
     it 'tracking by selector', () ->
       thread = new GSS()
       thread.solve [
-          ['==', ['get','$112', 'x', '.big-box'],1000, 'required']
-          ['==', ['get','$112', 'x', '.box'],50,'strong']
-        ]
+        ['==', ['get','$112[x]'],50,'strong']
+      ], '.box$112'
+
+      thread.solve [
+          ['==', ['get','$112[x]'],1000, 'required']
+      ], '.big-box$112'
       expect(thread.updated.solution).to.eql
         "$112[x]": 1000
       thread.solve [
-          ['remove', '.big-box']
+          ['remove', '.big-box$112']
         ]
       expect(thread.updated.solution).to.eql
         "$112[x]": 50

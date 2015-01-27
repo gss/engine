@@ -1,206 +1,130 @@
 ### Base class: Engine
 
-Engine is a base class for scripting environments.
+Engine is a base class for scripting environment.
 It initializes and orchestrates all moving parts.
 
-It includes interpreter that operates in defined constraint domains.
-Each domain has its own command set, that extends engine defaults. ###
+It operates over workers and domains. Workers are
+separate engines running in web worker thread. 
+Domains are either independent constraint graphs or
+pseudo-solvers like DOM measurements. ###
+  
+class Engine
 
-
-# Little shim for require.js so we dont have to carry it around
-@require ||= (string) ->
-  if string == 'cassowary'
-    return c
-  bits = string.replace('', '').split('/')
-  return this[bits[bits.length - 1]]
-@module ||= {}
-
-Native          = require('./methods/Native')
-Events          = require('./concepts/Events')
-Domain          = require('./concepts/Domain')
-Domain.Events ||= Native::mixin(Domain, Events)
-
-class Engine extends Domain.Events
-
-  Identity:     require('./concepts/Identity')
-  Evaluator:    require('./concepts/Evaluator')
-  Operation:    require('./concepts/Operation')
-  Variable:     require('./concepts/Variable')
-  Method:       require('./concepts/Method')
-  Property:     require('./concepts/Property')
-  Console:      require('./concepts/Console')
-  Debugger:     require('./concepts/Debugger')
-  Update:       require('./concepts/Update')
-  Continuation: require('./concepts/Continuation')
-
-  Properties:   require('./properties/Axioms')
- 
-  Methods:      Native
-
-  Domains: 
-    Abstract:   require('./domains/Abstract')
-    Document:   require('./domains/Document')
-    Intrinsic:  require('./domains/Intrinsic')
-    Numeric:    require('./domains/Numeric')
-    Linear:     require('./domains/Linear')
-    Finite:     require('./domains/Finite')
-    Boolean:    require('./domains/Boolean')
-
-
-  constructor: () -> #(scope, url, data)
-    for argument, index in arguments
-      continue unless argument
-      switch typeof argument
-        when 'object'
-          if argument.nodeType
-            if @Evaluator
-              Engine[Engine.identity.provide(argument)] = @
-              @scope = scope = argument
-            else
-              scope = argument
-              while scope
-                if id = Engine.identity.find(scope)
-                  if engine = Engine[id]
-                    return engine
-                break unless scope.parentNode
-                scope = scope.parentNode
-          else
-            assumed = argument
-        when 'string', 'boolean'
-          url = argument
-
-    # **GSS()** creates new Engine at the root, 
-    # if there is no engine assigned to it yet
-    unless @Evaluator
-      return new Engine(arguments[0], arguments[1], arguments[2])
-
-    # Create instance own objects and context objects.
-    # Context objects are contain non-callable 
-    # definitions of commands and properties.
-    # Definitions are compiled into functions 
-    # right before first commands are executed
-    super(@, url)
+  Command:   require('./engine/Command')
+  Domain:    require('./engine/Domain')
+  Update:    require('./engine/Update')
+  Query:     require('./engine/Query')
+  
+  Solver:    require('./engine/domains/Linear')
+  Input:     require('./engine/domains/Input')
+  Data:      require('./engine/domains/Data')
+  Output:    require('./engine/domains/Output')
     
-    @domain       = @
-    @properties   = new @Properties(@)
-    @methods      = new @Methods(@)
-    @evaluator    = new @Evaluator(@)
-    @debugger     = new @Debugger(@)
+  Console:   require('./engine/utilities/Console')
+  Inspector: require('./engine/utilities/Inspector')
+  Exporter:  require('./engine/utilities/Exporter')
 
-    @precompile()
- 
-    @Operation    = new @Operation(@)
-    @Variable     = new @Variable(@)
-    @Continuation = @Continuation.new(@)
+  constructor: (data, url) -> #(scope, url, data)
+    @engine = @
 
-    @assumed = new @Numeric(assumed)
-    @assumed.displayName = 'Assumed'
-    @assumed.setup()
+    # Attempt to initialize worker
+    if url? && Worker?
+      @url = @getWorkerURL(url)
+    
+    # Assign and manage event handlers
+    @eventHandler = @handleEvent.bind(@)
+    @listeners = {}
+    for events in [@events, @$events, @$$events]
+      @addListeners(events)
 
-    @solved = new @Boolean
-    @solved.displayName = 'Solved'
-    @solved.eager = true
-    @solved.setup()
+    # Manage and observe queries
+    @observers = {}
+    @queries   = {}
 
-    @values = @solved.values
+    # Register pairing selectors
+    @lefts = []
+    @pairs = {}
 
+    # Track variables and dependency graphs
+    @variables    = {}
+    @domains      = []
 
+    # Bookkeep parsed stylesheets
+    @stylesheets  = []
+    @imported     = {}
+
+    # Initialize utilities
+    @inspector    = new @Inspector(@)
+    @exporter     = new @Exporter(@)
+
+    # Subclass Update and Domains to point to this engine
+    @update = @Update.compile(@)
+    @Domain.compile(@)
+    
+    # Find and register commands in I/O domains
+    @data.setup()
+    @output.setup()
+
+    # Link solved values and use given data
+    @values = @output.values
+    if data
+      for property, value of data
+        @data.values[property] = @values[property] = value
+
+    # Bypass input domain for worker solver
     unless window?
-      @strategy = 'substitute'
-    else if @scope
-      @strategy = 'document'
-    else
-      @strategy = 'abstract'
+      @strategy = 'update'
+
+    # Listen for errors to flush buffered console
+    self.addEventListener 'error', @eventHandler
 
     return @
 
-  events:
-    # Receieve message from worker
-    message: (e) ->
-      values = e.target.values ||= {}
-      for property, value of e.data
-        values[property] = value
-      if @updating
-        if @updating.busy.length
-          @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
-          if (i = @updating.solutions.indexOf(e.target)) > -1
-            @updating.solutions[i] = e.data
-          unless @updating.busy.length
-            return @updating.each(@resolve, @, e.data) || @onSolve()
-          else
-            return @updating.apply(e.data)
-
-      @provide e.data
-
-    # Handle error from worker
-    error: (e) ->
-      throw new Error "#{e.message} (#{e.filename}:#{e.lineno})"
-
-    destroy: (e) ->
-      if @scope
-        Engine[@scope._gss_id] = undefined
-      if @worker
-        @worker.removeEventListener 'message', @eventHandler
-        @worker.removeEventListener 'error', @eventHandler
-
-  # Import exported variables to thread
-  substitute: (expressions, result, parent, index) ->
-    if result == undefined
-      start = true
-      result = null
-    for expression, i in expressions by -1
-      if expression?.push
-        result = @substitute(expression, result, expressions, i)
-    if expressions[0] == 'remove'
-      @updating.push expressions, null
-      if parent
-        parent.splice(index, 1)
-    if expressions[0] == 'value'
-      # Substituted part of expression
-      if expressions[4]
-        exp = parent[index] = expressions[3].split(',')
-        path = @Variable.getPath(exp[1], exp[2])
-      # Updates for substituted variables
-      else if !expressions[3]
-        path = expressions[2]
-        if parent
-          parent.splice(index, 1)
-        else
-          return []
-      if path && @assumed.values[path] != expressions[1]
-        unless (result ||= {}).hasOwnProperty(path)
-          result[path] = expressions[1]
-        else unless result[path]?
-          delete result[path]
-    unless start
-      if !expressions.length
-        parent.splice(index, 1)
-      return result
-    # Substitute variables next
-    if result
-      @assumed.merge result
-    # Perform remove commands first
-    if @updating
-      @updating.each(@resolve, @, result)
-    # Execute given expressions
-    if expressions.length
-      @provide expressions
-
+  # engine.solve({}) - solve with given data
+  # engine.solve([]) - evaluate commands
+  # engine.solve(function(){}) - buffer and solve changes of state within callback
   solve: () ->
-    if typeof arguments[0] == 'string'
-      if typeof arguments[1] == 'string'
-        source = arguments[0]
-        reason = arguments[1]
-        index = 2
+
+    unless @transacting
+      @transacting = transacting = true
+
+    args = @transact.apply(@, arguments)
+
+    if typeof args[0] == 'function'
+      if result = args.shift().apply(@, args) 
+        @updating.apply result
+        apply = false
+    else if args[0]?
+      strategy = @[@strategy || 'input']
+        
+      if strategy.solve
+        @console.start(strategy.displayName, args)
+        result = strategy.solve.apply(strategy, args)
+        @console.end(result)
       else
-        reason = arguments[0]
-        index = 1
+        result = strategy.apply(@, args)
 
-    args = Array.prototype.slice.call(arguments, index || 0)
+    if transacting
+      @transacting = undefined
+      
+      return @commit(result, undefined, apply)
 
+  # Figure out arguments and prepare to solve given operations
+  transact: ->
+    if typeof arguments[0] == 'string'
+      reason = arguments[0]
+      if typeof arguments[1] == 'string'
+        arg = arguments[1]
+
+    args = Array.prototype.slice.call(arguments, +reason? + +arg?)
+
+    unless @updating
+      @console.start(reason || (@updated && 'Update' || 'Initialize'), arg || args)
+      @updating = new @update
+      @updating.start()
 
     unless @running
-      @compile(true)
+      @compile()
 
     problematic = undefined
     for arg, index in args
@@ -213,401 +137,504 @@ class Engine extends Domain.Events
         else
           problematic = arg
 
-    if typeof args[0] == 'object'
-      if name = source || @displayName
-        @console.start(reason || args[0], name)
-    unless old = @updating
-      @engine.updating = new @update
-      @engine.updating.start ?= @engine.time()
+    return args
 
-    if @providing == undefined
-      @providing = null
-      providing = true
-    if typeof args[0] == 'function'
-      solution = args.shift().apply(@, args) 
-    else
-      solution = Domain::solve.apply(@, args)
-
-    if solution
-      @updating.apply(solution)
-
-    @queries?.onBeforeSolve()
-    @pairs?.onBeforeSolve()
-
-
-    if providing
-      while provided = @providing
-        @providing = null
-        if args[0]?.index
-          provided.index ?= args[0].index
-          provided.parent ?= args[0].parent
-        @update(provided)
-      @providing = undefined
-
-    if name
-      @console.end(reason)
-
-    workflow = @updating
-    if workflow.domains.length
-      if old
-        if old != workflow
-          old.push(workflow)
-      if !old || !workflow.busy?.length
-        workflow.each @resolve, @
-      if workflow.busy?.length
-        return workflow
-
-    onlyRemoving = (workflow.problems.length == 1 && workflow.domains[0] == null)
-    restyled = onlyRemoving || (@restyled && !old && !workflow.problems.length)
-
-    if @engine == @ && providing && (!workflow.problems[workflow.index + 1] || restyled) 
-      return @onSolve(null, restyled)
-
-  onSolve: (update, restyled) ->
-    # Apply styles
-
-    if solution = update || @updating.solution
-      #if Object.keys(solution).length
-      @applier?.solve(solution)
-    else if !@updating.reflown && !restyled
-      if !@updating.problems.length
-        @updating = undefined
-      return
-
-    if @intrinsic# && (restyled || (solution && Object.keys(solution).length))
-      @intrinsic.changes = {}
-      scope = @updating.reflown || @scope
-      @updating.reflown = undefined
-      @intrinsic?.each(scope, @intrinsic.update)
-      @updating.apply @intrinsic.changes
-      @intrinsic.changes = undefined
-
-    @solved.merge solution
-
-    @pairs?.onBeforeSolve()
-    @updating.reset()
-
-    # Launch another pass here if solutions caused effects
-    # Effects are processed separately, then merged with found solution
-    if effects = @updating.effects
-      @updating.effects = undefined
-    else
-      effects = {}
-
-    effects = @updating.each(@resolve, @, effects)
-    if @updating.busy?.length
-      return effects
-      
-    #return if @requesting
-
-    if effects && Object.keys(effects).length
-      return @onSolve(effects)
-
-    # Fire up solved event if we've had remove commands that 
-    # didnt cause any reactions
-    if (!solution || (!solution.push && !Object.keys(solution).length) || @updating.problems[@updating.index + 1]) &&
-        (@updating.problems.length != 1 || @updating.domains[0] != null) &&
-        !@engine.restyled
-      return 
-
-    if !@updating.problems.length && @updated?.problems.length && !@engine.restyled
-      @updating.finish()
-      @restyled = undefined
-      @updating = undefined
-      return
-    else
-      @updated = @updating
-      @updating.finish()
-      @updating = undefined
-      @restyled = undefined
-
-    @console.info('Solution\t   ', @updated, solution, @solved.values)
-
-    # Trigger events on engine and scope node
-    @triggerEvent('solve', @updated.solution, @updated)
-    if @scope
-      @dispatchEvent(@scope, 'solve', @updated.solution, @updated)
-
-    # Legacy events
-    @triggerEvent('solved', @updated.solution, @updated)
-    if @scope
-      @dispatchEvent(@scope, 'solved', @updated.solution, @updated)
+  # Start a solving tick, may cause others
+  commit: (solution, update = @updating, apply) ->
+    return if update.blocking
     
-    @debugger.update(@)
+    # Start with given solution
+    if solution && Object.keys(solution).length
+      @triggerEvent('resume', solution, update)
         
-    
-    return @updated.solution
+    until update.isDone() && !update.isDirty()
+      # Process stylesheets, mutations, pairs, conditions, branches
+      until update.isDocumentDone()
+        @triggerEvent('commit', update)
+      return if update.blocking
 
-  # Accept solution from a solver and resolve it to verify
-  provide: (solution) ->
-    if solution.operation
-      return @engine.updating.provide solution
-    if !solution.push
-      return @updating?.each(@resolve, @, solution) || @onSolve()
 
-    if @providing != undefined
-      unless @hasOwnProperty('providing')
-        @engine.providing ||= []
+      # Evaluate queue of generated constraints
+      if update.domains.length
+        if !update.busy?.length
+          @console.start('Solvers', update.problems.slice(update.index))
+          update.each @resolve, @
+          @console.end(update.solution)
+        if update.busy?.length
+          return update
 
-      (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
+      # Apply values to elements
+      if apply == false && !update.domains.length
+        @triggerEvent('flush', update.solution, update)
+      else
+        @console.start('Apply', update.solution)
+        @triggerEvent('apply', update.solution, update)
+        @triggerEvent('write', update.solution, update)
+        @triggerEvent('flush', update.solution, update)
+        @console.end(@values)
+
+        # Re-measure values
+        if update.solved || update.isDone()
+          @triggerEvent('validate', update.solution, update)
+      
+      update.commit()
+
+    # Discard update if it did nothing 
+    unless update.hadSideEffects(solution)
+      @updating = undefined
+      @console.end()
       return
-    else
-      return @update.apply(@, arguments)
 
-  resolve: (domain, problems, index, workflow) ->
+    update.finish()
+
+    @updated = update
+    @updating = undefined
+
+    @inspector.update()
+    @console.end(update.solution)
+    @fireEvent 'solve', update.solution, @updated
+    @fireEvent 'solved', update.solution, @updated
+
+    return update.solution
+
+  # Solve problems by given domain/worker
+  # Writes messages to lazy buffer, when using worker
+  resolve: (domain, problems, index, update) ->
     if domain && !domain.solve && domain.postMessage
-      workflow.postMessage domain, problems
-      workflow.await(domain.url)
+      update.postMessage domain, problems
+      update.await(domain.url)
       return domain
-
-    if (index = workflow.imports?.indexOf(domain)) > -1
-      finish = index
-      imports = []
-      while property = workflow.imports[++finish]
-        break unless typeof property == 'string'
-        if imports.indexOf(property) == -1
-          imports.push(property)
-      workflow.imports.splice(index, finish - index)
-
-      for property in imports
-        if @intrinsic.values.hasOwnProperty(property)
-          value = @intrinsic.values[property]
-        else if workflow.solution?.hasOwnProperty(property)
-          value = workflow.solution[property]
-        else
-          value = @solution?[property]
-
-        if value?
-          problems.push ['value', value, property]
 
     for problem, index in problems
       if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
         problem = problems[index] = problem[0]
-    if problems instanceof Array && problems.length == 1 && problem instanceof Array
-      problems = problem
-    if domain
-      if @providing == undefined
-        @providing = null
-        providing = true
-      @console.start(problems, domain.displayName)
-      result = domain.solve(problems) || undefined
-      if result && result.postMessage
-        workflow.await(result.url)
-      else
-        if providing && @providing
-          workflow.push(@update(@frame || true, @providing))
-          #workflow.optimize()
+    
+    unless domain
+      return @broadcast problems, update
 
-        if result?.length == 1
-          result = result[0]
-      if providing
-        @providing = undefined
-      @console.end()
-
-    # Broadcast operations without specific domain (e.g. remove)
+    @console.start(domain.displayName, problems)
+    result = domain.solve(problems) || undefined
+    if result && result.postMessage
+      update.await(result.url)
     else
+      if result?.length == 1
+        result = result[0]
+    @console.end(result)
 
-      others = []
-      removes = []
-      if problems[0] == 'remove'
-        removes.push problems
+    return result
+
+  # Dispatch operations without specific domain (e.g. remove)
+  broadcast: (problems, update = @updating, insert) ->
+    others = []
+    removes = []
+    if insert
+      if update.domains[update.index + 1] != null
+        update.domains.splice(update.index, 0, null)
+        update.problems.splice(update.index, 0, problems)
       else
-        for problem in problems
-          if problem[0] == 'remove'
-            removes.push(problem)
-          else
-            others.push(problem)
-     
+        broadcasted = update.problems[update.index + 1]
+        broadcasted.push.apply(broadcasted, problems)
+
+    if problems[0] == 'remove'
+      removes.push problems
+    else
+      for problem in problems
+        if problem[0] == 'remove'
+          removes.push(problem)
+        else
+          others.push(problem)
+   
+    for other, i in [@data, @output].concat(@domains)
+      locals = []
+      other.changes = undefined
       for remove in removes
         for path, index in remove
           continue if index == 0
-          @unbypass(path)
-
-      for other, i in @domains
-        locals = []
+          if other.paths?[path]
+            locals.push(path)
+          else if other.watched?[path]
+            other.remove(path)
+      if other.changes
+        for property, value of other.changes
+          (result or result = {})[property] = value
         other.changes = undefined
-        for remove in removes
-          for path, index in remove
-            continue if index == 0
-            if other.paths[path]
-              locals.push(path)
-            else if other.observers[path]
-              other.remove(path)
-        if other.changes
-          for property, value of other.changes
-            (result ||= {})[property] = value
-          other.changes = undefined
 
-        if locals.length
-          other.remove.apply(other, locals)
-          locals.unshift 'remove'
-          workflow.push([locals], other, true)
-        if others.length
-          workflow.push(others, other)
-      if typeof problems[0] == 'string'
-        problems = [problems]
-      for url, worker of @workers
-        workflow.push problems, worker
-    return result
+      if locals.length
+        #other.remove.apply(other, locals)
+        locals.unshift 'remove'
+        locals.index = -1
+        update.push([locals], other, true)
+      if others.length
+        update.push(others, other)
+    if typeof problems[0] == 'string'
+      problems = [problems]
+    for url, worker of @workers
+      working = problems.filter (command) ->
+        command[0] != 'remove' || worker.paths?[command[1]]
+
+      update.push working, worker, true
+    return
 
 
-  # auto-worker url, only works with sync scripts!
-  getWorkerURL: do ->
-    if document?
-      scripts = document.getElementsByTagName('script')
-      src = scripts[scripts.length - 1].src
-      if location.search?.indexOf('log=0') > -1
-        src += ((src.indexOf('?') > -1) && '&' || '?') + 'log=0'
-    return (url) ->
-      return typeof url == 'string' && url || src
+  # Compile all static definitions in the engine
+  compile: () ->
+    for name, domain of @
+      if domain != @ && domain.engine
+        domain.compile?(@)
+    @running = true
+    @triggerEvent('compile', @)
 
+  # Trigger event on engine and its scope element
+  fireEvent: (name, data, object) ->
+    @triggerEvent(name, data, object)
+    if @scope
+      @dispatchEvent(@scope, name, data, object)
+      
+  # Builtin event handlers
+  $events:
 
-
-  # Initialize new worker and subscribe engine to its events
-  useWorker: (url) ->
-    unless typeof url == 'string' && Worker? && self.onmessage != undefined
+    # Perform pending query operations
+    commit: ->
+      @Query::commit(@)
+      @Query::repair(@)
+      @Query::branch(@)
+      
+      if values = @data.commit()
+        @updating.apply(values)
+    
       return
 
-    @worker = @getWorker(url)
-    @worker.url = url
-    @worker.addEventListener 'message', @eventHandler
-    @worker.addEventListener 'error', @eventHandler
+    # Merge results into a solved domain (updates engine.values)
+    flush: (solution) ->
+      @output.merge solution
+
+    # Apply given values to current update object and solved domain
+    resume: (solution, update) ->
+      if update.solution != solution
+        update.apply(solution)
+      @output.merge(solution)
+
+    # Dispatch remove command
+    remove: (path) ->
+      @output.remove(path)
+      @updating?.remove(path)
+
+    # Unsubscribe from worker and forget the engine
+    destroy: (e) ->
+      if @worker
+        @worker.removeEventListener 'message', @eventHandler
+        @worker.removeEventListener 'error', @eventHandler
+
+    # Receive message from worker
+    message: (e) ->
+      values = e.target.values ||= {}
+      for property, value of e.data
+        if value?
+          values[property] = value
+        else
+          delete values[property]
+
+      if @updating?.busy.length
+        @updating.solutions[@updating.solutions.indexOf(e.target, @updating.index)] = e.data
+        @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
+        @commit e.data
+
+    # Re-raise worker exception
+    error: (e) ->
+      @updating = undefined
+      
+      if window? && e.target != window
+        throw new Error "#{e.message} (#{e.filename}:#{e.lineno})"
+      
+
+  # Figure out worker url automatically
+  getWorkerURL: do ->
+    if document?
+      # Check if last script has gss substring in it
+      scripts = document.getElementsByTagName('script')
+      src = scripts[scripts.length - 1].src
+      unless src.match(/gss/i)
+        # Select a script from document that has gss in its src
+        scripts = document.querySelectorAll('script[src*=gss]')[0]
+        if scripts.length
+          src = scripts[0].src
+    return (url) ->
+      unless typeof url == 'string'
+        url = src
+
+      unless url
+        throw new Error """
+          Can not detect GSS source file to set up worker.
+
+          - You can rename the gss file to contain "gss" in it:
+            `<script src="my-custom-path/my-gss.js"></script>`
+
+          - or provide worker path explicitly: 
+            `GSS(<scope>, "http://absolute.path/to/worker")`
+        """
+
+      return url
+
+  # Initialize new worker and subscribe engine to listen for message
+  useWorker: (url) ->
+    # Don't use worker if path was not resolved properly
+    return unless typeof url == 'string'
+
+    # if environment doesn't support it
+    return unless Worker?
+
+    # or if it uses file protocol
+    return if !url.match(/^http:/i) && location.protocol.match(/^file:/i)
+
+    @engine.worker ||= @engine.getWorker(url)
     @solve = (commands) =>
       @engine.updating ||= new @update
       @engine.updating.postMessage(@worker, commands)
       return @worker
     return @worker
 
+  # Use worker from a shared pool. To use multiple workers, provide #hashed urls
   getWorker: (url) ->
-    return (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)
+    worker = (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)
+    worker.url ||= url
+    worker.addEventListener 'message', @engine.eventHandler
+    worker.addEventListener 'error', @engine.eventHandler
+    return worker
 
-  # Compile initial domains and shared engine features 
-  precompile: ->
-    if @constructor::running == undefined
-      for property, method of @Methods::
-        @constructor::[property] ||= 
-        @constructor[property] ||= Engine::Method(method, property)
-      @constructor::compile()
-    @Domain.compile(@Domains,   @)
-    for name, domain of @Domains
-      if domain::helps
-        for property, method of domain::Methods::
-          @constructor::[property] ||= 
-          @constructor[property] ||= Engine::Method(method, property, name.toLowerCase())
-    @update = Engine::Update.compile(@)
-    @mutations?.connect(true)
-
-    if location.search.indexOf('export=') > -1
-      @preexport()
-
-  preexport: ->
-
-    # Let every element get an ID
-    if (scope = @scope).nodeType == 9
-      scope = @scope.body
-    @identity.provide(scope)
-    for element in scope.getElementsByTagName('*')
-      if element.tagName != 'SCRIPT' &&
-          (element.tagName != 'STYLE' || element.getAttribute('type')?.indexOf('gss') > -1)
-        @identity.provide(element)
-    if window.Sizes
-      @sizes = []
-      for pairs in window.Sizes
-        for width in pairs[0]
-          for height in pairs[1]
-            @sizes.push(width + 'x' + height)
-    if match = location.search.match(/export=([a-z0-9]+)/)?[1]
-      if match.indexOf('x') > -1
-        [width, height] = match.split('x')
-        baseline = 72
-        width = parseInt(width) * baseline
-        height = parseInt(height) * baseline
-        window.addEventListener 'load', =>
-          localStorage[match] = JSON.stringify(@export())
-          @postexport()
-
-        document.body.style.width = width + 'px'
-        @intrinsic.properties['::window[height]'] = ->
-          return height
-        @intrinsic.properties['::window[width]'] = ->
-          return width
-
-      else 
-        if match == 'true'
-          localStorage.clear()
-          @postexport()
-
-  postexport: ->
-    for size in @sizes
-      unless localStorage[size]
-        location.search = location.search.replace(/[&?]export=([a-z0-9])+/, '') + '?export=' + size
-        return
-    result = {}
-    for property, value of localStorage
-      if property.match(/^\d+x\d+$/)
-        result[property] = JSON.parse(value)
-    document.write(JSON.stringify(result))
-
-  export: ->
-    values = {}
-    for path, value of @values
-      if (index = path.indexOf('[')) > -1 && path.indexOf('"') == -1
-        property = @camelize(path.substring(index + 1, path.length - 1))
-        id = path.substring(0, index)
-        if property == 'x' || property == 'y' || document.body.style[property] != undefined
-          unless @values[id + '[intrinsic-' + property + ']']?
-            values[path] = Math.ceil(value)
-    values.stylesheets = @stylesheets.export() 
-    return values
-
-  generate: ->
-
-
-  # Comile user provided features specific to this engine
-  compile: (state) ->
-    methods    = @methods    || @Methods::
-    properties = @properties || @Properties::
-    @Method  .compile(methods,    @)
-    @Property.compile(properties, @)
+  # Try to apply conventional wisdom to dispatch variable
+  getVariableDomainByConvention: (operation, Default) ->
+    if operation.domain
+      return operation.domain
+    path = operation[1]
+    if (i = path.indexOf('[')) > -1
+      property = path.substring(i + 1, path.length - 1)
     
-    @console.compile(@)
+    if @data.values.hasOwnProperty(path)
+      return @data
+    else if property
+      if props = @data.properties
+        if (props[path]? || (props[property] && !props[property].matcher))
+          return @data
+      if property.indexOf('computed-') == 0 || property.indexOf('intrinsic-') == 0
+        return @data
 
-    @running = state ? null
-    
-    @triggerEvent('compile', @)
+  # Produce string representation of id-property pair
+  getPath: (id, property) ->
+    unless property
+      property = id
+      id = undefined
+    if property.indexOf('[') > -1 || !id
+      return property
+    else
+      if typeof id != 'string'
+        id = @identify(id)
 
-  # Hook: Should interpreter iterate returned object?
-  # (yes, if it's a collection of objects or empty array)
-  isCollection: (object) ->
-    if object && object.length != undefined && !object.substring && !object.nodeType
-      return true if object.isCollection
-      switch typeof object[0]
-        when "object"
-          return object[0].nodeType
-        when "undefined"
-          return object.length == 0
+      if id == @scope?._gss_id && !@data.check(id, property)
+        return property
+      if id.substring(0, 2) == '$"'
+        id = id.substring(1)
+      return id + '[' + property + ']'
+
   
+  url: false
+  
+  # Return domain that should be used to evaluate given variable
+  # For unknown variables, it creates a domain instance 
+  # that will hold all dependent constraints and variables.
+  getVariableDomain: (operation, Default) ->
+    if domain = @getVariableDomainByConvention(operation)
+      return domain
 
-Engine.Continuation = Engine::Continuation
+    if Default
+      return Default
 
-# Identity and console modules are shared between engines
-Engine.identity = Engine::identity = new Engine::Identity
-Engine.console  = Engine::console  = new Engine::Console
+    if op = @variables[operation[1]]?.constraints?[0]?.operations[0]?.domain
+      return op
 
-Engine.Engine   = Engine
-Engine.Domain   = Engine::Domain   = Domain
-Engine.mixin    = Engine::mixin    = Native::mixin
-Engine.time     = Engine::time     = Native::time
-Engine.clone    = Engine::clone    = Native::clone
+    if @solver.url
+      return @solver
+    else
+      return @solver.maybe()
+
+  # Normalize scope element
+  getScopeElement: (node) ->
+    switch node.tagName
+      when 'HTML', 'BODY', 'HEAD'
+        return document
+      when 'STYLE'
+        if node.scoped
+          return @getScopeElement(node.parentNode)
+    return node
+
+  # Return an index of 3 given items values in a flat array of triplets 
+  indexOfTriplet: (array, a, b, c) ->
+    if array
+      for op, index in array by 3
+        if op == a && array[index + 1] == b && array[index + 2] == c
+          return index
+    return -1
+    
+  destroy: ->
+    @triggerEvent('destroy')
+    @removeListeners(@events) if @events
+
+
+  # Event trigger
+
+  addListeners: (listeners) ->
+    for name, callback of listeners
+      @addEventListener name, callback
+
+  removeListeners: (listeners) ->
+    for name, callback of listeners
+      @removeEventListener name, callback
+
+  once: (type, fn) ->
+    fn.once = true
+    @addEventListener(type, fn)
+
+  addEventListener: (type, fn) ->
+    (@listeners[type] ||= []).push(fn)
+
+  removeEventListener: (type, fn) ->
+    if group = @listeners[type]
+      if (index = group.indexOf(fn)) > -1
+        group.splice(index, 1)
+
+  triggerEvent: (type, a, b, c) ->
+    if group = @listeners?[type]
+      index = 0
+      j = group.length
+      while index < j
+        fn = group[index]
+        if fn.once
+          group.splice(index--, 1)
+          j--
+        fn.call(@, a, b, c)
+        index++
+    if @[method = 'on' + type]
+      return @[method](a, b, c)
+
+  dispatchEvent: (element, type, data, bubbles, cancelable) ->
+    return unless @scope
+    detail = {engine: @}
+    for prop, value of data
+      detail[prop] = value
+
+    try
+      event = new window.CustomEvent(type, {detail,bubbles,cancelable})
+    catch e
+      window.CustomEvent = (event, params) ->
+        params = params or
+          bubbles: false
+          cancelable: false
+          detail: undefined
+
+        evt = document.createEvent "CustomEvent"
+        evt.initCustomEvent event, params.bubbles, params.cancelable, params.detail
+        evt
+      window.CustomEvent:: = window.Event::
+      event = new window.CustomEvent(type, {detail,bubbles,cancelable})
+
+    element.dispatchEvent event
+
+  # Catch-all event listener 
+  handleEvent: (e) ->
+    @triggerEvent(e.type, e)
+
+  then: (callback) ->
+    @once 'solve', callback
+
+class Engine::Identity
+  @uid: 0
+
+  excludes: ['$'.charCodeAt(0), ':'.charCodeAt(0), '@'.charCodeAt(0)]
+
+  set: (object, generate) =>
+    unless object
+      return ''
+
+    if typeof object == 'string'
+      if @excludes.indexOf(object.charCodeAt(0)) == -1
+        return '$' + object
+      return object
+
+    unless id = object._gss_id
+      if object == document
+        id = "::document"
+      else if object == window
+        id = "::window"
+
+      unless generate == false
+        object._gss_id = id ||= 
+          "$" + (object.id || object._gss_uid || ++Identity.uid)
+        @[id] = object
+    return id
+  
+  get: (id) ->
+    return @[id]
+
+  solve: (id) ->
+    return @[id]
+
+  unset: (object) ->
+    delete @[object._gss_id]
+
+  # Get id if given object has one
+  find: (object) ->
+    return @set(object, false)
 
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
-    engine = Engine.messenger ||= Engine()
-    changes = engine.assumed.changes = {}
-    solution = engine.solve(e.data) || {}
-    engine.assumed.changes = undefined
-    for property, value of changes
-      solution[property] = value
-    postMessage(solution)
-module.exports = @GSS = Engine
+    unless engine = Engine.messenger
+      engine = Engine.messenger = new Engine()
+    data = e.data
+    values = undefined
+    commands = []
+    removes = []
+    solution = engine.solve ->
+      if (values = data[0]) && !values.push
+        for command, index in data
+          if index
+            if command[0] == 'remove'
+              removes.push(command)
+            else
+              if command[0]?.key?
+                command[1].parent = command
+                command.index = command[0].index
+              commands.push(command)
+
+      if removes.length
+        @solve(removes)
+        if @updating.domains[0] == null
+          @broadcast(@updating.problems[0])
+          @updating.index++
+      if values
+        @data.merge(values)
+      if commands.length
+        @solve(commands)
+
+    result = {}
+    if values
+      for property, value of values
+        result[property] = value
+      for property, value of solution
+        result[property] = value
+    if !engine.domains.length
+      engine.variables = {}
+      engine.solver.operations = undefined
+    postMessage(result)
+
+# Identity and console modules are shared between engines
+Engine::console  = new Engine::Console
+Engine::identity = new Engine::Identity
+Engine::identify =     Engine::identity.set
+
+# Slice arrays recursively to remove the meta data
+Engine::clone    = (object) -> 
+  if object && object.map
+    return object.map @clone, @
+  return object
+
+module.exports = Engine

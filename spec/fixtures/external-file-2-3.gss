@@ -1,0 +1,2 @@
+[external-file-2] == 2000;
+@import ./fixtures/external-file-3.gss;

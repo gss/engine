@@ -35,11 +35,11 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
       """
       engine.solve [
-          ['stay', ['get', ['$class','box'], 'x']]
+          ['stay', ['get', ['.','box'], 'x']]
         ]
       chai.expect(engine.updated.getProblems()).to.eql [
-          [['stay', ['get', '$12322', 'x', '.box$12322']]]
-          [['stay', ['get', '$34222', 'x', '.box$34222']]]
+          [[key: '.box$12322', ['stay', ['get', '$12322[x]']]]]
+          [[key: '.box$34222', ['stay', ['get', '$34222[x]']]]]
         ]
     
     it 'multiple stays', ->
@@ -49,18 +49,18 @@ describe 'GSS commands', ->
       """
       engine
       engine.solve [
-          ['stay', ['get', ['$class','box']  , 'x'    ]]
-          ['stay', ['get', ['$class','box']  , 'y'    ]]
-          ['stay', ['get', ['$class','block'], 'width']]
+          ['stay', ['get', ['.','box']  , 'x'    ]]
+          ['stay', ['get', ['.','box']  , 'y'    ]]
+          ['stay', ['get', ['.','block'], 'width']]
         ]
       chai.expect(engine.updated.getProblems()).to.eql [
           # break up stays to allow multiple plural queries
-          [['stay', ['get', '$12322','x'    ,'.box$12322'  ]]]
-          [['stay', ['get', '$34222','x'    ,'.box$34222'  ]]] 
-          [['stay', ['get', '$12322','y'    ,'.box$12322'  ]]]          
-          [['stay', ['get', '$34222','y'    ,'.box$34222'  ]]]
-          [['stay', ['get', '$12322','width','.block$12322']]]          
-          [['stay', ['get', '$34222','width','.block$34222']]]
+          [[key: '.box$12322'  , ['stay', ['get', '$12322[x]'    ]]]]
+          [[key: '.box$34222'  , ['stay', ['get', '$34222[x]'    ]]]]
+          [[key: '.box$12322'  , ['stay', ['get', '$12322[y]'    ]]]]         
+          [[key: '.box$34222'  , ['stay', ['get', '$34222[y]'    ]]]]
+          [[key: '.block$12322', ['stay', ['get', '$12322[width]']]]]         
+          [[key: '.block$34222', ['stay', ['get', '$34222[width]']]]]
         ]
     
     it 'eq with class and tracker', ->
@@ -69,13 +69,13 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
       """
       engine.solve [
-        ['==', ['get', ['$class','box'], 'width'],['get','grid-col']]
+        ['==', ['get', ['.','box'], 'width'],['get','grid-col']]
         ['==', 100,['get','grid-col']]
       ], '%'
       chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [[
-        ['==', ['get','$12322','width','%.box$12322'],['get', "", 'grid-col',"%.box$12322"]]
-        ['==', ['get','$34222','width','%.box$34222'],['get', "", 'grid-col',"%.box$34222"]]
-        ['==', 100, ['get', "", 'grid-col',"%"]]
+        [key: '%.box$12322', ['==', ['get','$12322[width]'],['get', 'grid-col']]]
+        [key: '%.box$34222', ['==', ['get','$34222[width]'],['get', 'grid-col']]]
+        [key: '%',           ['==', 100, ['get', 'grid-col']]]
       ]]
         
     
@@ -85,60 +85,64 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
       """
       engine.solve [
-        ['==', ['get',['$class','box'],'width'],['get','grid-col']]
+        ['==', ['get',['.','box'],'width'], ['get','grid-col']]
         ['==', 100, ['get','grid-col']]
       ]
-      expect(engine.updated.getProblems()).to.eql [[
-        ['==', ['get','$12322','width','.box$12322'],['get', '', 'grid-col',".box$12322"]]
-        ['==', ['get','$34222','width','.box$34222'],['get', '', 'grid-col',".box$34222"]]
-        ['==', 100,['get', '', 'grid-col', ""]]
+      chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [[
+        [key: '.box$12322', ['==', ['get','$12322[width]'],['get', 'grid-col']]]
+        [key: '.box$34222', ['==', ['get','$34222[width]'],['get', 'grid-col']]]
+        [key: '',           ['==', 100, ['get', 'grid-col']]]
       ]]
 
-    it 'lte for class & id selectos', (done) ->
+    it 'lte for class & id selectors', (done) ->
       window.$engine = engine
 
       engine.solve [
-        ['<=',['get',['$class','box'],'width'],['get',['$id','box1'],'width']]
+        ['<=',['get',['.','box'],'width'],['get',['#','box1'],'width']]
       ], (solution) ->
         expect(engine.updated.getProblems()).to.eql [[
-          ['<=',['get', '$box1' , 'width','.box$box1→#box1'],['get','$box1','width','.box$box1→#box1']]
-          ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
-          ['<=',['get', '$35346', 'width','.box$35346→#box1'],['get','$box1','width','.box$35346→#box1']]
+          [key: '.box$box1→#box1$box1' , ['<=',['get', '$box1[width]' ],['get','$box1[width]']]]
+          [key: '.box$34222→#box1$box1', ['<=',['get', '$34222[width]'],['get','$box1[width]']]]
+          [key: '.box$35346→#box1$box1', ['<=',['get', '$35346[width]'],['get','$box1[width]']]]
         ]]
-        box2 = engine.$id("34222")
+        box2 = engine.id("34222")
         box2.parentNode.removeChild(box2)
 
         engine.then (solution) ->
 
           expect(engine.updated.getProblems()).to.eql [
-            ['remove', '.box$34222', '.box$34222→#box1']
-            [['remove', '.box$34222→#box1']]
+            [['remove', '.box$34222'], ['remove', '.box$34222→#box1$box1']]
+            [['remove', '.box$34222→#box1$box1']]
           ]
 
           scope.appendChild(box2)
 
           engine.then (solution) ->
+            expect(engine.updated.getProblems()).to.eql [
+              [[key: '.box$34222→#box1$box1', ['<=',['get', '$34222[width]'],['get','$box1[width]']]]]
+            ]
 
-            expect(engine.updated.getProblems()).to.eql [[
-              ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
-            ]]
-
-            box1 = engine.$id("box1")
+            box1 = engine.id("box1")
             box1.parentNode.removeChild(box1)
 
             engine.then (solution) ->
-
               expect(engine.updated.getProblems()).to.eql [
-                ['remove', '.box$box1', '.box$box1→#box1', '.box$35346→#box1', '.box$34222→#box1']
-                [['remove', '.box$box1→#box1', '.box$35346→#box1', '.box$34222→#box1']]
+                [
+                  ['remove', '#box1'], 
+                  ['remove', '.box$box1'],
+                  ['remove', '.box$box1→#box1$box1'], 
+                  ['remove', '.box$35346→#box1$box1'], 
+                  ['remove', '.box$34222→#box1$box1']
+                ]
+                [['remove', '.box$box1→#box1$box1', '.box$35346→#box1$box1', '.box$34222→#box1$box1']]
               ]
               scope.appendChild(box1)
 
               engine.then (solution) ->
                 expect(engine.updated.getProblems()).to.eql [[
-                  ['<=',['get', '$35346', 'width','.box$35346→#box1'],['get','$box1','width','.box$35346→#box1']]
-                  ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
-                  ['<=',['get', '$box1' , 'width','.box$box1→#box1'],['get','$box1','width','.box$box1→#box1']]
+                  [key: '.box$35346→#box1$box1', ['<=',['get', '$35346[width]'],['get','$box1[width]']]]
+                  [key: '.box$34222→#box1$box1', ['<=',['get', '$34222[width]'],['get','$box1[width]']]]
+                  [key: '.box$box1→#box1$box1',  ['<=',['get', '$box1[width]'],['get','$box1[width]']]]
                 ]]
                 done()
 
@@ -155,27 +159,36 @@ describe 'GSS commands', ->
 
       engine.solve [
         ['==', 
-          ['get', ['$class','box'], 'width'],
-          ['get', ['$class','box'], 'intrinsic-width']]
+          ['get', ['.','box'], 'width'],
+          ['get', ['.','box'], 'intrinsic-width']]
       ], (solution) ->
         chai.expect(stringify engine.updated.getProblems()).to.eql stringify  [
           [
-            ['get','$12322','intrinsic-width','.box$12322']
-            ['get','$34222','intrinsic-width','.box$34222']
-            ['get','$35346','intrinsic-width','.box$35346']
-          ], [
+            ['get','$12322[intrinsic-width]']
+            ['get','$34222[intrinsic-width]']
+            ['get','$35346[intrinsic-width]']
+          ], 
+          [[
+            key: '.box$12322', values: {'$12322[intrinsic-width]': 111}
             ['==', 
-              ['get','$12322','width','.box$12322'],
-              ["value",111, '.box$12322',"get,$12322,intrinsic-width,.box$12322"]]
-          ], [
+                ['get','$12322[width]'],
+                ['get','$12322[intrinsic-width]']
+            ]
+          ]], 
+          [[
+            key: '.box$34222', values: {'$34222[intrinsic-width]': 222}
             ['==', 
-              ['get','$34222','width','.box$34222'],
-              ["value",222, '.box$34222',"get,$34222,intrinsic-width,.box$34222"]]
-          ], [
+              ['get','$34222[width]'],
+              ['get','$34222[intrinsic-width]']
+            ]
+          ]], 
+          [[
+            key: '.box$35346', values: {'$35346[intrinsic-width]': 333}
             ['==', 
-              ['get','$35346','width','.box$35346'],
-              ["value",333, '.box$35346',"get,$35346,intrinsic-width,.box$35346"]]
-          ]
+              ['get','$35346[width]'],
+              ['get','$35346[intrinsic-width]']
+            ]
+          ]]
         ]
         expect(solution).to.eql
           "$12322[intrinsic-width]": 111
@@ -195,8 +208,8 @@ describe 'GSS commands', ->
 
         engine.once 'solve', ->
           chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [
-            ["remove",".box$12322"],
-            #[["remove",".box$12322"]]
+            [["remove",".box$12322"]],
+            [["remove",".box$12322"]]
           ]
           done()
 
@@ -209,19 +222,20 @@ describe 'GSS commands', ->
 
     it '.box[width] == ::window[width]', (done) ->
       engine.solve [
-        ['==', ['get', ['$class','box'], 'width'],['get', ['$reserved','window'], 'width']]
+        ['==', ['get', ['.','box'], 'width'],['get', ['::window'], 'width']]
       ]
       engine.then ->
         chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [
           [
-            ['get','::window', 'width',".box$12322"]
+            ['get','::window[width]']
           ],
-          [
+          [[
+            key: '.box$12322', values: {'::window[width]': document.documentElement.clientWidth}
             ['==', 
-              ['get', '$12322','width','.box$12322'],
-              ['value', window.innerWidth, ".box$12322", 'get,::window,width,.box$12322']
+              ['get', '$12322[width]'],
+              ['get', '::window[width]']
             ]
-          ]
+          ]]
         ]
         done()
       scope.innerHTML = """
@@ -234,34 +248,52 @@ describe 'GSS commands', ->
         
       """
       engine.solve [
-        ['==',  ['get', 'xxx'], ['get', ['$reserved','window'], 'x'     ]]
-        ['<=',  ['get', 'yyy'], ['get', ['$reserved','window'], 'y'     ]]
-        ['<=',  ['get', 'yay'], ['get', ['$reserved','window'], 'y'     ]]
-        ['>=',  ['get', 'hhh'], ['get', ['$reserved','window'], 'height']]
-        ['>=',  ['get', 'hah'], ['get', ['$reserved','window'], 'height']]
-        ['<=',  ['get', 'www'], ['get', ['$reserved','window'], 'width' ]]
+        ['==',  ['get', 'xxx'], ['get', ['::window'], 'x'     ]]
+        ['<=',  ['get', 'yyy'], ['get', ['::window'], 'y'     ]]
+        ['<=',  ['get', 'yay'], ['get', ['::window'], 'y'     ]]
+        ['>=',  ['get', 'hhh'], ['get', ['::window'], 'height']]
+        ['>=',  ['get', 'hah'], ['get', ['::window'], 'height']]
+        ['<=',  ['get', 'www'], ['get', ['::window'], 'width' ]]
       ]
       chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [
         [
-          ["get",   "::window",   "x",   ""]
-          ["get",   "::window",   "y",   ""]
-          ["get",   "::window",   "y",   ""]
-          ["get",   "::window",   "height",   ""]
-          ["get",   "::window",   "height",   ""]
-          ["get",   "::window",   "width",   ""]
+          ["get",   "::window[x]"]
+          ["get",   "::window[y]"]
+          ["get",   "::window[y]"]
+          ["get",   "::window[height]"]
+          ["get",   "::window[height]"]
+          ["get",   "::window[width]"]
         ],
-        [['==',  ['get','', 'xxx', ''], 
-                ['value', 0, '', 'get,::window,x,']]],
-        [['<=',  ['get','', 'yyy', ''], 
-                ['value', 0, '', 'get,::window,y,']]],        
-        [['<=',  ['get','', 'yay', ''], 
-                ['value', 0, '', 'get,::window,y,']]],
-        [['>=',  ['get','', 'hhh', ''], 
-                ['value', window.innerHeight, '', 'get,::window,height,']]],
-        [['>=',  ['get','', 'hah', ''], 
-                ['value', window.innerHeight, '', 'get,::window,height,']]],
-        [['<=',  ['get','', 'www', ''], 
-                ['value', window.innerWidth, '', 'get,::window,width,']]]        
+        [[
+          key: '', values: {'::window[x]': 0}
+          ['==',  ['get', 'xxx'], 
+                ['get', '::window[x]']]
+        ]],
+        [[
+          key: '', values: {'::window[y]': 0}
+          ['<=',  ['get', 'yyy'], 
+                  ['get', '::window[y]']],
+        ]],
+        [[
+          key: '', values: {'::window[y]': 0}     
+          ['<=',  ['get', 'yay'], 
+                  ['get', '::window[y]']],
+        ]],
+        [[
+          key: '', values: {'::window[height]': Math.min(window.innerHeight, document.documentElement.clientHeight)}
+          ['>=',  ['get', 'hhh'], 
+                  ['get', '::window[height]']]
+        ]],
+        [[
+          key: '', values: {'::window[height]': Math.min(window.innerHeight, document.documentElement.clientHeight)}
+          ['>=',  ['get', 'hah']
+                  ['get', '::window[height]']]
+        ]],
+        [[
+          key: '', values: {'::window[width]': document.documentElement.clientWidth}
+          ['<=',  ['get', 'www'], 
+                  ['get', '::window[width]']]
+        ]] 
         
       ]
 
@@ -277,19 +309,19 @@ describe 'GSS commands', ->
           count++
           if count is 1
             expect(engine.updated.getProblems()).to.eql [
-                [['==', ['get','$12322','x','.box$12322'], 100]]
-                [['==', ['get','$34222','x','.box$34222'], 100]]
+                [[key: '.box$12322', ['==', ['get','$12322[x]'], 100]]]
+                [[key: '.box$34222', ['==', ['get','$34222[x]'], 100]]]
               ]
             scope.insertAdjacentHTML('beforeend', '<div class="box" id="35346">One</div>')            
           else if count is 2
             expect(engine.updated.getProblems()).to.eql [
-                [['==', ['get','$35346','x','.box$35346'], 100]]
+                [[key: '.box$35346', ['==', ['get','$35346[x]'], 100]]]
               ]
             engine.removeEventListener 'solve', listener
             done()
         engine.addEventListener 'solve', listener
         engine.solve [
-            ['==', ['get',['$class','box'],'x'], 100]
+            ['==', ['get',['.','box'],'x'], 100]
           ]
         scope.innerHTML = """
           <div class="box" id="12322">One</div>
@@ -302,21 +334,21 @@ describe 'GSS commands', ->
           count++
           if count is 1
             chai.expect(engine.updated.getProblems()).to.eql [
-                [['==', ['get','$12322','x','.box$12322'], 100]]
-                [['==', ['get','$34222','x','.box$34222'], 100]]
+                [[key: '.box$12322', ['==', ['get','$12322[x]'], 100]]]
+                [[key: '.box$34222', ['==', ['get','$34222[x]'], 100]]]
               ]
-            res = engine.$id('34222')
+            res = engine.id('34222')
             res.parentNode.removeChild res
           else if count is 2
             chai.expect(engine.updated.getProblems()).to.eql [
-              ['remove', '.box$34222']
-              #[['remove', '.box$34222']]
+              [['remove', '.box$34222']]
+              [['remove', '.box$34222']]
             ]
             engine.removeEventListener 'solve', listener
             done()
         engine.addEventListener 'solve', listener
         engine.solve [
-            ['==', ['get',['$class','box'],'x'], 100]
+            ['==', ['get',['.','box'],'x'], 100]
           ]
         scope.innerHTML = """
           <div class="box" id="12322">One</div>
@@ -329,21 +361,21 @@ describe 'GSS commands', ->
           count++
           if count is 1
             chai.expect(engine.updated.getProblems()).to.eql [
-                [['==', ['get','$12322','x','.box$12322'], 100]]
-                [['==', ['get','$34222','x','.box$34222'], 100]]
+                [[key: '.box$12322', ['==', ['get','$12322[x]',], 100]]]
+                [[key: '.box$34222', ['==', ['get','$34222[x]',], 100]]]
               ]
-            el = engine.$id('34222')
+            el = engine.id('34222')
             el.setAttribute('class',  '')
           else if count is 2
             chai.expect(engine.updated.getProblems()).to.eql [
-                ['remove', '.box$34222']
-                #[['remove', '.box$34222']]
+                [['remove', '.box$34222']]
+                [['remove', '.box$34222']]
               ]
             engine.removeEventListener 'solve', listener
             done()
         engine.addEventListener 'solve', listener
         engine.solve [
-            ['==', ['get',['$class','box'],'x'], 100]
+            ['==', ['get',['.','box'],'x'], 100]
           ]
         scope.innerHTML = """
           <div class="box" id="12322">One</div>
@@ -360,27 +392,29 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            el = engine.$id('box1')
+            el = engine.id('box1')
             el.setAttribute('style', "width:1110px")
             
           else if count is 2     
             chai.expect(engine.updated.getProblems()).to.eql [
                 #[
-                #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
-                #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
+                #  ["get", "$box1[intrinsic-width]"]
+                #  ["get", "$box1[intrinsic-width]"]
                 #],
-                [
+                [[
+                  key: ".box$box1→#box1$box1", values: {"$box1[intrinsic-width]": 1110},
                   ["==",
-                    ["get", "$box1", "height",          ".box$box1→#box1"]
-                    ["value", 1110, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                    ["get", "$box1[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ],
-                [
+                ]],
+                [[
+                  key: ".box$box2→#box1$box1", values: {"$box1[intrinsic-width]": 1110},
                   ["==",
-                    ["get", "$box2", "height",          ".box$box2→#box1"]
-                    ["value", 1110, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                    ["get", "$box2[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ]
+                ]]
               ]
             #chai.expect(engine.values['$box1[intrinsic-width]']).to.equal 1110
             chai.expect(engine.values['$box2[height]']).to.equal 1110
@@ -389,7 +423,7 @@ describe 'GSS commands', ->
 
         engine.addEventListener 'solve', listener
         engine.solve [
-          ['==', ['get',['$class','box'],'height'],['get',['$id','box1'],'intrinsic-width']]
+          ['==', ['get',['.','box'],'height'],['get',['#','box1'],'intrinsic-width']]
         ]
         scope.innerHTML = """
           <div style="width:111px;" id="box1" class="box" >One</div>
@@ -401,31 +435,33 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1           
-            engine.$id('box1').innerHTML = "<div style=\"width:111px;\"></div>"
+            engine.id('box1').innerHTML = "<div style=\"width:111px;\"></div>"
           else if count is 2
             chai.expect(engine.updated.getProblems()).to.eql [
                 #[
                 #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
                 #],
-                [
+                [[
+                  key: ".box$box1→#box1$box1", values: {"$box1[intrinsic-width]": 111},
                   ["==",
-                    ["get", "$box1", "height",          ".box$box1→#box1"]
-                    ["value", 111, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                    ["get", "$box1[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ],
-                [
+                ]],
+                [[
+                  key: ".box$box2→#box1$box1", values: {"$box1[intrinsic-width]": 111},
                   ["==",
-                    ["get", "$box2", "height",          ".box$box2→#box1"]
-                    ["value", 111, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                    ["get", "$box2[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ]
+                ]]
               ]
             engine.removeEventListener 'solve', listener
             done()
         engine.addEventListener 'solve', listener
         engine.solve [
-          ['==', ['get',['$class','box'],'height'],['get',['$id','box1'],'intrinsic-width']]
+          ['==', ['get',['.','box'],'height'],['get',['#','box1'],'intrinsic-width']]
         ]
         scope.innerHTML = """
           <div style="display:inline-block;" id="box1" class="box">One</div>
@@ -438,7 +474,7 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++          
           if count is 1
-            el = engine.$id('box1')            
+            el = engine.id('box1')            
             el.innerHTML = "<div style=\"width:111px;\"></div>"
           else if count is 2            
             chai.expect(engine.updated.getProblems()).to.eql [
@@ -446,18 +482,20 @@ describe 'GSS commands', ->
                 #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
                 #],
-                [
+                [[
+                  key: ".box$box1→#box1$box1", values: {"$box1[intrinsic-width]": 111},
                   ["==",
-                    ["get", "$box1", "height",          ".box$box1→#box1"]
-                    ["value", 111, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                    ["get", "$box1[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ],
-                [
+                ]],
+                [[
+                  key: ".box$box2→#box1$box1", values: {"$box1[intrinsic-width]": 111},
                   ["==",
-                    ["get", "$box2", "height",          ".box$box2→#box1"]
-                    ["value", 111, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                    ["get", "$box2[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ]
+                ]]
               ]
             el.innerHTML = ""            
           else if count is 3
@@ -466,24 +504,26 @@ describe 'GSS commands', ->
                 #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
                 #],
-                [
+                [[
+                  key: ".box$box1→#box1$box1", values: {"$box1[intrinsic-width]": 0},
                   ["==",
-                    ["get", "$box1", "height",          ".box$box1→#box1"]
-                    ["value", 0, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                    ["get", "$box1[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ],
-                [
+                ]],
+                [[
+                  key: ".box$box2→#box1$box1", values: {"$box1[intrinsic-width]": 0},
                   ["==",
-                    ["get", "$box2", "height",          ".box$box2→#box1"]
-                    ["value", 0, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                    ["get", "$box2[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ]
+                ]]
               ]
             engine.removeEventListener 'solve', listener
             done()
         engine.addEventListener 'solve', listener
         engine.solve [
-          ['==', ['get',['$class','box'],'height'],['get',['$id','box1'],'intrinsic-width']]
+          ['==', ['get',['.','box'],'height'],['get',['#','box1'],'intrinsic-width']]
         ]
         scope.innerHTML = """
           <div style="display:inline-block" id="box1" class="box" >One</div>
@@ -497,12 +537,12 @@ describe 'GSS commands', ->
           count++      
           if count is 1
             # don't set height b/c intrinsic-height was used
-            expect(engine.$id("p-text").style.height).to.eql ""            
+            expect(engine.id("p-text").style.height).to.eql ""            
             expect(engine.values["$p-text[width]"]).to.eql 100
             expect(engine.values["$p-text[x-height]"] > 400).to.eql true
             expect(engine.values["$p-text[x-height]"] % 16).to.eql 0
             expect(engine.values["$p-text[x-height]"] % 16).to.eql 0
-            engine.$id("p-text").innerHTML = "Booyaka"
+            engine.id("p-text").innerHTML = "Booyaka"
           else if count is 2
             expect(engine.values["$p-text[width]"]).to.eql 100
             expect(engine.values["$p-text[x-height]"]).to.eql(16)
@@ -511,8 +551,8 @@ describe 'GSS commands', ->
             done()
         engine.addEventListener 'solve', listener
         engine.solve [
-          ['==', ['get',['$id','p-text'],'width'],  100]
-          ['==', ['get',['$id','p-text'],'x-height'], ['get',['$id','p-text'],'intrinsic-height']]
+          ['==', ['get',['#','p-text'],'width'],  100]
+          ['==', ['get',['#','p-text'],'x-height'], ['get',['#','p-text'],'intrinsic-height']]
         ]
         scope.innerHTML = """
           <p id="p-text" style="font-size:16px; line-height:16px; font-family:Helvetica;">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>
@@ -528,20 +568,20 @@ describe 'GSS commands', ->
 
         engine.solve [  
           ['==', ['get','hgap'], 20]
-          ['==', ['get',['$id','thing1'],'width'], 100]
+          ['==', ['get',['#','thing1'],'width'], 100]
           [
             'rule', 
-            ['$class', 'thing'], 
+            ['.', 'thing'], 
             ['=='
               ['get'
-                ['$reserved', 'this'],
+                ['&'],
                 'width'],
               ['+',
                 ['get'
-                  ['$pseudo', ['$reserved', 'this'], 'previous'],
+                  [':previous'],
                   'width']
                 ['*'
-                  ['get', 'hgap'],
+                  ['get', ['^'], 'hgap'],
                   2
                 ]
               ]
@@ -566,16 +606,16 @@ describe 'GSS commands', ->
           done()
     
         engine.solve [
-          ['==', ['get',['$id','thing1'],'x'], 10]
-          ['==', ['get',['$id','thing2'],'x'], 110]
+          ['==', ['get',['#','thing1'],'x'], 10]
+          ['==', ['get',['#','thing2'],'x'], 110]
           ['rule'
-            ['$class','thing'],
+            ['.','thing'],
             ['=='
               ['get'
-                ['$pseudo', ['$reserved', 'this'], 'previous'],
+                [':previous', ['&']],
                 'right']
               ['get'
-                ['$reserved', 'this'],
+                ['&'],
                 'x']
             ]
           ]

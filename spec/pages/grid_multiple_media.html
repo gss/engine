@@ -1,0 +1,351 @@
+<script type="text/javascript" src="../../dist/gss.js">
+</script>
+<style type="text/css">
+
+body {
+  padding: 0;
+  margin: 0;
+  font-family: Arial
+}
+.post-multiple-media {
+  background-color: hsl(255, 11%, 15%);
+  position: relative;
+  overflow: hidden;
+}
+
+.post-multiple-media .background {
+  background-size: cover;
+  background-position: center;
+  opacity: .3;
+}
+
+.post-multiple-media .title {
+  color: hsl(0, 0%, 100%);
+}
+
+.post-multiple-media .subtitle {
+  color: hsl(27, 10%, 60%);
+  text-transform: uppercase;
+}
+
+.post-multiple-media .text {
+  color: hsl(0, 0%, 100%);
+}
+
+.post-multiple-media .media {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  box-shadow: 5px 5px 15px hsla(0, 0%, 0%, .15);
+}
+
+
+</style>
+
+
+<script>
+if (window.parent != window) {
+  window.addEventListener('message', function(e) {
+    window.engine.merge(e.data)
+  })
+}
+
+function boot(values) {
+  var data = {
+    "md": 72,
+    "-md": -72,
+    "-md-2": -36,
+    "md-2": 36,
+    "md2": 144,
+    "md-gap": 36,
+    "md-gap2": 18,
+    "base": 8,
+  }
+  for (var property in values)
+    data[property] = values[property];
+  document.addEventListener('solve', function(solution) {
+    delete solution.detail.engine
+    window.parent.postMessage(solution.detail, location.origin)
+  })
+  window.engine = GSS(document, data);
+} 
+
+boot()
+
+</script>
+
+
+<style type="text/gss">
+.post-multiple-media {
+  @h |(& .background)| in(&);
+  @v |(& .background)| in(&);
+
+  article {
+    height: == &[intrinsic-height];
+
+    .subtitle,
+    .text {
+      margin-top: == [base];
+    }
+  }
+
+  .media {
+    width: == &[height] * (1265 / 943) !require;
+  }
+}
+
+/*
+
+portrait mobile
+
+----------------------------------------------- */
+
+@if ::window[width] <= 400 {
+
+  .post-multiple-media {
+
+    .title {
+      font-size: 32px;
+      line-height: 32px;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 18px;
+      line-height: 24px;
+      text-align: center;
+    }
+    .text {
+      display: none;
+    }
+    .media {
+      display: none;
+    }
+    .media.selected {
+      display: block;
+    }
+
+    (.media.selected)[width] == ::window[width];
+
+
+    &"area"[center-y] == &[center-y];
+    @h |(&"area")|;
+    @v |~-~(&"area")~-~| outer-gap([base] * 14);
+
+    @h |-(& article)-| gap([base] * 4) in(&"area");
+    @v |(& article)-(& .media.selected)| gap([base] * 4) in(&"area");
+
+    &.media-left {
+      @h |(& .media.selected)~-~| gap([base] * 4) in(&"area");
+    }
+
+    &.media-right {
+      @h |~-~(& .media.selected)| gap([base] * 4) in(&"area");
+    }
+  }
+
+}
+
+@else {
+  /*
+
+  landscape mobile
+
+  ----------------------------------------------- */
+
+  @if ::window[width] < 900  {
+
+    .post-multiple-media {
+
+      .title {
+        font-size: 32px;
+        line-height: 32px;
+      }
+      .subtitle {
+        font-size: 18px;
+        line-height: 24px;
+      }
+      .text {
+        display: none;
+      }
+      .media {
+        display: none;
+      }
+      .media.selected {
+        display: block;
+      }
+
+      (& article)[center-y] == (& .media.selected)[center-y] == &[center-y];
+
+      (& article)[width] == [md] * 4;
+
+      @v |~-~(& .media.selected)~-~| in(&) gap([base] * 6);
+
+      &.media-left {
+        @h (& .media.selected)~-~(& article)-| gap([base] * 6) outer-gap([base] * 4);
+        (& .media.selected)[left] == &[left] - ((& .media.selected)[width] / 4);
+      }
+
+      &.media-right {
+        @h |-(& article)~-~(& .media.selected) gap([base] * 6) outer-gap([base] * 4);
+        (& .media.selected)[right] == &[right] + ((& .media.selected)[width] / 4);
+      }
+    }
+  }
+
+  /*
+
+  Desktop
+
+  ----------------------------------------------- */
+
+  @else {
+
+    .post-multiple-media {
+
+
+      .title {
+        font-size: 40px;
+        line-height: 46px;
+      }
+      .subtitle {
+        font-size: 20px;
+        line-height: 30px;
+      }
+      .text {
+        font-size: 20px;
+        line-height: 30px;
+      }
+
+      height: == (& .media.selected)[height] * 2;
+
+      &"media"[width] == [md] * 10;
+
+      @v |(&"media")| in(&);
+      (& .media)[width] == [md] * 4 !weak;
+
+      @h |(& .media.selected)| in(&"media") !strong;
+      (& .media.selected)[center-y] == &"media"[center-y];
+
+      article {
+        width: >= [md] * 5;
+        @v |~-~(&)~-~| gap([md] * 2);
+      }
+
+      (& article)[center-y] == &[center-y];
+
+      &.media-left {
+        @h |(&"media")-(& article)~-~| in(&) gap([md2]);
+
+        @v (& .media)-... gap([base] * 11) in(&"media") {
+          right: == &:next[right];
+        }
+      }
+
+      &.media-right {
+        @h |~-~(& article)-(&"media")| in(&) gap([md2]);
+
+        @v (& .media)-... gap([base] * 11) in(&"media") {
+          left: == &:next[left];
+        }
+      }
+    }
+  }
+}
+
+
+section {
+  width: 100%;
+  width: == ::window[width] !require;
+  top: == 0 !require;
+  left: == 0 !require;
+  z-index: 1;
+  overflow-x: hidden;
+  margin: auto;
+  width: 100%;
+
+  height: <= ::window[height] !weak;
+  height: >= &[width] / 2.4 !weak;
+}
+
+.modal {
+  @h |(&)| in(::window);
+  @v |(&)| in(::window);
+}
+
+section.footer {
+  width: == ::window[width];
+  height: == 144;
+
+  (& .content)[center] == &[center];
+
+  .content {
+    size: == &[intrinsic-size];
+  }
+}
+</style>
+
+<section class="post-multiple-media media-left else" style="position:relative;"><style type="text/css" scoped="scoped">@media (max-width: 599px) {
+  #post-multiple-media-media-left-2-background {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/b889e2b2c80def541505f5e9cdbd5ece/gaussianblur?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fassets%2Fimages%2Fpurus-02.jpg&width=599&height=447.84169278996865&std-dev-x=20&std-dev-y=20');
+  }
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+  #post-multiple-media-media-left-2-background {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/3f5dd3fe28a9468b99ab12d097c6658c/gaussianblur?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fassets%2Fimages%2Fpurus-02.jpg&width=959&height=716.9952978056426&std-dev-x=20&std-dev-y=20');
+  }
+}
+
+@media (min-width: 960px) {
+  #post-multiple-media-media-left-2-background {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/f7fdec150e2ec19640c2897420117c3d/gaussianblur?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fassets%2Fimages%2Fpurus-02.jpg&width=1276&height=954&std-dev-x=20&std-dev-y=20');
+  }
+}@media (max-width: 599px) {
+  #post-multiple-media-media-left-2-image-one {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/05347a797ffd0efd24893d1526bb280d/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fassets%2Fimages%2Fpurus-01.jpg&width=399&height=297.43636363636364');
+  }
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+  #post-multiple-media-media-left-2-image-one {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/affd07161af4e5f2ce24d1dd7c4facdc/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fassets%2Fimages%2Fpurus-01.jpg&width=589&height=439.07272727272726');
+  }
+}
+
+@media (min-width: 960px) {
+  #post-multiple-media-media-left-2-image-one {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/7f1a1a01fbbb4750b4fea418bf3d6a20/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fassets%2Fimages%2Fpurus-01.jpg&width=1265&height=943');
+  }
+}@media (max-width: 599px) {
+  #post-multiple-media-media-left-2-image-two {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/bd7a3c09531dc45ca7f17f9b77169f6b/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fassets%2Fimages%2Fpurus-02.jpg&width=399&height=298.3119122257053');
+  }
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+  #post-multiple-media-media-left-2-image-two {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/b8213d1b59b1039c0885ff90b2a11340/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fassets%2Fimages%2Fpurus-02.jpg&width=589&height=440.3652037617555');
+  }
+}
+
+@media (min-width: 960px) {
+  #post-multiple-media-media-left-2-image-two {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/6dc5bc4bb5e29bc708f32df0f9858b24/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fassets%2Fimages%2Fpurus-02.jpg&width=1276&height=954');
+  }
+}@media (max-width: 599px) {
+  #post-multiple-media-media-left-2-image-three {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/ee3e109291b0c81562e1f9fb39908e8f/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fassets%2Fimages%2Fpurus-03.jpg&width=399&height=298.46948356807513');
+  }
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+  #post-multiple-media-media-left-2-image-three {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/994e080d62e6c170c1909fcaa3db6f32/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fassets%2Fimages%2Fpurus-03.jpg&width=589&height=440.5978090766823');
+  }
+}
+
+@media (min-width: 960px) {
+  #post-multiple-media-media-left-2-image-three {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/f9d928974f978cc206395c10fb6d812e/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fassets%2Fimages%2Fpurus-03.jpg&width=1278&height=956');
+  }
+}</style><div class="background" id="post-multiple-media-media-left-2-background"></div><article><h1 class="title">A Site As Colorful As You</h1><h2 class="subtitle">Intelligent Color Detection &amp; Correction</h2><p class="text">Our algorithms expertly analyze your media and apply color palettes that keep your messaging consistent and unique. The Grid also detects color contrasts, automatically adjusting typography color to maximize legibility.</p></article><div class="media" id="post-multiple-media-media-left-2-image-one"></div><div class="media selected" id="post-multiple-media-media-left-2-image-two"></div><div class="media" id="post-multiple-media-media-left-2-image-three"></div></section>

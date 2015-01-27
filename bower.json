@@ -6,29 +6,22 @@
     "Dan Tocchini <d4@thegrid.io>"
   ],
   "description": "Grid Style Sheets Runtime",
-  "main": ["dist/gss.js","dist/worker.js"],
+  "main": [
+    "dist/gss.js",
+    "dist/gss.min.js"
+  ],
   "keywords": [
     "gss"
   ],
   "license": "MIT",
   "ignore": [
-    "/components",
-    "/node_modules",
-    "/bower_components",
     ".gitignore",
-    "/src",
+    ".travis.yml",
     "/lib",
+    "/node_modules",
     "/spec",
-    "/demo",
-    "/docs",
-    "_layouts",
-    "_includes",
-    "_config.yml",
-    "CNAME",
-    "component.json",
-    "package.json",
+    "/src",
     "Gruntfile.coffee",
-    "index.html",
-    ".travis.yml"    
+    "package.json"
   ]
 }

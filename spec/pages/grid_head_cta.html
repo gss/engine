@@ -1,0 +1,296 @@
+<script type="text/javascript" src="../../dist/gss.js">
+</script>
+<style type="text/css">
+body, h2, h1 {
+  padding: 0;
+  margin: 0;
+  font-family: Arial;
+}
+section.head-cta {
+  background-color: hsl(0,0%,0%);
+  overflow: hidden;
+}
+section.head-cta .overlay {
+  background-color: hsla(0,0%,0%,.83);
+}
+section.head-cta .bg.media {
+  /*-webkit-filter: blur(2px);*/
+  background-position: center;
+}
+section.head-cta .bg.overlay {
+  background-color: hsla(0,0%,0%,.5);
+}
+section.head-cta svg.logo {
+  fill: hsl(42, 84%, 69%);
+}
+section.head-cta .cta {
+  z-index: 10;
+}
+section.head-cta .title {
+  text-align: center;
+  color: #fcfbfd;
+  text-transform: uppercase;
+}
+section.head-cta .subtitle {
+  text-align: center;
+  color: #fcfbfd;
+  text-transform: uppercase;
+}
+section.head-cta button,
+section.head-cta .button {
+  text-transform: uppercase;
+  padding: 0 24px;
+  cursor: pointer;
+}
+a.button {
+  text-decoration: none;
+}
+
+section.head-cta button .odometer {
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+span.cta-hash {
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+section.head-cta .cta, section.head-cta .play:hover {
+  background-color: hsl(42, 84%, 69%);
+  border: 2px solid hsl(42, 84%, 69%);
+  color: hsl(42, 84%, 8%);
+}
+
+section.head-cta .cta:hover, section.head-cta .play {
+  background-color: transparent;
+  border: 2px solid hsla(42, 84%, 69%, .59);
+  color: hsl(42, 84%, 69%);
+}
+
+section.head-cta .cta .number {
+  display: inline-block;
+  white-space: nowrap; /* Keep the pound sign on the same line as the number */
+}
+
+section.head-cta .cta,
+section.head-cta .play {
+  text-align: center;
+}
+
+</style>
+
+
+<script>
+if (window.parent != window) {
+  window.addEventListener('message', function(e) {
+    window.engine.merge(e.data)
+  })
+}
+
+function boot(values) {
+  var data = {
+    "md": 72,
+    "-md": -72,
+    "-md-2": -36,
+    "md-2": 36,
+    "md2": 144,
+    "md-gap": 36,
+    "md-gap2": 18,
+    "base": 8,
+  }
+  for (var property in values)
+    data[property] = values[property];
+  document.addEventListener('solve', function(solution) {
+    delete solution.detail.engine
+    window.parent.postMessage(solution.detail, location.origin)
+  })
+  window.engine = GSS(document, data);
+} 
+
+boot()
+
+</script>
+
+
+<style type="text/gss">
+section.head-cta {
+  height: >= ::window[height];
+
+  @h |(& .overlay)| in(&);
+  @v |(& .overlay)| in(&);
+
+  @h  |-(&"area")-| in(&) gap($md) !require;
+  @v  |-(&"area")-| in(&) gap($md) !require;
+
+  @h |(& .bg)| in(&);
+  @v |(& .bg)| in(&);
+
+  @h |~-~(& .cta, & .play)~-~| in(&"area") gap(0);
+  (& .cta)[center-x] == &"area"[center-x];
+  (& .play)[center-x] == &"area"[center-x];
+
+  .title, .subtitle {
+    height: == &[intrinsic-height] !require;
+  }
+
+  .cta, .play {
+    height: == &[intrinsic-height];
+    line-height: == &[font-size] + $base;
+  }
+
+  .cta {
+    .number {
+      margin-left: == $base;
+    }
+
+    .odometer {
+      margin-top: == -2;
+      margin-left: == 1;
+    }
+  }
+
+  &[sizer] == &[width];
+  //&[sizer] <= &[height];
+
+  video {
+    ::[width] == ::[height] * (640/360) !require;
+    ::[x] <= 0;
+    ::[y] <= 0;
+    ::[width] >= ::window[width];
+    ::[height] >= ::window[height];
+    ::[center-x] == ::window[center-x];
+    ::[center-y] == ::window[center-y];
+  }
+
+  @if &[sizer] <= 600 {
+
+    .logo {
+      opacity: 0;
+    }
+    .subtitle {
+      opacity: 0;
+    }
+
+    (& .title)[center] == &[center];
+
+    @h |-18-(& .title)-18-| in(&);
+    (& .title)[center-y] == &[center-y];
+
+    .title {
+      font-size: 40px;
+      line-height: 48px;
+    }
+
+    @v  |
+        -36-
+        (& .play)
+        ~18~
+        (& .title)
+        ~18~
+        (& .cta)
+        -36-
+        |
+      in(&);
+
+    .cta, .play {
+      font-size: == 14;
+      padding: == $base;
+    }
+  }
+  @else {
+
+    @v  |
+        (&"logo")
+        ~$md~
+        (& .subtitle)
+        -18-
+        (& .title)
+        <&"area"[center-y]>
+        -$[md-gap]-
+        (& .cta)
+        -$[md-gap]-
+        (& .play)
+      in(&"area") !require;
+
+    @v (& .play)~$md~| in(&"area");
+
+    .cta, .play {
+      font-size: == 20;
+      padding: == $base * 3;
+      size: == &[intrinsic-size];
+    }
+
+    &"logo" {
+      &[height] == $md == &[width];
+    }
+    &"logo"[center-x] == &"area"[center-x];
+
+    .logo {
+      &[height] == 46 == &[width];
+    }
+    (& .logo)[center] == &"logo"[center];
+
+    @h  |(& .title)| in(&"area") {
+
+          @if &[width] <= 600 {
+            line-height: == $md / 2;
+            font-size: == $md / 2;
+          }
+          @else {
+            line-height: == $md;
+            font-size: == $md;
+          }
+        }
+
+
+    @h |(& .subtitle)| in(&"area") {
+          @if &[width] <= 600 {
+            line-height: == 24;
+            font-size: == 16;
+          }
+          @else {
+            line-height: == 36;
+            font-size: == 24;
+          }
+        }
+  }
+
+
+}
+
+
+section {
+  width: 100%;
+  width: == ::window[width] !require;
+  top: == 0 !require;
+  left: == 0 !require;
+  z-index: 1;
+  overflow-x: hidden;
+  margin: auto;
+  width: 100%;
+
+  height: <= ::window[height] !weak;
+  height: >= &[width] / 2.4 !weak;
+}
+
+.modal {
+  @h |(&)| in(::window);
+  @v |(&)| in(::window);
+}
+
+section.footer {
+  width: == ::window[width];
+  height: == 144;
+
+  (& .content)[center] == &[center];
+
+  .content {
+    size: == &[intrinsic-size];
+  }
+}
+</style>
+
+<section class="head-cta top" style="position: relative"><div class="bg media" style="background-size:cover; background-image:url(https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/b1c9b1ca4f93bc0072c358e366290128/passthrough?input=http%3A%2F%2Fimg.youtube.com%2Fvi%2FOXA4-5x31V0%2Fhqdefault.jpg&amp;width=480&amp;height=360);"></div><div class="bg overlay"></div><video autoplay="true" loop="true"><source type="video/mp4" src="//s3-us-west-2.amazonaws.com/cdn.thegrid.io/posts/cta-ui-bg.mp4"><source type="video/webm" src="//s3-us-west-2.amazonaws.com/cdn.thegrid.io/posts/cta-ui-bg.webm"></video><div class="overlay"></div><svg version="1.1" class="logo" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 46 46" enable-background="new 0 0 46 46" xml:space="preserve">
+    <polygon points="46,46 0,46 0,0 46,0 46,2 2,2 2,44 44,44 44,13 13,13 13,33 33,33 33,24 22,24 22,22 35,22 35,35 11,35 11,11 46,11"/>
+</svg><h2 class="title heading">Join the Evolution</h2><h1 class="subtitle">AI Websites That Design Themselves</h1><button class="cta preorder" data-role="cta" data-id="f6a4bd8d-55ec-4c3a-9ccd-9c5f3df80802" data-verb="purchase" data-sum="9600"><span>Be founding member<span class="number"><span class="cta-hash">#</span><span id="odometer">1</span></span></span></button><script type="text/javascript">var product = { id: 'f6a4bd8d-55ec-4c3a-9ccd-9c5f3df80802', sum: 96, description: 'The Grid Basic', verb: 'purchase', button: '.preorder', benefits: [ '1 year pre-paid subscription', 'Subscription begins v1 release, late Spring 2015', 'Locked-in rate of $8/month (regularly $25)', '7 Sites, custom domains OK', 'Pretty much unlimited contributors, storage and bandwidth', 'Commerce engine, due late 2015, cost-based fees only', 'Grid NFC Token (limited gold edition)' ] }; window.product = product;</script><a class="play outline button" href="//www.youtube.com/embed/OXA4-5x31V0" data-iframer="//www.youtube.com/embed/OXA4-5x31V0" data-iframer-cta="Pre-Order Now" data-iframer-cta-click=".cta.preorder">watch the video</a></section>

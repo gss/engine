@@ -11,11 +11,37 @@ module.exports = ->
       nuke_built:
         src: ['dist']
 
-    exec:
-      component_install:
-        command: 'node ./node_modules/component/bin/component install'
-      component_build:
-        command: 'node ./node_modules/component/bin/component build -o dist -n gss -s gss -c'
+    browserify:
+      dist:
+        files:
+          'dist/gss.js': ['dist/document.parser.coffee']
+        options:
+          transform: ['coffeeify']
+          browserifyOptions:
+            extensions: ['.coffee']
+            fullPaths: false
+            #standalone: 'GSS'
+      spec:
+        files:
+          'spec/js/specs.js': ['spec/specs.coffee']
+        options:
+          transform: ['coffeeify']
+          browserifyOptions:
+            #debug: true
+            extensions: ['.coffee']
+            fullPaths: false
+        debug:
+          options:
+            debug: true
+
+    # Automated recompilation and testing when developing
+    watch:
+      spec:
+        files: ['spec/**/*.coffee']
+        tasks: ['browserify:spec']
+      src:
+        files: ['src/**/*.coffee']
+        tasks: ['browserify:dist']
 
 
     # JavaScript minification for the browser
@@ -39,18 +65,6 @@ module.exports = ->
             'dist/gss.min.js'
           ]
 
-    # Automated recompilation and testing when developing
-    watch:
-      'build-fast':
-        files: ['spec/*.coffee','spec/**/*.coffee', 'src/*.coffee', 'src/**/*.coffee']
-        tasks: ['build-fast']
-      build:
-        files: ['spec/*.coffee','spec/**/*.coffee', 'src/*.coffee', 'src/**/*.coffee']
-        tasks: ['build']
-      test:
-        files: ['spec/*.coffee', 'src/*.coffee']
-        tasks: ['test']
-
     # Syntax checking
     coffeelint:
       src:
@@ -60,6 +74,8 @@ module.exports = ->
           'max_line_length':
             level: 'ignore'
           'no_trailing_whitespace':
+            level: 'ignore'
+          'no_backticks':
             level: 'ignore'
       spec:
         files:
@@ -79,26 +95,6 @@ module.exports = ->
           output: 'docs/'
           css: 'vendor/docs.css'
 
-    # CoffeeScript compilation
-    coffee:
-      src:
-        options:
-          bare: true
-        expand: true
-        cwd: 'src'
-        src: ['**.coffee', '**/*.coffee']
-        dest: 'lib'
-        ext: '.js'
-
-      spec:
-        options:
-          bare: true
-        expand: true
-        cwd: 'spec'
-        src: ['**.coffee', '**/*.coffee']
-        dest: 'spec/js'
-        ext: '.js'
-
     # Cross-browser testing
     connect:
       server:
@@ -110,7 +106,7 @@ module.exports = ->
     mocha_phantomjs:
       all:
         options:
-          reporter: 'spec'
+          reporter: 'node_modules/mocha/lib/reporters/spec.js'
           urls: ['http://127.0.0.1:9999/spec/runner.html']
 
     'saucelabs-mocha':
@@ -119,31 +115,43 @@ module.exports = ->
           urls: ['http://127.0.0.1:9999/spec/runner.html']
           browsers: [
             browserName: 'googlechrome'
-            version: '34'
+            platform: 'OS X 10.8'
+            version: '37'
           ,
             browserName: 'firefox'
-            version: '28'
+            platform: 'Windows 7',
+            version: '33'
           ,
             browserName: 'safari'
-            version: '6'
-          ,
-            browserName: 'internet explorer'
-            version: '11'
+            platform: 'OS X 10.9'
+            version: '7'
+          #,
+          #  browserName: 'internet explorer'
+          #  platform: 'Windows 8.1',
+          #  version: '11'
           ,
             browserName: 'internet explorer'
             version: '10'
+          ,
+            browserName: 'internet explorer'
+            version: '9'
+          ,
+            browserName: 'iPhone'
+            platform: "OS X 10.10"
+            version: '8.0'
+          ,
+            browserName: "android"
           ]
           build: process.env.TRAVIS_JOB_ID
           testname: 'GSS browser tests'
-          tunnelTimeout: 5
+          tunnelTimeout: 20
           concurrency: 6
 
+
   # Grunt plugins used for building
-  @loadNpmTasks 'grunt-contrib-coffee'
-  @loadNpmTasks 'grunt-contrib-concat'
+  @loadNpmTasks 'grunt-browserify'
   @loadNpmTasks 'grunt-contrib-uglify'
   @loadNpmTasks 'grunt-contrib-clean'
-  @loadNpmTasks 'grunt-exec'
   @loadNpmTasks 'grunt-docco'
   @loadNpmTasks 'grunt-banner'
 
@@ -156,8 +164,7 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-connect'
   @loadNpmTasks 'grunt-saucelabs'
 
-  @registerTask 'build-fast', ['coffee', 'exec:component_build']
-  @registerTask 'build', ['coffee', 'exec', 'uglify:engine', 'usebanner']
+  @registerTask 'build', ['browserify:spec', 'uglify:engine', 'usebanner']
   @registerTask 'test', ['coffeelint', 'build', 'phantom']
   @registerTask 'phantom', ['connect', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['build', 'coffeelint', 'connect', 'mocha_phantomjs', 'saucelabs-mocha']

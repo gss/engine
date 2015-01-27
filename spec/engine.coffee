@@ -3,12 +3,6 @@ Engine = GSS.Engine #require 'gss-engine/lib/Engine.js'
 assert = chai.assert
 expect = chai.expect
 
-$  = () ->
-  return document.querySelector arguments...
-  
-$$ = () -> 
-  return document.querySelectorAll arguments...
-
 remove = (el) ->
   el?.parentNode?.removeChild(el)
 
@@ -26,7 +20,7 @@ describe 'GSS engine', ->
   describe 'when initialized', ->
     before ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       engine = new GSS(container)
 
     after (done) ->
@@ -43,15 +37,23 @@ describe 'GSS engine', ->
       e.once 'solved', ->
         val = e.values['x']
         assert val == 222, "engine has wrong [x] value: #{val}"
-        done()
+
+        e.once 'solved', ->
+          val = e.values['x']
+          assert val == undefined, "engine has wrong [x] value: #{val}"
+
+          done()
+        
+        e.solve ['remove', 'tracker']
+
       e.solve [
           ['==', ['get','x'], 222]
-        ]
+        ], 'tracker'
     it 'should destroy', (done)->
       e.destroy()
       done()
     
-  describe 'GSS() - scopeless & no web workers', ->
+  xdescribe 'GSS() - scopeless & no web workers', ->
     e = null
     it 'should initialize', ->
       e = new GSS()
@@ -59,10 +61,19 @@ describe 'GSS engine', ->
       e.once 'solved', ->
         val = e.values['x']
         assert val == 222, "engine has wrong [x] value: #{val}"
-        done()
+
+        e.once 'solved', ->
+          val = e.values['x']
+          assert val == undefined, "engine has wrong [x] value: #{val}"
+
+
+          done()
+        
+        e.solve ['remove', 'tracker']
+
       e.solve [
           ['==', ['get','x'], 222]
-        ]
+        ], 'tracker'
     it 'should destroy', (done)->
       e.destroy()
       done()
@@ -78,7 +89,7 @@ describe 'GSS engine', ->
       describe "useWorker: #{useWorker}", ->
         before ->
           container = document.createElement 'div'
-          $('#fixtures').appendChild container
+          document.getElementById('fixtures').appendChild container
           container.innerHTML = """
             <button id="button1">One</button>
             <button id="button2">Second</button>
@@ -86,30 +97,30 @@ describe 'GSS engine', ->
             <button id="button4">4</button>
           """
           engine = new GSS(container, useWorker || undefined)
-        after (done) ->
-          remove(container)
-          # have to manually destroy, otherwise there is some clash!
-          engine.destroy()
-          done()
+          engine.compile()
     
         ast = [
-          ['==', ['get', ['$id','button1'], 'width'], ['get', ['$id','button2'], 'width']]
-          ['==', ['get', ['$id','button1'], 'width'], 100]
+          ['==', ['get', ['#','button1'], 'width'], ['get', ['#','button2'], 'width']]
+          ['==', ['get', ['#','button1'], 'width'], 100]
         ]
         
         it 'before solving the second button should be wider', ->
-          button1 = engine.$id 'button1'
-          button2 = engine.$id 'button2'
+          button1 = engine.id 'button1'
+          button2 = engine.id 'button2'
           expect(button2.getBoundingClientRect().width).to.be.above button1.getBoundingClientRect().width
         
         it 'after solving the buttons should be of equal width', (done) ->
+          count = 0
           onSolved = (values) ->
-            expect(values).to.be.an 'object'
-            expect(values['$button1'])
-            expect(Math.round(button1.getBoundingClientRect().width)).to.equal 100
-            expect(Math.round(button2.getBoundingClientRect().width)).to.equal 100
-            engine.removeEventListener 'solved', onSolved
-            done()
+            if ++count == 1
+              expect(values).to.be.an 'object'
+              expect(values['$button1'])
+              expect(Math.round(button1.getBoundingClientRect().width)).to.equal 100
+              expect(Math.round(button2.getBoundingClientRect().width)).to.equal 100
+              container.innerHTML = ""
+            else
+              engine.removeEventListener 'solved', onSolved
+              done()
           engine.addEventListener 'solved', onSolved
           engine.solve ast
           
@@ -127,22 +138,16 @@ describe 'GSS engine', ->
       describe "useWorker: #{useWorker}", ->
         before ->
           container = document.createElement 'div'
-          $('#fixtures').appendChild container
+          document.getElementById('fixtures').appendChild container
           container.innerHTML = """
             <h1 id="text1" style="line-height:12px;font-size:12px;">One</h1>
             <h1 id="text2" style="line-height:12px;font-size:12px;">Two</h1>
           """
           engine = new GSS(container, useWorker || undefined)
-          
-        after (done) ->
-          remove(container)
-          # have to manually destroy, otherwise there is some clash!
-          engine.destroy()
-          done()
     
         ast = [
-            ['==', ['get',['$tag','h1'],'line-height'], ['get',['$tag','h1'],'font-size']]
-            ['==', ['get',['$tag','h1'],'line-height'], 42]
+            ['==', ['get',['tag','h1'],'line-height'], ['get',['tag','h1'],'font-size']]
+            ['==', ['get',['tag','h1'],'line-height'], 42]
           ]
         
             
@@ -154,17 +159,21 @@ describe 'GSS engine', ->
           assert text1.style['fontSize'] is "12px"
           assert text2.style['fontSize'] is "12px"          
         it 'after solving', (done) ->
+          count = 0
           onSolved = (e) ->
-            assert text1.style['lineHeight'] is "42px"
-            assert text2.style['lineHeight'] is "42px"
-            assert text1.style['fontSize'] is "42px"
-            assert text2.style['fontSize'] is "42px"
-            assert e.detail['$text1[line-height]'] is 42
-            assert e.detail['$text2[line-height]'] is 42
-            assert e.detail['$text1[font-size]'] is 42
-            assert e.detail['$text2[font-size]'] is 42
-            container.removeEventListener 'solved', onSolved
-            done()
+            if ++count == 1
+              assert text1.style['lineHeight'] is "42px"
+              assert text2.style['lineHeight'] is "42px"
+              assert text1.style['fontSize'] is "42px"
+              assert text2.style['fontSize'] is "42px"
+              assert e.detail['$text1[line-height]'] is 42
+              assert e.detail['$text2[line-height]'] is 42
+              assert e.detail['$text1[font-size]'] is 42
+              assert e.detail['$text2[font-size]'] is 42
+              container.innerHTML = ""
+            else
+              engine.removeEventListener 'solved', onSolved
+              done()
           container.addEventListener 'solved', onSolved
           engine.solve ast
           
@@ -178,7 +187,7 @@ describe 'GSS engine', ->
     
     before ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       engine = new GSS(container)
       container.innerHTML = """
       """
@@ -190,14 +199,14 @@ describe 'GSS engine', ->
       done()
     
     ast = [
-      ['==', ['get',['$id','button2'],'width'], 222]
-      ['==', ['get',['$id','button1'],'width'], 111]        
+      ['==', ['get',['#','button2'],'width'], 222]
+      ['==', ['get',['#','button1'],'width'], 111]        
     ]
     
     it 'before solving buttons dont exist', ->
       engine.solve ast
-      button1 = engine.$id 'button1'
-      button2 = engine.$id 'button2'
+      button1 = engine.id 'button1'
+      button2 = engine.id 'button2'
       assert !button1, "button1 doesn't exist"
       assert !button2, "button2 doesn't exist"
     
@@ -205,13 +214,19 @@ describe 'GSS engine', ->
       assert engine.updated == undefined
     
     it 'after solving the buttons should have right', (done) ->
+      count = 0
       onSolved = (e) ->
-        w = Math.round(button1.getBoundingClientRect().width)
-        assert w is 111, "button1 width: #{w}"
-        w = Math.round(button2.getBoundingClientRect().width)
-        assert w is 222, "button2 width: #{w}"
-        container.removeEventListener 'solved', onSolved
-        done()
+        if ++count == 1
+          w = Math.round(button1.getBoundingClientRect().width)
+          assert w is 111, "button1 width: #{w}"
+          w = Math.round(button2.getBoundingClientRect().width)
+          assert w is 222, "button2 width: #{w}"
+          remove button1
+          remove button2
+        else
+          engine.removeEventListener 'solved', onSolved
+          done()
+
       container.addEventListener 'solved', onSolved
       container.innerHTML = """
       <div>        
@@ -219,8 +234,8 @@ describe 'GSS engine', ->
         <button id="button1">One</button>        
       </div>
       """
-      button1 = engine.$id 'button1'
-      button2 = engine.$id 'button2'
+      button1 = engine.id 'button1'
+      button2 = engine.id 'button2'
     
   describe 'Before IDs exist - advanced', ->
     engine = null
@@ -228,43 +243,41 @@ describe 'GSS engine', ->
     
     before ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       engine = new GSS(container)
       container.innerHTML = """
         <div id="w">        
         </div>
       """
-    
-    after (done) ->
-      remove(container)
-      # have to manually destroy, otherwise there is some clash!
-      engine.destroy()
-      done()
-    
 
     ast = [
-        ['==', ["get", ["$id","b1"], "right"],  ["get",["$id","b2"],"x"]]
-        ['==', ["get", ["$id","w"],  "width"],  200]
-        ['==', ["get", ["$id","w"],  "x"]  ,    ["get",'target']]
-        ['==', ["get", ["$id","b2"], "right"] , ["get",["$id","w"],"right"]] 
+        ['==', ["get", ["#","b1"], "right"],  ["get",["#","b2"],"x"]]
+        ['==', ["get", ["#","w"],  "width"],  200]
+        ['==', ["get", ["#","w"],  "x"]  ,    ["get",'target']]
+        ['==', ["get", ["#","b2"], "right"] , ["get",["#","w"],"right"]] 
         # b2[right] -> 200
-        ['==', ["get", ["$id","b1"], "x"   ] ,  ["get","target"]]        
-        ['==', ["get", ["$id","b1"], "width"] , ["get",["$id","b2"],"width"]]
+        ['==', ["get", ["#","b1"], "x"   ] ,  ["get","target"]]        
+        ['==', ["get", ["#","b1"], "width"] , ["get",["#","b2"],"width"]]
         
         ['==', ["get", "target"], 0]
       ]
     
     it 'after solving should have right size', (done) ->
+      count = 0
+
       onSolved = (e) ->
-        w = Math.round(engine.$id("w").getBoundingClientRect().width)
-        assert w is 200, "w width: #{w}"
-        w = Math.round(engine.$id('b1').getBoundingClientRect().width)
-        assert w is 100, "button1 width: #{w}"
-        w = Math.round(engine.$id('b2').getBoundingClientRect().width)
-        assert w is 100, "button2 width: #{w}"
-        container.removeEventListener 'solved', onSolved
-        done()
-      $('#w').innerHTML = """
+        if ++count == 1
+          w = Math.round(engine.id("w").getBoundingClientRect().width)
+          assert w is 200, "w width: #{w}"
+          w = Math.round(engine.id('b1').getBoundingClientRect().width)
+          assert w is 100, "button1 width: #{w}"
+          w = Math.round(engine.id('b2').getBoundingClientRect().width)
+          assert w is 100, "button2 width: #{w}"
+          container.innerHTML = ""
+        else
+          container.removeEventListener 'solved', onSolved
+          done()
+      document.getElementById('w').innerHTML = """
       <div>        
            <div id="b1"></div>
            <div id="b2"></div>
@@ -276,7 +289,7 @@ describe 'GSS engine', ->
   describe 'Math', ->
     before ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       engine = new GSS(container)
 
     after (done) ->
@@ -304,7 +317,7 @@ describe 'GSS engine', ->
   
     beforeEach ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       engine = new GSS(container)
 
     afterEach (done) ->
@@ -339,7 +352,7 @@ describe 'GSS engine', ->
         <div id="d2"></div>
         <div id="d3"></div>
       """
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       engine = new GSS(container)
 
     afterEach (done) ->
@@ -347,12 +360,12 @@ describe 'GSS engine', ->
       done()
       
     it "force display on un-queried views", ->
-      engine.positions.solve {"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}
-      w = Math.round($('#d1').getBoundingClientRect().width)
+      engine.solve {"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}
+      w = Math.round(document.getElementById('d1').getBoundingClientRect().width)
       assert w is 1, "d1 width: #{w}"
-      w = Math.round($('#d2').getBoundingClientRect().width)
+      w = Math.round(document.getElementById('d2').getBoundingClientRect().width)
       assert w is 2, "d2 width: #{w}"
-      w = Math.round($('#d3').getBoundingClientRect().width)
+      w = Math.round(document.getElementById('d3').getBoundingClientRect().width)
       assert w is 3, "d3 width: #{w}"
 
       
@@ -365,7 +378,7 @@ describe 'GSS engine', ->
   
     before ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
   
     after ->
       remove(container)
@@ -375,8 +388,14 @@ describe 'GSS engine', ->
       it 'Runs commands from sourceNode', (done) ->
         listener = (e) ->        
           expect(engine.updated.getProblems()).to.eql [
-              [['==', ['get','$box1','x','style[type*="text/gss"]$style1↓.box$box1'], 100]]
-              [['==', ['get','$box2','x','style[type*="text/gss"]$style1↓.box$box2'], 100]]
+              [[
+                key: 'style[type*="gss"]$style1↓.box$box1'
+                ['==', ['get','$box1[x]'], 100]
+              ]]
+              [[
+                key: 'style[type*="gss"]$style1↓.box$box2'
+                ['==', ['get','$box2[x]'], 100]
+              ]]
             ]
           container.removeEventListener 'solved', listener
           done()
@@ -384,7 +403,7 @@ describe 'GSS engine', ->
         engine = new GSS(container)
         container.innerHTML =  """
           <style type="text/gss-ast" scoped id="style1">
-            ["==", ["get",["$class", "box"],"x"], 100]
+            ["==", ["get",[".", "box"],"x"], 100]
           </style>
           <div id="box1" class="box"></div>
           <div id="box2" class="box"></div>
@@ -396,10 +415,11 @@ describe 'GSS engine', ->
     before ->
       container = document.createElement 'div'
       new GSS(container)
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
   
     after ->
       remove(container)
+
 
     describe 'Asynchronous existentialism (one engine for life of container)', ->
       engine1 = null
@@ -417,28 +437,24 @@ describe 'GSS engine', ->
             ]
           </style>
           """
-        listener = (e) ->
+        engine1.then ->
           expect(engine1.values['col-width-1']).to.equal 111
-          container.removeEventListener 'solved', listener
           done()
-        container.addEventListener 'solved', listener
     
       it 'after modified GSS style tag', (done) ->
         engine = GSS(container)
-        styleNode = engine.$id 'gssa'
-        styleNode.innerHTML = styleNode.innerText = """
+        styleNode = engine.id 'gssa'
+        styleNode.textContent = """
           [
               ["==", ["get", "col-width-11"], 1111]
           ]  
         """        
-        listener = (e) ->
+        engine.then ->
           engine2 = GSS(container)
           expect(engine1).to.equal engine2
           expect(engine1.values['col-width-1']).to.equal undefined
           expect(engine1.values['col-width-11']).to.equal 1111
-          container.removeEventListener 'solved', listener
           done()
-        container.addEventListener 'solved', listener
     
       it 'after replaced GSS style tag', (done) ->
         engine2 = GSS(container)
@@ -450,16 +466,13 @@ describe 'GSS engine', ->
           </style>
           <div id="box1" class="box" data-gss-id="12322"></div>
           """
-        debugger
-        listener = (e) ->
-          engine2 = GSS(container)
+
+        engine2.then ->
           assert engine1 is engine2, "engine is maintained" 
           assert !engine2.values['col-width-1']?, "engine1.vars['col-width-1'] removed" 
           expect(engine2.values['col-width-11']).to.equal undefined
           expect(engine2.values['col-width-2']).to.equal 222
-          container.removeEventListener 'solved', listener
           done()
-        container.addEventListener 'solved', listener
     
       it 'Engine after container replaced multiple GSS style tags', (done) ->
         engine2 = GSS(container)
@@ -476,7 +489,7 @@ describe 'GSS engine', ->
           </style>
           <div id="box1" class="box" data-gss-id="12322"></div>
           """
-        listener = (e) ->
+        engine2.then ->
           engine2 = GSS(container)
           expect(engine1).to.equal engine2
           #expect(engine1.styleNode).to.equal document.getElementById 'gssb'
@@ -484,9 +497,7 @@ describe 'GSS engine', ->
           expect(engine1.values['col-width-2']).to.equal undefined
           expect(engine1.values['col-width-3']).to.equal 333
           expect(engine1.values['col-width-4']).to.equal 444
-          container.removeEventListener 'solved', listener
           done()
-        container.addEventListener 'solved', listener
     
       xit 'Engine after container removed', (done) ->
         remove(container)
@@ -497,7 +508,7 @@ describe 'GSS engine', ->
         setTimeout wait, 1
     
       xit 'new Engine after container re-added', () ->      
-        $('#fixtures').appendChild container      
+        document.getElementById('fixtures').appendChild container      
         engine3 = GSS(container)
         expect(engine1).to.not.equal engine3
   
@@ -510,7 +521,7 @@ describe 'GSS engine', ->
   
     before ->
       container = document.createElement 'div'
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       #        
       container.innerHTML =  """
         <section>
@@ -519,7 +530,7 @@ describe 'GSS engine', ->
             [{
               "type":"constraint",
               "commands": [
-                ['==', ["get$","width",["$id","boo"]], ["number",100]]
+                ['==', ["get$","width",["#","boo"]], ["number",100]]
               ]
             }]
             </style>
@@ -700,14 +711,14 @@ describe 'GSS engine', ->
     before ->
       container = document.createElement 'div'
       container.id = "wrap-container"
-      $('#fixtures').appendChild container
+      document.getElementById('fixtures').appendChild container
       #        
       container.innerHTML =  """
           <style type="text/gss-ast" scoped>
           [{
             "type":"constraint",
             "commands": [
-              ['==', ["get$","width",["$id","wrap"]], ["number",69]]
+              ['==', ["get$","width",["#","wrap"]], ["number",69]]
             ]
           }]
           </style>
@@ -716,7 +727,7 @@ describe 'GSS engine', ->
             [{
               "type":"constraint",
               "commands": [
-                ['==', ["get$","width",["$id","boo"]], ["get$","width",["$reserved","scope"]]]
+                ['==', ["get$","width",["#","boo"]], ["get$","width",["$reserved","scope"]]]
               ]
             }]
             </style>
@@ -736,7 +747,6 @@ describe 'GSS engine', ->
       expect(containerEngine.scope).to.equal container    
 
     it 'scoped value is bridged downward', (done) ->
-      #debugger
       cListener = (e) ->           
         container.removeEventListener 'solved', cListener
       
@@ -759,7 +769,7 @@ describe 'GSS engine', ->
         done()
     it "views are recycled *MOSTLY*", (done) ->
       # - margin_of_error should be about 2 for things like document.body
-      # - larger b/c views activated via ::parent queries will not be cleaned up, need more robust GSS.Query
+      # - larger b/c views activated via ^ queries will not be cleaned up, need more robust GSS.Query
       # - async intrinsics also seem to matter...
       # - vies are not cleaned up when removed unless selector is updated!
       margin_of_error = 25 + 5

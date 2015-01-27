@@ -22,7 +22,21 @@ describe 'Domain', ->
         result: 0
         a: -1
 
-  describe 'solving and assumed domains together', ->
+    it 'should find solutions when using nested simple expressions', ->
+      engine = new GSS.Engine()
+      expect(engine.solve [
+        ['==',
+          ['get', 'result']
+          ['+',
+            ['get', 'a']
+            ['+', ['*', 1, 2], 3]
+          ]
+        ]
+      ]).to.eql 
+        result: 0
+        a: -5
+
+  describe 'solving and input domains together', ->
     it 'should calculate simplified expression', ->
       window.$engine = engine = new GSS({
         a: 666
@@ -86,6 +100,8 @@ describe 'Domain', ->
         a: -555
       ).to.eql
         result: -1100
+        a: -555
+
 
 
     it 'should simplify multiple variables partially', ->
@@ -117,12 +133,14 @@ describe 'Domain', ->
         a: -555
       ).to.eql
         result: -1100
+        a: -555
 
       GSS.console.info('A=1, was 2')
 
       expect(engine.solve
         A: 1
       ).to.eql
+        A: 1
         result: -545
 
     it 'should change variable domain after the fact', ->
@@ -137,8 +155,9 @@ describe 'Domain', ->
       ]).to.eql
         result: 0
         a: -1
-
+      
       GSS.console.error('A=666')
+      
       expect(engine.solve
         a: 666
       ).to.eql
@@ -149,8 +168,8 @@ describe 'Domain', ->
       expect(engine.solve
         a: null
       ).to.eql
-        a: -1
         result: 0
+        a: -1
 
     it 'should use intrinsic values as known values', ->
       el = document.createElement('div')
@@ -164,8 +183,8 @@ describe 'Domain', ->
         ['==',
           ['get', 'a']
           ['+',
-            ['get', ['$id', 'box0'], 'z']
-            ['get', ['$id', 'box1'], 'intrinsic-width']
+            ['get', ['#', 'box0'], 'z']
+            ['get', ['#', 'box1'], 'intrinsic-width']
           ]
         ]
       ], (solution) ->
@@ -177,7 +196,10 @@ describe 'Domain', ->
 
 
   describe 'solvers in worker', ->
-    xit 'should receieve measurements from document to make substitutions', (done) ->
+    @timeout 60000
+
+
+    it 'should receieve measurements from document to make substitutions', (done) ->
       root = document.createElement('div')
       root.innerHTML = """
         <div id="box0" style="width: 20px"></div>
@@ -186,32 +208,33 @@ describe 'Domain', ->
       engine =  new GSS(root, true)
       problem = [
         ['=='
-          ['get', 'result', null, 'my_funny_tracker_path']
-          ['*',
+          ['get', 'result']
+          ['-',
             ['+'
-              ['get', ['$id', 'box0'], 'intrinsic-width'],
+              ['get', ['#', 'box0'], 'intrinsic-width'],
               1]
             ['get', 'x']]
         ]
       ]
-      engine.solve problem, (solution) ->
+      engine.solve problem, 'my_funny_tracker_path', (solution) ->
         expect(solution).to.eql 
           "$box0[intrinsic-width]": 20
           result: 0
-          x: 0
-
+          x: 21
+        
+        
         engine.solve
           x: 2
         , (solution) ->
           expect(solution).to.eql 
-            result: 42
+            result: 19
             x: 2
 
           engine.solve
             "x": 3
           , (solution) ->
             expect(solution).to.eql 
-              result: 63
+              result: 18
               x: 3
             engine.solve
               "x": null
@@ -219,8 +242,8 @@ describe 'Domain', ->
               GSS.console.info(solution)
               expect(solution).to.eql 
                 result: 0
-                x: 0
-              root.removeChild(engine.$id('box0'))
+                x: 21
+              root.removeChild(engine.id('box0'))
               engine.then (solution) ->
                 GSS.console.info(solution)
                 expect(solution).to.eql 
@@ -230,7 +253,7 @@ describe 'Domain', ->
 
 
 
-                document.body.removeChild(root)
+                #document.body.removeChild(root)
                 done()
 
 
@@ -251,14 +274,23 @@ describe 'Domain', ->
         ]
       ]
 
-      engine.solve problem, (solution) ->
+      engine.solve problem, 'my_funny_tracker_path', (solution) ->
         expect(solution).to.eql 
           a: -1
           result: 0
           b: 1001
-        done()
 
-  describe 'framed domains', (done) ->
+        engine.then (solution) ->
+          expect(solution).to.eql 
+            a: null
+            result: null
+            b: null
+
+          done()
+        engine.remove('my_funny_tracker_path')
+
+          
+  xdescribe 'framed domains', (done) ->
     it 'should not merge expressions of a framed domain in worker', ->
       window.$engine = engine =  new GSS true
       problem = [
@@ -456,26 +488,25 @@ describe 'Domain', ->
         b: 0
         c: 0
 
-      expect(engine.solve [
+      expect(engine.solve([
         ['==', 
           ['get', 'c'],
           ['*', 
             2
-            ['get', 'a', null, 'my_tracker_path']
+            ['get', 'a']
           ]
         ]
-      ]).to.eql
+      ], 'my_tracker_path')).to.eql
         b: 2
         c: 2
-        a: 1
+        #a: 1
       GSS.console.log(1)
       expect(engine.solve [
         ['remove', 'my_tracker_path']
       ]).to.eql
         b: 0
         c: 0
-        a: 1
-
+        #a: 1
 
     it 'should merge multiple domains', ->
       engine =  new GSS
@@ -541,5 +572,7 @@ describe 'Domain', ->
       ]).to.eql
         a: 8
         result: 9
+        #c: 9
+        #b: 3
 
 

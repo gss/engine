@@ -4,9 +4,7 @@
  * license that can be found in the LICENSE file.
  */
 
-if (typeof window != 'undefined')
-(function(global) {
-
+if (typeof window != 'undefined') {
   var registrationsTable = new WeakMap();
 
   // We use setImmediate or postMessage for our future callback.
@@ -543,6 +541,4 @@ if (typeof window != 'undefined')
 
   if (!global.MutationObserver)
     global.MutationObserver = JsMutationObserver;
-
-
-})(this);
+}
