@@ -39,6 +39,8 @@ Updater = (engine) ->
       if update
         update.wrap(problem, parent, domain || Domain)
       else if problem[0] != 'remove'
+        if Domain
+          problem.domain = Domain
         return
       else
         update = new @update([problem], [domain || Domain || null])

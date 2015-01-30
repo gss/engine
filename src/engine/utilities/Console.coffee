@@ -2,12 +2,12 @@
 
 class Console
   constructor: (@level) ->
-    @level ?= self.GSS_LOG ? parseFloat(self?.location?.search.match(/log=([\d.]+)/)?[1] || 0)
+    @level ?= self?.GSS_LOG ? parseFloat(self?.location?.search.match(/log=([\d.]+)/)?[1] || 0)
     if !Console.bind
       @level = 0
     @stack = []
     @buffer = []
-    self.addEventListener 'error', @onError, true
+    self?.addEventListener 'error', @onError, true
 
   methods: ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd']
   groups: 0

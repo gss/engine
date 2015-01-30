@@ -1,5 +1,3 @@
-/* gss-engine - version 2.0.0 (2015-01-26) - http://gridstylesheets.org */
-/* gss-engine - version 1.0.4-beta (2015-01-27) - http://gridstylesheets.org */
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 (function (global){
 global.GSS = require('../src/GSS');
@@ -14823,8 +14821,8 @@ module.exports = (function() {
 arguments[4][7][0].apply(exports,arguments)
 },{"dup":7}],13:[function(require,module,exports){
 var Document, Engine,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Engine = require('./Engine');
 
@@ -15542,7 +15540,9 @@ Engine = (function() {
     if (typeof window === "undefined" || window === null) {
       this.strategy = 'update';
     }
-    self.addEventListener('error', this.eventHandler);
+    if (typeof self !== "undefined" && self !== null) {
+      self.addEventListener('error', this.eventHandler);
+    }
     return this;
   }
 
@@ -15844,7 +15844,7 @@ Engine = (function() {
     error: function(e) {
       this.updating = void 0;
       if ((typeof window !== "undefined" && window !== null) && e.target !== window) {
-        throw new Error("" + e.message + " (" + e.filename + ":" + e.lineno + ")");
+        throw new Error(e.message + " (" + e.filename + ":" + e.lineno + ")");
       }
     }
   };
@@ -16169,7 +16169,7 @@ Engine.prototype.Identity = (function() {
 
 })();
 
-if (!self.window && self.onmessage !== void 0) {
+if ((typeof self !== "undefined" && self !== null) && !self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
     var commands, data, engine, property, removes, result, solution, value, values;
     if (!(engine = Engine.messenger)) {
@@ -16688,8 +16688,8 @@ inspired by Slick of mootools fame (shout-out & credits)
 Combinators fetch new elements, while qualifiers filter them.
  */
 var Query, Selector, dummy,
-  __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty,
   __slice = [].slice;
 
 Query = require('../../engine/Query');
@@ -17864,8 +17864,8 @@ module.exports = Selector;
 
 },{"../../../vendor/MutationObserver.js":44,"../../../vendor/weakmap.js":46,"../../engine/Query":31}],18:[function(require,module,exports){
 var Command, GSS, Query, Stylesheet,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 GSS = require('../../GSS');
 
@@ -18514,8 +18514,8 @@ module.exports = Stylesheet;
 
 },{"../../GSS":15,"../../engine/Command":29,"../../engine/Query":31}],19:[function(require,module,exports){
 var Unit, Variable,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Variable = require('../../engine/commands/Variable');
 
@@ -18713,8 +18713,8 @@ var Styles;
 Styles = (function() {
   var i, index, prop, side, sides, type, _base, _base1, _base2, _base3, _base4, _i, _j, _k, _len, _len1, _name, _ref, _ref1;
 
-  function Styles(engine) {
-    this.engine = engine;
+  function Styles(_at_engine) {
+    this.engine = _at_engine;
   }
 
   Styles.prototype.transform = [
@@ -18985,8 +18985,8 @@ module.exports = Styles;
 
 },{}],22:[function(require,module,exports){
 var Color, Command,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Command = require('../../engine/Command');
 
@@ -19098,8 +19098,8 @@ module.exports = Color;
 
 },{"../../engine/Command":29}],23:[function(require,module,exports){
 var Command, Easing,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Command = require('../../engine/commands/Variable');
 
@@ -19136,8 +19136,8 @@ module.exports = Easing;
 
 },{"../../engine/commands/Variable":36}],24:[function(require,module,exports){
 var Command, Gradient,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Command = require('../../engine/Command');
 
@@ -19172,8 +19172,8 @@ module.exports = Gradient;
 
 },{"../../engine/Command":29}],25:[function(require,module,exports){
 var Command, Matrix,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Command = require('../../engine/Command');
 
@@ -19413,8 +19413,8 @@ module.exports = Matrix;
 
 },{"../../../vendor/gl-matrix":45,"../../engine/Command":29}],26:[function(require,module,exports){
 var Measurement, Unit,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Unit = require('../commands/Unit');
 
@@ -19605,8 +19605,8 @@ module.exports = Measurement;
 
 },{"../commands/Unit":19}],27:[function(require,module,exports){
 var Command, Primitive,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Command = require('../../engine/Command');
 
@@ -19765,8 +19765,8 @@ module.exports = Primitive;
 
 },{"../../engine/Command":29}],28:[function(require,module,exports){
 var Command, URL,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Command = require('../../engine/Command');
 
@@ -21392,8 +21392,8 @@ module.exports = Domain;
 
 },{}],31:[function(require,module,exports){
 var Command, Query,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Command = require('./Command');
 
@@ -22730,6 +22730,9 @@ Updater = function(engine) {
       if (update) {
         update.wrap(problem, parent, domain || Domain);
       } else if (problem[0] !== 'remove') {
+        if (Domain) {
+          problem.domain = Domain;
+        }
         return;
       } else {
         update = new this.update([problem], [domain || Domain || null]);
@@ -23315,8 +23318,8 @@ module.exports = Update;
 
 },{}],33:[function(require,module,exports){
 var Condition, Query,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Query = require('../Query');
 
@@ -23858,8 +23861,8 @@ module.exports = Constraint;
 
 },{"../Command":29}],35:[function(require,module,exports){
 var Command, Iterator,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Command = require('../Command');
 
@@ -23927,8 +23930,8 @@ module.exports = Iterator;
 
 },{"../Command":29}],36:[function(require,module,exports){
 var Command, Variable,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Command = require('../Command');
 
@@ -24035,8 +24038,8 @@ module.exports = Variable;
 Provides values that don't need to be solved
  */
 var Command, Data, Domain, Variable,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Domain = require('../Domain');
 
@@ -24121,8 +24124,8 @@ module.exports = Data;
 
 },{"../Command":29,"../Domain":30,"../commands/Variable":36}],38:[function(require,module,exports){
 var Command, Constraint, Domain, Input, Top, Variable,
-  __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty,
   __slice = [].slice;
 
 Domain = require('../Domain');
@@ -24384,8 +24387,8 @@ module.exports = Input;
 
 },{"../Command":29,"../Domain":30,"../commands/Condition":33,"../commands/Constraint":34,"../commands/Iterator":35,"../commands/Variable":36}],39:[function(require,module,exports){
 var Command, Constraint, Domain, Linear, Variable, c,
-  __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty,
   __slice = [].slice;
 
 Domain = require('../Domain');
@@ -24650,8 +24653,8 @@ module.exports = Linear;
 
 },{"../Command":29,"../Domain":30,"../commands/Constraint":34,"../commands/Variable":36,"cassowary":2}],40:[function(require,module,exports){
 var Constraint, Data, Output,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __hasProp = {}.hasOwnProperty;
 
 Data = require('./Data');
 
@@ -24719,19 +24722,21 @@ var Console, method, _i, _len, _ref,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 Console = (function() {
-  function Console(level) {
+  function Console(_at_level) {
     var _ref, _ref1, _ref2;
-    this.level = level;
+    this.level = _at_level;
     this.onError = __bind(this.onError, this);
     if (this.level == null) {
-      this.level = (_ref = self.GSS_LOG) != null ? _ref : parseFloat((typeof self !== "undefined" && self !== null ? (_ref1 = self.location) != null ? (_ref2 = _ref1.search.match(/log=([\d.]+)/)) != null ? _ref2[1] : void 0 : void 0 : void 0) || 0);
+      this.level = (_ref = typeof self !== "undefined" && self !== null ? self.GSS_LOG : void 0) != null ? _ref : parseFloat((typeof self !== "undefined" && self !== null ? (_ref1 = self.location) != null ? (_ref2 = _ref1.search.match(/log=([\d.]+)/)) != null ? _ref2[1] : void 0 : void 0 : void 0) || 0);
     }
     if (!Console.bind) {
       this.level = 0;
     }
     this.stack = [];
     this.buffer = [];
-    self.addEventListener('error', this.onError, true);
+    if (typeof self !== "undefined" && self !== null) {
+      self.addEventListener('error', this.onError, true);
+    }
   }
 
   Console.prototype.methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd'];
@@ -24986,9 +24991,9 @@ var Exporter,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 Exporter = (function() {
-  function Exporter(engine) {
+  function Exporter(_at_engine) {
     var _ref;
-    this.engine = engine;
+    this.engine = _at_engine;
     this.postexport = __bind(this.postexport, this);
     this.preexport = __bind(this.preexport, this);
     if (!(this.command = (_ref = location.search.match(/export=([a-z0-9]+)/)) != null ? _ref[1] : void 0)) {
@@ -25106,8 +25111,8 @@ var Inspector,
   __hasProp = {}.hasOwnProperty;
 
 Inspector = (function() {
-  function Inspector(engine) {
-    this.engine = engine;
+  function Inspector(_at_engine) {
+    this.engine = _at_engine;
     this.draw = __bind(this.draw, this);
     this.onMouseMove = __bind(this.onMouseMove, this);
     this.onClick = __bind(this.onClick, this);

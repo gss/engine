@@ -76,7 +76,7 @@ class Engine
       @strategy = 'update'
 
     # Listen for errors to flush buffered console
-    self.addEventListener 'error', @eventHandler
+    self?.addEventListener 'error', @eventHandler
 
     return @
 
@@ -585,7 +585,7 @@ class Engine::Identity
     return @set(object, false)
 
 # Listen for message in worker to initialize engine on demand
-if !self.window && self.onmessage != undefined
+if self? && !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
     unless engine = Engine.messenger
       engine = Engine.messenger = new Engine()
