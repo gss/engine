@@ -1,6 +1,6 @@
 class Exporter
   constructor: (@engine) ->
-    return unless @command = location.search.match(/export=([a-z0-9]+)/)?[1]
+    return unless @command = location?.search.match(/export=([a-z0-9]+)/)?[1]
 
     @preexport()
 

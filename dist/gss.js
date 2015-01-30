@@ -15537,7 +15537,7 @@ Engine = (function() {
         this.data.values[property] = this.values[property] = value;
       }
     }
-    if (typeof window === "undefined" || window === null) {
+    if ((typeof window === "undefined" || window === null) && (typeof self !== "undefined" && self !== null)) {
       this.strategy = 'update';
     }
     if (typeof self !== "undefined" && self !== null) {
@@ -15880,7 +15880,7 @@ Engine = (function() {
     if (typeof Worker === "undefined" || Worker === null) {
       return;
     }
-    if (!url.match(/^http:/i) && location.protocol.match(/^file:/i)) {
+    if (!url.match(/^http:/i) && (typeof location !== "undefined" && location !== null ? location.protocol.match(/^file:/i) : void 0)) {
       return;
     }
     (_base = this.engine).worker || (_base.worker = this.engine.getWorker(url));
@@ -24996,7 +24996,7 @@ Exporter = (function() {
     this.engine = _at_engine;
     this.postexport = __bind(this.postexport, this);
     this.preexport = __bind(this.preexport, this);
-    if (!(this.command = (_ref = location.search.match(/export=([a-z0-9]+)/)) != null ? _ref[1] : void 0)) {
+    if (!(this.command = typeof location !== "undefined" && location !== null ? (_ref = location.search.match(/export=([a-z0-9]+)/)) != null ? _ref[1] : void 0 : void 0)) {
       return;
     }
     this.preexport();

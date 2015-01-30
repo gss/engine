@@ -72,7 +72,7 @@ class Engine
         @data.values[property] = @values[property] = value
 
     # Bypass input domain for worker solver
-    unless window?
+    if !window? && self?
       @strategy = 'update'
 
     # Listen for errors to flush buffered console
@@ -384,7 +384,7 @@ class Engine
     return unless Worker?
 
     # or if it uses file protocol
-    return if !url.match(/^http:/i) && location.protocol.match(/^file:/i)
+    return if !url.match(/^http:/i) && location?.protocol.match(/^file:/i)
 
     @engine.worker ||= @engine.getWorker(url)
     @solve = (commands) =>
