@@ -20,7 +20,7 @@ Output::Constraint = Constraint.extend {
     return a || b
     
   "!=": (a, b) ->
-    return a == b
+    return a != b
 
   "==": (a, b) ->
     return a == b
