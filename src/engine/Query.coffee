@@ -536,7 +536,7 @@ class Query extends Command
         if method.call @, engine, child, continuation, operation, scope, needle, recursion, contd
           returned = true
       return returned
-    else if typeof result == 'object'
+    else if result && typeof result != 'number'
       return method.call @, engine, result, continuation, operation, scope, needle, recursion, contd
 
 

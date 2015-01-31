@@ -22042,7 +22042,7 @@ Query = (function(_super) {
         }
       }
       return returned;
-    } else if (typeof result === 'object') {
+    } else if (result && typeof result !== 'number') {
       return method.call(this, engine, result, continuation, operation, scope, needle, recursion, contd);
     }
   };
