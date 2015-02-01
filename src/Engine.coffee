@@ -76,6 +76,7 @@ class Engine
       @strategy = 'update'
 
     # Listen for errors to flush buffered console
+
     self?.addEventListener 'error', @eventHandler
 
     return @
@@ -324,6 +325,7 @@ class Engine
       if @worker
         @worker.removeEventListener 'message', @eventHandler
         @worker.removeEventListener 'error', @eventHandler
+      self?.removeEventListener 'error', @eventHandler
 
     # Receive message from worker
     message: (e) ->
