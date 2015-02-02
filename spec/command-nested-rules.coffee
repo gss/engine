@@ -399,6 +399,41 @@ describe 'Nested Rules', ->
                   done()
         engine.solve(rules)
 
+    describe '1 level w/ ^ and #id selector', ->
+      it 'should combine comma separated native selectors', (done) ->
+        rules = [
+          'rule', 
+          ['#', 'group1']
+
+          ['rule',
+            ['.', 'box']
+              
+            ['==',
+              ['get'
+                ['^']
+                'x']
+              100
+            ] 
+          ]
+        ]
+        container.innerHTML =  """
+          <div id="box0" class="box"></div>
+          <div class="vessel" id="vessel0">
+            <div id="box1" class="box"></div>
+            <div id="box2" class="box"></div>
+          </div>
+          <div class="group" id="group1">
+            <div id="box3" class="box"></div>
+            <div id="box4" class="box"></div>
+          </div>
+          """
+
+        engine.once 'solve', (solution) ->
+          expect(solution).to.eql({'$group1[x]': 100})
+          done()
+
+        engine.solve(rules)
+
     describe '1 level w/ multiple selectors and &', ->
       it 'should combine comma separated native selectors', (done) ->
         rules = [

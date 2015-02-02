@@ -68,11 +68,14 @@ class Stylesheet extends Command.List
 
       # Replace old property
       if (i = text.indexOf(' ' + property + ':')) == -1
-        if (i = text.indexOf('{' + property + ':')) ==1
+        if (i = text.indexOf('{' + property + ':')) == -1
           i = text.indexOf(';' + property + ':')
+        else i++
+      else i++
+
       if i > -1
-        i++
-        j = text.length - 1
+        unless (j = text.indexOf(';', i) + 1)
+          j = text.length - 1
       
       # Add property
       else

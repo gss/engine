@@ -17955,13 +17955,18 @@ Stylesheet = (function(_super) {
     if (generated && (needle !== operation.index || value === '' || (other === rule && index !== needle))) {
       text = generated.cssText;
       if ((i = text.indexOf(' ' + property + ':')) === -1) {
-        if ((i = text.indexOf('{' + property + ':')) === 1) {
+        if ((i = text.indexOf('{' + property + ':')) === -1) {
           i = text.indexOf(';' + property + ':');
+        } else {
+          i++;
         }
+      } else {
+        i++;
       }
       if (i > -1) {
-        i++;
-        j = text.length - 1;
+        if (!(j = text.indexOf(';', i) + 1)) {
+          j = text.length - 1;
+        }
       } else {
         i = j = text.length - 1;
       }
