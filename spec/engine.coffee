@@ -53,7 +53,7 @@ describe 'GSS engine', ->
       e.destroy()
       done()
     
-  xdescribe 'GSS() - scopeless & no web workers', ->
+  describe 'GSS() - scopeless & no web workers', ->
     e = null
     it 'should initialize', ->
       e = new GSS()
