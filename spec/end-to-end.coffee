@@ -2093,14 +2093,16 @@ describe 'End - to - End', ->
           container.innerHTML = ""
         else
           expect(e['$dd2[x]']).to.eql(null)
+          engine.removeEventListener(listen)
           done()     
                      
+
       engine.addEventListener 'solve', listen
   
       container.innerHTML =  """
           <section id="s1">
-            <div id="dd1">123</div>
-            <div id="dd2">123</div>
+            <div id="d1">123</div>
+            <div id="d2">123</div>
           </section>
           <link rel="stylesheet" type="text/gss" href="./fixtures/external-file-parent.gss"></link>
         """
