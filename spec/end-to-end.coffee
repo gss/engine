@@ -423,7 +423,7 @@ describe 'End - to - End', ->
     getSource = (style) ->
       Array.prototype.slice.call(style.sheet.cssRules).map (rule) ->
         return rule.cssText.replace(/^\s+|\s+$|\n|\t|\s*({|}|:|;)\s*|(\s+)/g, '$1$2').replace(/\='/g, '="').replace(/'\]/g, '"]').replace /{(.*?)}/, (m, inside) ->
-          bits = inside.split(';')
+          bits = inside.split(/\s*;\s*/g)
           unless bits[bits.length - 1]
             bits.pop()
           return '{' +  bits.sort().join(';') + ';}'
