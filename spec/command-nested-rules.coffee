@@ -430,7 +430,10 @@ describe 'Nested Rules', ->
 
         engine.once 'solve', (solution) ->
           expect(solution).to.eql({'$group1[x]': 100})
-          done()
+          container.innerHTML = ""
+          engine.once 'solve', (solution) ->
+            expect(solution).to.eql({'$group1[x]': null})  
+            done()
 
         engine.solve(rules)
 
