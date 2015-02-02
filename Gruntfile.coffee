@@ -102,6 +102,14 @@ module.exports = ->
           base: ''
           port: 9999
 
+    # BDD tests on node.js
+    mochaTest:
+      nodejs:
+        src: ['spec/nodejs/*.coffee']
+        options:
+          reporter: 'spec'
+
+
     # BDD tests on browser
     mocha_phantomjs:
       all:
@@ -159,6 +167,7 @@ module.exports = ->
   @loadNpmTasks 'grunt-coffeelint'
   @loadNpmTasks 'grunt-mocha-phantomjs'
   @loadNpmTasks 'grunt-contrib-watch'
+  @loadNpmTasks 'grunt-mocha-test'
 
   # Cross-browser testing in the cloud
   @loadNpmTasks 'grunt-contrib-connect'
