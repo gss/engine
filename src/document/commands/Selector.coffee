@@ -134,6 +134,8 @@ class Selector extends Query
     return true
 
 
+
+
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   @onMutations: (mutations) ->
     unless @running
@@ -228,6 +230,12 @@ class Selector extends Query
         allRemoved.push(child)
         for el in child.getElementsByTagName('*')
           allRemoved.push(el)
+
+    if Selector.destructuring
+      for property, el of engine.identity
+        if el.nodeType && !el.parentNode
+          allRemoved.push(el)
+
     allChanged = allAdded.concat(allRemoved, allMoved)
 
     # Generate map of qualifiers to invalidate (to re-query native selectors)
@@ -276,13 +284,8 @@ class Selector extends Query
     # Clean removed elements by id
     for removed in allRemoved
       if allAdded.indexOf(removed) == -1
-        if id = engine.identity.find(removed)
-          (engine.removed ||= []).push(id)
+        (engine.removed ||= []).push(removed)
 
-    if engine.removed
-      for added in allAdded
-        if (j = engine.removed.indexOf(engine.identity.find(added))) > -1
-          engine.removed.splice(j, 1)
     return true
 
   @mutateCharacterData: (engine, target, parent = target.parentNode) ->
@@ -831,11 +834,16 @@ Selector.define
 if document?
   # Add shims for IE<=8 that dont support some DOM properties
   dummy = Selector.dummy = document.createElement('_')
-
+  div = document.createElement('div')
+  div.appendChild(document.createElement('b'))
+  dummy.appendChild(div)
+  dummy.innerHTML = ""
+  Selector.destructuring = !div.childNodes.length
+  
   unless dummy.hasOwnProperty("classList")
     Selector['.']::Qualifier = (node, value) ->
       return node if node.className.split(/\s+/).indexOf(value) > -1
-      
+
   if dummy.parentElement != undefined
     Selector['!>']::Combinator = (node = scope, engine, operation, continuation, scope) ->
       if parent = node.parentNode

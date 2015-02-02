@@ -579,9 +579,10 @@ class Engine::Identity
   solve: (id) ->
     return @[id]
 
-  unset: (id) ->
-    @[id]._gss_id = undefined
-    delete @[id]
+  unset: (element) ->
+    if id = element._gss_id
+      delete @[id]
+      element._gss_id = undefined
 
   # Get id if given object has one
   find: (object) ->

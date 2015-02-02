@@ -15055,7 +15055,7 @@ Document = (function(_super) {
       return this.input.Selector.connect(this, true);
     },
     solve: function() {
-      var html, id, klass, _i, _len, _ref;
+      var element, html, klass, _i, _len, _ref;
       if (this.scope.nodeType === 9) {
         html = this.scope.documentElement;
         klass = html.className;
@@ -15068,8 +15068,8 @@ Document = (function(_super) {
       if (this.removed) {
         _ref = this.removed;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          id = _ref[_i];
-          this.identity.unset(id);
+          element = _ref[_i];
+          this.identity.unset(element);
         }
         return this.removed = void 0;
       }
@@ -16158,9 +16158,12 @@ Engine.prototype.Identity = (function() {
     return this[id];
   };
 
-  Identity.prototype.unset = function(id) {
-    this[id]._gss_id = void 0;
-    return delete this[id];
+  Identity.prototype.unset = function(element) {
+    var id;
+    if (id = element._gss_id) {
+      delete this[id];
+      return element._gss_id = void 0;
+    }
   };
 
   Identity.prototype.find = function(object) {
@@ -16689,7 +16692,7 @@ inspired by Slick of mootools fame (shout-out & credits)
 
 Combinators fetch new elements, while qualifiers filter them.
  */
-var Query, Selector, dummy,
+var Query, Selector, div, dummy,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty,
   __slice = [].slice;
@@ -16875,7 +16878,7 @@ Selector = (function(_super) {
   };
 
   Selector.mutateChildList = function(engine, target, mutation) {
-    var added, allAdded, allChanged, allMoved, allRemoved, attribute, changed, changedTags, child, el, firstNext, firstPrev, id, index, j, kls, moved, next, node, parent, prev, prop, queries, removed, tag, update, value, values, _i, _j, _k, _l, _len, _len1, _len10, _len11, _len12, _len13, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _s, _t, _u, _v;
+    var added, allAdded, allChanged, allMoved, allRemoved, attribute, changed, changedTags, child, el, firstNext, firstPrev, index, kls, moved, next, node, parent, prev, prop, property, queries, removed, tag, update, value, values, _i, _j, _k, _l, _len, _len1, _len10, _len11, _len12, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _s, _t, _u;
     added = [];
     removed = [];
     _ref = mutation.addedNodes;
@@ -16963,23 +16966,32 @@ Selector = (function(_super) {
         }
       }
     }
+    if (Selector.destructuring) {
+      _ref5 = engine.identity;
+      for (property in _ref5) {
+        el = _ref5[property];
+        if (el.nodeType && !el.parentNode) {
+          allRemoved.push(el);
+        }
+      }
+    }
     allChanged = allAdded.concat(allRemoved, allMoved);
     update = {};
     for (_p = 0, _len7 = allChanged.length; _p < _len7; _p++) {
       node = allChanged[_p];
       if (node.className) {
-        _ref5 = node.classList || node.className.split(/\s+/);
-        for (_q = 0, _len8 = _ref5.length; _q < _len8; _q++) {
-          kls = _ref5[_q];
+        _ref6 = node.classList || node.className.split(/\s+/);
+        for (_q = 0, _len8 = _ref6.length; _q < _len8; _q++) {
+          kls = _ref6[_q];
           this.index(update, ' .', kls);
         }
       }
       if (node.id) {
         this.index(update, ' #', node.id);
       }
-      _ref6 = node.attributes;
-      for (_r = 0, _len9 = _ref6.length; _r < _len9; _r++) {
-        attribute = _ref6[_r];
+      _ref7 = node.attributes;
+      for (_r = 0, _len9 = _ref7.length; _r < _len9; _r++) {
+        attribute = _ref7[_r];
         if (attribute.name === 'class' || attribute.name === 'id') {
           continue;
         }
@@ -17033,17 +17045,7 @@ Selector = (function(_super) {
     for (_u = 0, _len12 = allRemoved.length; _u < _len12; _u++) {
       removed = allRemoved[_u];
       if (allAdded.indexOf(removed) === -1) {
-        if (id = engine.identity.find(removed)) {
-          (engine.removed || (engine.removed = [])).push(id);
-        }
-      }
-    }
-    if (engine.removed) {
-      for (_v = 0, _len13 = allAdded.length; _v < _len13; _v++) {
-        added = allAdded[_v];
-        if ((j = engine.removed.indexOf(engine.identity.find(added))) > -1) {
-          engine.removed.splice(j, 1);
-        }
+        (engine.removed || (engine.removed = [])).push(removed);
       }
     }
     return true;
@@ -17724,6 +17726,11 @@ Selector.define({
 
 if (typeof document !== "undefined" && document !== null) {
   dummy = Selector.dummy = document.createElement('_');
+  div = document.createElement('div');
+  div.appendChild(document.createElement('b'));
+  dummy.appendChild(div);
+  dummy.innerHTML = "";
+  Selector.destructuring = !div.childNodes.length;
   if (!dummy.hasOwnProperty("classList")) {
     Selector['.'].prototype.Qualifier = function(node, value) {
       if (node.className.split(/\s+/).indexOf(value) > -1) {
@@ -24638,7 +24645,7 @@ Linear.prototype.Remove = Command.extend({
   if (c.isUnordered == null) {
     obj = {
       '10': 1,
-      '9': 1
+      9: 1
     };
     for (property in obj) {
       break;

@@ -164,8 +164,8 @@ class Document extends Engine
 
       # Unreference removed elements
       if @removed
-        for id in @removed
-          @identity.unset(id)
+        for element in @removed
+          @identity.unset(element)
         @removed = undefined
 
 
