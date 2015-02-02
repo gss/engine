@@ -15066,7 +15066,6 @@ Document = (function(_super) {
         }
       }
       if (this.removed) {
-        console.error(this.removed);
         _ref = this.removed;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           id = _ref[_i];
