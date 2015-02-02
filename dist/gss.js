@@ -17915,7 +17915,7 @@ Stylesheet = (function(_super) {
           argument.parent = operation;
         }
         if (command = argument.command || engine.Command(argument)) {
-          command.solve(engine, argument, continuation, scope);
+          command.solve(engine, argument, this.delimit(continuation, this.DESCEND), scope);
         }
       }
     }

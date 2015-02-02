@@ -27,7 +27,7 @@ class Stylesheet extends Command.List
       if argument?.push
         argument.parent ?= operation
         if command = argument.command || engine.Command(argument)
-          command.solve(engine, argument, continuation, scope)
+          command.solve(engine, argument, @delimit(continuation, @DESCEND), scope)
     return
 
   

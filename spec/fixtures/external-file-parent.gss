@@ -1,0 +1,9 @@
+#s1 {
+    width: == 100;
+
+    > div {
+        ^[left] == :first[left];
+        ^[right] == :last[right];
+        left: == :previous[right];
+    }
+}

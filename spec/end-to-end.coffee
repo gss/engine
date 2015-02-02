@@ -2082,7 +2082,29 @@ describe 'End - to - End', ->
             <link rel="stylesheet" id="external" type="text/gss" href="./fixtures/external-file-2-3.gss" scoped></link>
           """
 
+  describe "single file with ^ and id rulesets", ->
   
+    it 'should compute', (done) ->
+      counter = 0
+      listen = (e) ->     
+        counter++
+        if counter == 1
+          expect(e['$dd2[x]']).to.eql(100)
+          container.innerHTML = ""
+        else
+          expect(e['$dd2[x]']).to.eql(null)
+          done()     
+                     
+      engine.addEventListener 'solve', listen
+  
+      container.innerHTML =  """
+          <section id="s1">
+            <div id="dd1">123</div>
+            <div id="dd2">123</div>
+          </section>
+          <link rel="stylesheet" type="text/gss" href="./fixtures/external-file-parent.gss"></link>
+        """
+
   
   # VGL
   # ===========================================================
