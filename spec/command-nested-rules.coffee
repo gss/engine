@@ -403,16 +403,20 @@ describe 'Nested Rules', ->
       it 'should combine comma separated native selectors', (done) ->
         rules = [
           'rule', 
-          ['#', 'group1']
+          ['#', 'abgRoup']
 
           ['rule',
-            ['.', 'box']
+            ['.', ['>'], 'box']
               
             ['==',
-              ['get'
-                ['^']
+              ['get',
+                ['^'],
                 'x']
-              100
+              
+              ['get',
+                [':first'],
+                'x'
+              ]
             ] 
           ]
         ]
@@ -422,17 +426,17 @@ describe 'Nested Rules', ->
             <div id="box1" class="box"></div>
             <div id="box2" class="box"></div>
           </div>
-          <div class="group" id="group1">
+          <div class="group" id="abgRoup">
             <div id="box3" class="box"></div>
             <div id="box4" class="box"></div>
           </div>
           """
 
         engine.once 'solve', (solution) ->
-          expect(solution).to.eql({'$group1[x]': 100})
+          expect(solution).to.eql({'$abgRoup[x]': 0, '$box3[x]': 0})
           container.innerHTML = ""
           engine.once 'solve', (solution) ->
-            expect(solution).to.eql({'$group1[x]': null})  
+            expect(solution).to.eql({'$abgRoup[x]': null, '$box3[x]': null})  
             done()
 
         engine.solve(rules, 'link[type*="gss"]$external' + engine.Command.prototype.DESCEND + '@import(a)' + engine.Command.prototype.DESCEND)
