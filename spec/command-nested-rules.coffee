@@ -435,7 +435,7 @@ describe 'Nested Rules', ->
             expect(solution).to.eql({'$group1[x]': null})  
             done()
 
-        engine.solve(rules)
+        engine.solve(rules, 'link[type*="gss"]$external' + engine.Command.prototype.DESCEND + '@import(a)' + engine.Command.prototype.DESCEND)
 
     describe '1 level w/ multiple selectors and &', ->
       it 'should combine comma separated native selectors', (done) ->
