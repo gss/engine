@@ -49,7 +49,6 @@ class Stylesheet extends Command.List
       return 
     needle = @getOperation(operation, watchers, rule)
     previous = []
-
     for ops, index in watchers
       if ops
         other = @getRule(watchers[ops[0]][0])
@@ -68,9 +67,12 @@ class Stylesheet extends Command.List
       text = generated.cssText
 
       # Replace old property
-      if (i = text.indexOf(property + ':')) > -1
-        unless (j = text.indexOf(';', i) + 1)
-          j = text.length - 1
+      if (i = text.indexOf(' ' + property + ':')) == -1
+        if (i = text.indexOf('{' + property + ':')) ==1
+          i = text.indexOf(';' + property + ':')
+      if i > -1
+        i++
+        j = text.length - 1
       
       # Add property
       else

@@ -17954,10 +17954,14 @@ Stylesheet = (function(_super) {
     generated = rules[index];
     if (generated && (needle !== operation.index || value === '' || (other === rule && index !== needle))) {
       text = generated.cssText;
-      if ((i = text.indexOf(property + ':')) > -1) {
-        if (!(j = text.indexOf(';', i) + 1)) {
-          j = text.length - 1;
+      if ((i = text.indexOf(' ' + property + ':')) === -1) {
+        if ((i = text.indexOf('{' + property + ':')) === 1) {
+          i = text.indexOf(';' + property + ':');
         }
+      }
+      if (i > -1) {
+        i++;
+        j = text.length - 1;
       } else {
         i = j = text.length - 1;
       }
@@ -19195,18 +19199,23 @@ Matrix = (function(_super) {
 
   Matrix.prototype.matrix3d = function() {};
 
-  Matrix.prototype.Type = typeof Float32Array !== "undefined" && Float32Array !== null ? Float32Array : Array;
-
   Matrix.prototype.mat3 = function(matrix, method, a, b, c) {
     if (matrix == null) {
-      matrix = this._mat4.create();
+      matrix = this._mat3.create();
     }
-    return this._mat4[method](matrix, matrix, a, b, c);
+    if (matrix.length === 9) {
+      return this._mat3[method](matrix, matrix, a, b, c);
+    } else {
+      return this._mat4[method](matrix, matrix, a, b, c);
+    }
   };
 
   Matrix.prototype.mat4 = function(matrix, method, a, b, c) {
     if (matrix == null) {
       matrix = this._mat4.create();
+    }
+    if (matrix.length === 9) {
+      matrix = this._mat4.fromMat3(matrix);
     }
     return this._mat4[method](matrix, matrix, a, b, c);
   };
@@ -19228,10 +19237,6 @@ Matrix.prototype.Sequence = (function(_super) {
     return Sequence.__super__.constructor.apply(this, arguments);
   }
 
-  Sequence.prototype.ascend = function() {
-    debugger;
-  };
-
   return Sequence;
 
 })(Command.Sequence);
@@ -19246,7 +19251,7 @@ Matrix.Transformation1 = (function(_super) {
   Transformation1.prototype.signature = [
     [
       {
-        matrix: ['Matrix', 'Iterable']
+        matrix: ['Matrix']
       }
     ], {
       x: ['Variable', 'Number']
@@ -19255,13 +19260,13 @@ Matrix.Transformation1 = (function(_super) {
 
   Transformation1.define({
     translateX: function(matrix, x) {
-      return this.mat3(matrix, 'translate', [x, 0, 0]);
+      return this.mat3(matrix, 'translate', [x, 1, 1]);
     },
     translateY: function(matrix, y) {
-      return this.mat3(matrix, 'translate', [0, y, 0]);
+      return this.mat3(matrix, 'translate', [1, y, 1]);
     },
     translateZ: function(matrix, z) {
-      return this.mat4(matrix, 'translate', [0, 0, z]);
+      return this.mat4(matrix, 'translate', [1, 1, z]);
     },
     translate: function(matrix, x) {
       return this.mat3(matrix, 'translate', [x, x]);
@@ -19306,7 +19311,7 @@ Matrix.Transformation2 = (function(_super) {
   Transformation2.prototype.signature = [
     [
       {
-        matrix: ['Matrix', 'Iterable']
+        matrix: ['Matrix']
       }
     ], {
       x: ['Variable', 'Number'],
@@ -19337,7 +19342,7 @@ Matrix.Transformation3 = (function(_super) {
   Transformation3.prototype.signature = [
     [
       {
-        matrix: ['Matrix', 'Iterable']
+        matrix: ['Matrix']
       }
     ], {
       x: ['Variable', 'Number'],
@@ -19377,7 +19382,7 @@ Matrix.Transformation3A = (function(_super) {
   Transformation3A.prototype.signature = [
     [
       {
-        matrix: ['Matrix', 'Iterable']
+        matrix: ['Matrix']
       }
     ], {
       x: ['Variable', 'Number'],
@@ -20112,13 +20117,9 @@ Command = (function() {
     }
     if (top) {
       parent = operation;
-      while (((_ref1 = parent.parent) != null ? _ref1.domain : void 0) === parent.domain) {
+      while (((_ref1 = parent.parent) != null ? _ref1.domain : void 0) === parent.domain && !parent.parent.command.boundaries) {
         operation = parent;
-        if (parent = parent.parent) {
-          if (parent.command.boundaries) {
-            break;
-          }
-        }
+        parent = parent.parent;
       }
       if (!(domain = parent.domain)) {
         if (domain = (_ref2 = parent.command.domains) != null ? _ref2[parent.indexOf(operation)] : void 0) {
@@ -20318,9 +20319,6 @@ Command = (function() {
     }
     if (object.push) {
       return 'List';
-    }
-    if (object.length !== void 0) {
-      return 'Iterable';
     }
     return 'Object';
   };
@@ -21092,7 +21090,6 @@ Domain = (function() {
 
   Domain.prototype.callback = function(path, value) {
     var command, constraint, index, op, operation, url, values, variable, watcher, watchers, worker, workers, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
-    console.log('callback', path);
     if (watchers = (_ref = this.watchers) != null ? _ref[path] : void 0) {
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
         watcher = watchers[index];
@@ -23570,7 +23567,6 @@ Constraint = Command.extend({
     ]
   ],
   log: function(args, engine, operation, continuation, scope, name) {
-    debugger;
     return engine.console.push(name || operation[0], args, operation.hash || (operation.hash = this.toExpression(operation)));
   },
   toHash: function(meta) {
@@ -24238,29 +24234,23 @@ Top = Input.prototype.Default.extend({
   execute: function() {
     var args, continuation, domain, engine, meta, operation, scope, wrapper, _i;
     args = 5 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 4) : (_i = 0, []), engine = arguments[_i++], operation = arguments[_i++], continuation = arguments[_i++], scope = arguments[_i++];
-    args.unshift(operation[0]);
-    if (!(domain = typeof this.domain === "function" ? this.domain(engine, operation) : void 0)) {
-      if (!engine.solver.signatures[operation[0]]) {
-        if (!engine.output.signatures[operation[0]]) {
-          throw "[Solver] Unknown command" + operation[0];
-        }
-        return engine.output.solve(args, continuation, scope);
-      }
-    }
     meta = {
       key: this.delimit(continuation)
     };
     if (scope !== engine.scope) {
       meta.scope = engine.identify(scope);
     }
+    args.unshift(operation[0]);
     wrapper = this.produce(meta, args, operation);
     wrapper.index = operation.index;
     args.parent = wrapper;
-    if (domain) {
+    if (domain = typeof this.domain === "function" ? this.domain(engine, operation) : void 0) {
       wrapper.parent = operation.parent;
       wrapper.domain || (wrapper.domain = domain);
     }
-    engine.update(wrapper, void 0, void 0, domain);
+    if (engine.update(wrapper, void 0, void 0, domain) === void 0) {
+      return engine.data.solve(args);
+    }
   },
   produce: function(meta, args) {
     return [meta, args];
@@ -24388,10 +24378,10 @@ Input.prototype.Assignment.Style = Input.prototype.Assignment.extend({
   ]
 }, {
   'set': function(object, property, value, engine, operation, continuation, scope) {
-    if (engine.setStyle) {
+    if (engine.data) {
       engine.setStyle(object || scope, property, value, continuation, operation);
     } else {
-      engine.data.set(object || scope, property, value);
+      engine.input.set(object || scope, property, value);
     }
   }
 });
@@ -24709,7 +24699,7 @@ Output.prototype.Constraint = Constraint.extend({
     return a || b;
   },
   "!=": function(a, b) {
-    return a !== b;
+    return a === b;
   },
   "==": function(a, b) {
     return a === b;

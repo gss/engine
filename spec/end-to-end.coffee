@@ -422,7 +422,11 @@ describe 'End - to - End', ->
   describe 'Vanilla CSS', ->  
     getSource = (style) ->
       Array.prototype.slice.call(style.sheet.cssRules).map (rule) ->
-        return rule.cssText.replace(/^\s+|\s+$|\n|\t|\s*({|}|:|;)\s*|(\s+)/g, '$1$2').replace(/\='/g, '="').replace(/'\]/g, '"]')
+        return rule.cssText.replace(/^\s+|\s+$|\n|\t|\s*({|}|:|;)\s*|(\s+)/g, '$1$2').replace(/\='/g, '="').replace(/'\]/g, '"]').replace /{(.*?)}/, (m, inside) ->
+          console.error(inside)
+          bits = inside.split(';')
+          bits.pop()
+          return '{' +  bits.sort().join(';') + ';}'
       .join('\n')
     
     describe 'just CSS', ->
@@ -446,7 +450,49 @@ describe 'End - to - End', ->
             expect(getSource(engine.tag('style')[1])).to.equal ""
 
             done()   
-    
+      
+    describe 'with multiple properties', ->
+      it 'should dump background color before color', (done) ->
+        container.innerHTML =  """
+          <style type="text/gss" scoped>
+            #css-only-dump {
+              background-color: green;
+              color: blue;
+            }
+          </style>
+          <div id="css-only-dump"></div>
+          """
+        engine.once 'solve', (e) ->
+          expect(getSource(engine.tag('style')[1])).to.equal "#css-only-dump{background-color:green;color:blue;}"
+
+          dumper = engine.id('css-only-dump')
+          dumper.parentNode.removeChild(dumper)
+          engine.once 'solve', (e) ->
+            expect(getSource(engine.tag('style')[1])).to.equal ""
+
+            done()   
+
+      it 'should dump color before background-color', (done) ->
+        container.innerHTML =  """
+          <style type="text/gss" scoped>
+            #css-only-dump {
+              color: blue;
+              background-color: green;
+            }
+          </style>
+          <div id="css-only-dump"></div>
+          """
+        engine.once 'solve', (e) ->
+          expect(getSource(engine.tag('style')[1])).to.equal "#css-only-dump{background-color:green;color:blue;}"
+
+          dumper = engine.id('css-only-dump')
+          dumper.parentNode.removeChild(dumper)
+          engine.once 'solve', (e) ->
+            expect(getSource(engine.tag('style')[1])).to.equal ""
+
+            done()   
+
+
     describe 'CSS + CCSS', ->
       engine = null
     
@@ -638,7 +684,6 @@ describe 'End - to - End', ->
             }
           </style>
           """
-        zIndexAndHeight = (document.all && !window.atob || document.body.style.msTouchAction?) && 'height:200px;z-index:5;' || 'z-index:5;height:200px;'
         engine.once 'solve', ->
           expect(getSource(engine.tag('style')[1])).to.equal """
             .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
@@ -655,13 +700,13 @@ describe 'End - to - End', ->
             , ->
               expect(getSource(engine.tag('style')[1])).to.equal """
                 [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
-                .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
+                .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:200px;z-index:5;}
                 """
               engine.solve
                 A: 0
               , ->
                 expect(getSource(engine.tag('style')[1])).to.equal """
-                  .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
+                  .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:200px;z-index:5;}
                   """
                 engine.solve
                   B: 0
@@ -673,14 +718,14 @@ describe 'End - to - End', ->
                     B: 1
                   , ->
                     expect(getSource(engine.tag('style')[1])).to.equal """
-                      .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
+                      .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:200px;z-index:5;}
                       """
                     engine.solve
                       A: 1
                     , ->
                       expect(getSource(engine.tag('style')[1])).to.equal """
                         [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
-                        .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
+                        .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:200px;z-index:5;}
                         """
                       engine.solve
                         B: 0
@@ -738,14 +783,14 @@ describe 'End - to - End', ->
               B: 1
             , ->
               expect(getSource(engine.tag('style')[1])).to.equal """
-                .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
+                .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:200px;z-index:5;}
                 [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
                 """
               engine.solve
                 A: 0
               , ->
                 expect(getSource(engine.tag('style')[1])).to.equal """
-                  .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
+                  .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:200px;z-index:5;}
                   """
                 engine.solve
                   B: 0
@@ -757,13 +802,13 @@ describe 'End - to - End', ->
                     B: 1
                   , ->
                     expect(getSource(engine.tag('style')[1])).to.equal """
-                      .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
+                      .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:200px;z-index:5;}
                       """
                     engine.solve
                       A: 1
                     , ->
                       expect(getSource(engine.tag('style')[1])).to.equal """
-                        .outer #css-inner-dump-1, .outie #css-inner-dump-1{#{zIndexAndHeight}}
+                        .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:200px;z-index:5;}
                         [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
                         """
                       engine.solve
