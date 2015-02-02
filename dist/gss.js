@@ -15066,6 +15066,7 @@ Document = (function(_super) {
         }
       }
       if (this.removed) {
+        console.error(this.removed);
         _ref = this.removed;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           id = _ref[_i];
@@ -16158,8 +16159,9 @@ Engine.prototype.Identity = (function() {
     return this[id];
   };
 
-  Identity.prototype.unset = function(object) {
-    return delete this[object._gss_id];
+  Identity.prototype.unset = function(id) {
+    this[id]._gss_id = void 0;
+    return delete this[id];
   };
 
   Identity.prototype.find = function(object) {
@@ -16953,11 +16955,13 @@ Selector = (function(_super) {
     }
     for (_n = 0, _len5 = removed.length; _n < _len5; _n++) {
       child = removed[_n];
-      allRemoved.push(child);
-      _ref4 = child.getElementsByTagName('*');
-      for (_o = 0, _len6 = _ref4.length; _o < _len6; _o++) {
-        el = _ref4[_o];
-        allRemoved.push(el);
+      if (allAdded.indexOf(child) === -1) {
+        allRemoved.push(child);
+        _ref4 = child.getElementsByTagName('*');
+        for (_o = 0, _len6 = _ref4.length; _o < _len6; _o++) {
+          el = _ref4[_o];
+          allRemoved.push(el);
+        }
       }
     }
     allChanged = allAdded.concat(allRemoved, allMoved);

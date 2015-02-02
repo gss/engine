@@ -2089,11 +2089,11 @@ describe 'End - to - End', ->
       listen = (e) ->     
         counter++
         if counter == 1
-          expect(e['$dd2[x]']).to.eql(100)
+          expect(e['$d2[x]']).to.eql(100)
           container.innerHTML = ""
         else
-          expect(e['$dd2[x]']).to.eql(null)
-          engine.removeEventListener(listen)
+          expect(e['$d2[x]']).to.eql(null)
+          engine.removeEventListener('solve', listen)
           done()     
                      
 

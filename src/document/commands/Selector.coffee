@@ -224,9 +224,10 @@ class Selector extends Query
       for el in child.getElementsByTagName('*')
         allAdded.push(el)
     for child in removed
-      allRemoved.push(child)
-      for el in child.getElementsByTagName('*')
-        allRemoved.push(el)
+      if allAdded.indexOf(child) == -1
+        allRemoved.push(child)
+        for el in child.getElementsByTagName('*')
+          allRemoved.push(el)
     allChanged = allAdded.concat(allRemoved, allMoved)
 
     # Generate map of qualifiers to invalidate (to re-query native selectors)
