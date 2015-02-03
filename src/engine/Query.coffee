@@ -802,7 +802,7 @@ class Query extends Command
   getScope: (engine, node, continuation) ->
     if !node
       if (index = continuation.lastIndexOf('$')) > -1
-        if path = @getScopePath(engine, continuation, 0)
+        if path = @getScopePath(continuation, 0)
           if scope = @getByPath(engine, path)
             if scope.scoped
               if (parent = engine.getScopeElement(scope.parentNode)) == engine.scope
@@ -814,7 +814,7 @@ class Query extends Command
       return node._gss_id || node
 
   # Iterate parent scopes, skip conditions
-  getScopePath: (engine, continuation, level = 0, virtualize) ->
+  getScopePath: (continuation, level = 0, virtualize) ->
     last = continuation.length - 1
     if continuation.charCodeAt(last) == 8594 # @PAIR
       last = continuation.lastIndexOf(@DESCEND, last)
@@ -836,14 +836,14 @@ class Query extends Command
     return continuation.substring(0, last + 1)
 
   getPrefixPath: (engine, continuation, level = 0) ->
-    if path = @getScopePath(engine, continuation, level, true)
+    if path = @getScopePath(continuation, level, true)
       return path + @DESCEND
     return ''
 
   # Return id of a parent scope element
   getParentScope: (engine, scope, continuation, level = 1) ->
     return scope._gss_id unless continuation
-    if path = @getScopePath(engine, continuation, level)
+    if path = @getScopePath(continuation, level)
       if result = @getByPath(engine, path)
         if result.scoped
           result = engine.getScopeElement(result)
@@ -867,11 +867,11 @@ class Query extends Command
   # Remove all fork marks from a path. 
   # Allows multiple query paths have shared destination 
   getCanonicalPath: (continuation, compact) ->
-    PopDirectives = Query.PopDirectives ||= new RegExp("" +
-        "@[^@"   + @DESCEND   + "]+" +
-        @DESCEND + "$", "g")
-
+    PopDirectives = new RegExp("(?:" +
+        "@[^@"   + this.DESCEND   + "]+" +
+        this.DESCEND + ")+$", "g")
     bits = @delimit(continuation.replace(PopDirectives, '')).split(@DESCEND)
+    console.log(bits, continuation)
     last = bits[bits.length - 1]
     RemoveForkMarks = Query.RemoveForkMarks ||= new RegExp("" +
         "([^"   + @PAIR   + ",@])" +

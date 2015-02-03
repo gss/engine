@@ -2763,7 +2763,16 @@ describe 'End - to - End', ->
               "$container[width]": 15
               "$container[intrinsic-width]": 15
               "$box1[x]": 1
-            done()          
+            engine.id('container').style.width = '25px'
+            engine.then ->
+              expect(engine.values).to.eql 
+                "$container[width]": 25
+                "$container[intrinsic-width]": 25
+                "$box1[x]": 2
+              engine.scope.innerHTML = ""
+              engine.then ->
+                expect(engine.values).to.eql {}
+                done()
     
         container.innerHTML =  """
             <div id="container" style="width:5px">
@@ -2783,7 +2792,11 @@ describe 'End - to - End', ->
                   :next[x] == 1;
                 }
                 @else {
-                  :previous[x] == 1;
+                  @if ^width < 20 {
+                    :previous[x] == 1;
+                  } @else {
+                    :previous[x] == 2;
+                  }
                 }
               }            
             }

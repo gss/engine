@@ -363,6 +363,7 @@ class Stylesheet.Import extends Query
   type: 'Import'
 
   relative: true
+  virtualized: true
   
   signature: [
     'source': ['Selector', 'String', 'Node']

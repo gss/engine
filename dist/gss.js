@@ -22388,7 +22388,7 @@ Query = (function(_super) {
     var index, parent, path, scope;
     if (!node) {
       if ((index = continuation.lastIndexOf('$')) > -1) {
-        if (path = this.getScopePath(engine, continuation, 0)) {
+        if (path = this.getScopePath(continuation, 0)) {
           if (scope = this.getByPath(engine, path)) {
             if (scope.scoped) {
               if ((parent = engine.getScopeElement(scope.parentNode)) === engine.scope) {
@@ -22407,7 +22407,7 @@ Query = (function(_super) {
     }
   };
 
-  Query.prototype.getScopePath = function(engine, continuation, level, virtualize) {
+  Query.prototype.getScopePath = function(continuation, level, virtualize) {
     var index, last;
     if (level == null) {
       level = 0;
@@ -22443,7 +22443,7 @@ Query = (function(_super) {
     if (level == null) {
       level = 0;
     }
-    if (path = this.getScopePath(engine, continuation, level, true)) {
+    if (path = this.getScopePath(continuation, level, true)) {
       return path + this.DESCEND;
     }
     return '';
@@ -22457,7 +22457,7 @@ Query = (function(_super) {
     if (!continuation) {
       return scope._gss_id;
     }
-    if (path = this.getScopePath(engine, continuation, level)) {
+    if (path = this.getScopePath(continuation, level)) {
       if (result = this.getByPath(engine, path)) {
         if (result.scoped) {
           result = engine.getScopeElement(result);
@@ -22485,7 +22485,7 @@ Query = (function(_super) {
 
   Query.prototype.getCanonicalPath = function(continuation, compact) {
     var PopDirectives, RemoveForkMarks, bits, last;
-    PopDirectives = Query.PopDirectives || (Query.PopDirectives = new RegExp("" + "@[^@" + this.DESCEND + "]+" + this.DESCEND + "$", "g"));
+    PopDirectives = new RegExp("(?:" + "@[^@" + this.DESCEND + "]+" + this.DESCEND + ")+$", "g");
     bits = this.delimit(continuation.replace(PopDirectives, '')).split(this.DESCEND);
     last = bits[bits.length - 1];
     RemoveForkMarks = Query.RemoveForkMarks || (Query.RemoveForkMarks = new RegExp("" + "([^" + this.PAIR + ",@])" + "\\$[^\[" + this.ASCEND + "]+" + "(?:" + this.ASCEND + "|$)", "g"));
