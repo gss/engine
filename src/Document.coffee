@@ -279,6 +279,9 @@ class Document extends Engine
     return unless prop = @output.properties[property]
     camel = @camelize property
     if typeof value != 'string'
+      if value < 0 && (property == 'width' || property == 'height')
+        @console.warn(property + ' of', element, ' is negative: ', value)
+
       value = prop.format(value)
 
     if property == 'left' || property == 'top'

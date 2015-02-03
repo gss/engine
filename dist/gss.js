@@ -15219,6 +15219,9 @@ Document = (function(_super) {
     }
     camel = this.camelize(property);
     if (typeof value !== 'string') {
+      if (value < 0 && (property === 'width' || property === 'height')) {
+        this.console.warn(property + ' of', element, ' is negative: ', value);
+      }
       value = prop.format(value);
     }
     if (property === 'left' || property === 'top') {

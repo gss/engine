@@ -139,48 +139,34 @@ describe "GSS.View", ->
         done()
       
       engine.once 'solved', onSolved
-      
-  xdescribe 'printCss', ->
-    it 'prints css', (done) ->
-      container.innerHTML = """
-      <style type="text/gss">
-        .target[y] == 100;
-        .target[margin-right] == 55;
-        .target {
-          height: 33px;
-          height: == ::[intrinsic-height];
-        }
-      </style>
-      <div id="ignore1">
-        <div id="target1" class="target">
-          <div id="ignore2"> 
-            <div id="target2" class="target">
-            </div>
-          </div>
-        </div>  
-      </div>
-      """                        
 
-      q = document.getElementsByClassName('target')
-      target1 = q[0]
-      target2 = q[1]
-      
-      GSS.config.defaultMatrixType = 'mat4'
-      didAttach = false
-      
-      engine.once 'display', (values) ->
-        css1 = target1.gssView.printCss()
-        css2 = target2.gssView.printCss()
-        cssRoot = GSS.printCss()
-        m1 = "matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 100, 0, 1)"
-        m2 = "matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)"        
-        expectedCss1 = "#target1{position:absolute;margin:0px;top:0px;left:0px;#{GSS._.dasherize(GSS._.transformPrefix)}:#{m1};margin-right:55px;}"
-        expectedCss2 = "#target2{position:absolute;margin:0px;top:0px;left:0px;#{GSS._.dasherize(GSS._.transformPrefix)}:#{m2};margin-right:55px;}"
-        assert css1 is expectedCss1,"wrong css1 #{css1}"
-        assert css2 is expectedCss2,"wrong css2 #{css2}"
-        assert( cssRoot is (expectedCss1 + expectedCss2), "wrong cssRoot, #{cssRoot}")
+
+
+  describe 'Should warn when width or height are negative', ->
+              
+    it 'after solving', (done) ->   
         
+      engine.solve [
+          ['==', ['get',['.', 'target'],'height'], -100]
+        ]
+      
+      
+      container.innerHTML = """
+        <div id="target1" class="target">
+        </div>      
+      """  
+
+      warn = engine.console.warn
+      called = false
+      engine.console.warn = ->
+        called = true
+
+      onSolved = (e) ->
+        engine.console.warn = warn
+        expect(called).to.eql(true)
         done()
+      
+      engine.once 'solved', onSolved
       
 
       

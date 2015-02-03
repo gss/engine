@@ -23,7 +23,7 @@ module.exports = ->
             #standalone: 'GSS'
       spec:
         files:
-          'spec/js/specs.js': ['spec/specs.coffee']
+          'spec/js/specs.js': ['spec/all.coffee']
         options:
           transform: ['coffeeify']
           browserifyOptions:

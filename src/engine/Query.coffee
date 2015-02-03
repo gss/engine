@@ -871,7 +871,6 @@ class Query extends Command
         "@[^@"   + this.DESCEND   + "]+" +
         this.DESCEND + ")+$", "g")
     bits = @delimit(continuation.replace(PopDirectives, '')).split(@DESCEND)
-    console.log(bits, continuation)
     last = bits[bits.length - 1]
     RemoveForkMarks = Query.RemoveForkMarks ||= new RegExp("" +
         "([^"   + @PAIR   + ",@])" +
