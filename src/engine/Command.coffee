@@ -480,12 +480,27 @@ class Command
     operation
 
   # Find defined command signatures in the engine and register their methods
-  @compile: (engine, command) ->
+  @compile: (engine, command, force) ->
     unless command
-      for property, value of engine
-        if (proto = value?.prototype)? && proto instanceof Command
-          if property.match /^[A-Z]/
-            @compile(engine, value)
+
+      if engine.proto.hasOwnProperty('$signatures') && !force
+        #signatures = {}
+        for property, value of engine.proto.$signatures
+          console.info(property, engine.displayName)
+          engine.signatures[property] = value
+        #engine.signatures = signatures
+      else
+
+        for property, value of engine
+          if (proto = value?.prototype)? && proto instanceof Command
+            if property.match /^[A-Z]/
+              @compile(engine, value)
+
+        engine.proto.$signatures = {} 
+        for property, value of engine.signatures
+          console.error(property, engine.displayName)
+          engine.proto.$signatures[property] = value
+
       return
     if (engine.compiled ||= []).indexOf(command) > -1
       return
@@ -498,29 +513,29 @@ class Command
           Types[property] = value
           @compile(engine, value)
 
+
     for property, value of command
       if value != Command[property] && property != '__super__'
         if value?.prototype instanceof Command
           unless property.match /^[A-Z]/
             @register(engine.signatures, property, value, Types)
             if engine.helps
-              engine.engine[property] ||= @Helper(engine, property)
+              engine.$prototype[property] ||= @Helper(engine, property)
               if aliases = value.prototype.helpers
                 for name in aliases
-                  engine.engine[name] = engine.engine[property]
+                  engine.$prototype[name] = engine.$prototype[property]
+
     @Types = Types
 
     @
 
   # Compile command as an external helper on engine prototype
   @Helper: (engine, name) ->
-    signature = engine.signatures[name]
-    base = [name]
-    engine.engine[name] ?= ->
+    return ->
       args = Array.prototype.slice.call(arguments)
-      command = Command.match(engine, base.concat(args)).prototype
+      command = Command.match(engine, [name].concat(args)).prototype
       unless parent = command.constructor.__super__
-        return engine.engine.solve([name, arguments...])
+        return @engine.solve([name, arguments...])
 
       length =  command.padding
       if command.hasOwnProperty('permutation')
@@ -534,16 +549,16 @@ class Command
         args.length = length
 
       if extras = command.extras ? command.execute.length
-        args.push(engine)
+        args.push(@input)
         if extras > 1
           args.push(args)
           if extras > 2
             args.push('')
             if extras > 3
-              args.push(engine.scope)
+              args.push(@scope)
         if (result = command.execute.apply(command, args))?
           unless command.ascend == parent.ascend
-            command.ascend(engine, args, '', engine.scope, result)
+            command.ascend(engine.input, args, '', @scope, result)
           return result
 
 

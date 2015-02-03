@@ -1,6 +1,3 @@
-/* gss-engine - version 2.0.0 (2015-02-02) - http://gridstylesheets.org */
-/* gss-engine - version 2.0.0 (2015-02-02) - http://gridstylesheets.org */
-/* gss-engine - version 2.0.0 (2015-02-02) - http://gridstylesheets.org */
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 (function (global){
 global.GSS = require('../src/GSS');
@@ -15512,6 +15509,7 @@ Engine = (function() {
   function Engine(data, url) {
     var events, property, value, _i, _len, _ref;
     this.engine = this;
+    this.$prototype = Engine.prototype;
     if ((url != null) && (typeof Worker !== "undefined" && Worker !== null)) {
       this.url = this.getWorkerURL(url);
     }
@@ -15784,7 +15782,7 @@ Engine = (function() {
       domain = this[name];
       if (domain !== this && domain.engine) {
         if (typeof domain.compile === "function") {
-          domain.compile(this);
+          domain.compile();
         }
       }
     }
@@ -20361,15 +20359,31 @@ Command = (function() {
     return operation;
   };
 
-  Command.compile = function(engine, command) {
-    var Types, aliases, name, property, proto, value, _base, _j, _len;
+  Command.compile = function(engine, command, force) {
+    var Types, aliases, name, property, proto, value, _base, _j, _len, _ref, _ref1;
     if (!command) {
-      for (property in engine) {
-        value = engine[property];
-        if (((proto = value != null ? value.prototype : void 0) != null) && proto instanceof Command) {
-          if (property.match(/^[A-Z]/)) {
-            this.compile(engine, value);
+      if (engine.proto.hasOwnProperty('$signatures') && !force) {
+        _ref = engine.proto.$signatures;
+        for (property in _ref) {
+          value = _ref[property];
+          console.info(property, engine.displayName);
+          engine.signatures[property] = value;
+        }
+      } else {
+        for (property in engine) {
+          value = engine[property];
+          if (((proto = value != null ? value.prototype : void 0) != null) && proto instanceof Command) {
+            if (property.match(/^[A-Z]/)) {
+              this.compile(engine, value);
+            }
           }
+        }
+        engine.proto.$signatures = {};
+        _ref1 = engine.signatures;
+        for (property in _ref1) {
+          value = _ref1[property];
+          console.error(property, engine.displayName);
+          engine.proto.$signatures[property] = value;
         }
       }
       return;
@@ -20395,11 +20409,11 @@ Command = (function() {
           if (!property.match(/^[A-Z]/)) {
             this.register(engine.signatures, property, value, Types);
             if (engine.helps) {
-              (_base = engine.engine)[property] || (_base[property] = this.Helper(engine, property));
+              (_base = engine.$prototype)[property] || (_base[property] = this.Helper(engine, property));
               if (aliases = value.prototype.helpers) {
                 for (_j = 0, _len = aliases.length; _j < _len; _j++) {
                   name = aliases[_j];
-                  engine.engine[name] = engine.engine[property];
+                  engine.$prototype[name] = engine.$prototype[property];
                 }
               }
             }
@@ -20412,15 +20426,12 @@ Command = (function() {
   };
 
   Command.Helper = function(engine, name) {
-    var base, signature, _base;
-    signature = engine.signatures[name];
-    base = [name];
-    return (_base = engine.engine)[name] != null ? _base[name] : _base[name] = function() {
+    return function() {
       var arg, args, command, extras, index, length, parent, permutation, permuted, result, _j, _len, _ref;
       args = Array.prototype.slice.call(arguments);
-      command = Command.match(engine, base.concat(args)).prototype;
+      command = Command.match(engine, [name].concat(args)).prototype;
       if (!(parent = command.constructor.__super__)) {
-        return engine.engine.solve([name].concat(__slice.call(arguments)));
+        return this.engine.solve([name].concat(__slice.call(arguments)));
       }
       length = command.padding;
       if (command.hasOwnProperty('permutation')) {
@@ -20436,19 +20447,19 @@ Command = (function() {
         args.length = length;
       }
       if (extras = (_ref = command.extras) != null ? _ref : command.execute.length) {
-        args.push(engine);
+        args.push(this.input);
         if (extras > 1) {
           args.push(args);
           if (extras > 2) {
             args.push('');
             if (extras > 3) {
-              args.push(engine.scope);
+              args.push(this.scope);
             }
           }
         }
         if ((result = command.execute.apply(command, args)) != null) {
           if (command.ascend !== parent.ascend) {
-            command.ascend(engine, args, '', engine.scope, result);
+            command.ascend(engine.input, args, '', this.scope, result);
           }
           return result;
         }
@@ -21173,8 +21184,8 @@ Domain = (function() {
     return object;
   };
 
-  Domain.prototype.compile = function() {
-    return this.Command.compile(this);
+  Domain.prototype.compile = function(force) {
+    return this.Command.compile(this, void 0, force);
   };
 
   Domain.prototype.add = function(path, value) {
@@ -21358,6 +21369,7 @@ Domain = (function() {
         EngineDomainWrapper = function() {};
         EngineDomainWrapper.prototype = engine;
         EngineDomain.prototype = new EngineDomainWrapper;
+        EngineDomain.prototype.proto = domain;
         EngineDomain.prototype.engine = engine;
         EngineDomain.prototype.displayName = name;
         _ref = domain.prototype;

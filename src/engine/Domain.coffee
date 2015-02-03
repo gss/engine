@@ -188,7 +188,6 @@ class Domain
 
 
   callback: (path, value) ->
-
     # Notify watchers
     if watchers = @watchers?[path]
       for watcher, index in watchers by 3
@@ -233,8 +232,8 @@ class Domain
     return object
 
   # Generate signature lookup tables for commands provided by domain
-  compile: ->
-    @Command.compile @
+  compile: (force)->
+    @Command.compile @, undefined, force
 
   # Observe path so when it's cleaned, command's remove method is invoked
   add: (path, value) ->
@@ -374,6 +373,8 @@ class Domain
         EngineDomainWrapper = ->
         EngineDomainWrapper.prototype = engine
         EngineDomain.prototype        = new EngineDomainWrapper
+        EngineDomain::proto  = domain
+
         EngineDomain::engine = engine
         EngineDomain::displayName = name
         for property, value of domain::

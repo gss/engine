@@ -26,6 +26,7 @@ class Engine
 
   constructor: (data, url) -> #(scope, url, data)
     @engine = @
+    @$prototype = Engine::
 
     # Attempt to initialize worker
     if url? && Worker?
@@ -281,7 +282,7 @@ class Engine
   compile: () ->
     for name, domain of @
       if domain != @ && domain.engine
-        domain.compile?(@)
+        domain.compile?()
     @running = true
     @triggerEvent('compile', @)
 
