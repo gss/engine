@@ -4,12 +4,7 @@ assert = chai.assert
 
 
 describe 'Signatures', ->
-    
-    
-
-
-  
-  
+      
   engine = null
   describe 'dispatched by argument types', ->
     PrimitiveCommand = GSS.Engine::Command.extend {

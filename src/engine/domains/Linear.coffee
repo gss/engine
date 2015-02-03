@@ -194,7 +194,7 @@ Linear::Remove = Command.extend {
 # The hack enforces arrays as base structure.
 do ->
   unless c.isUnordered?
-    obj = {'10': 1, 9: 1}
+    obj = {'10': 1, '9': 1}
     for property of obj
       break
     if c.isUnordered = (property > 9)

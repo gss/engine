@@ -484,10 +484,8 @@ class Command
     unless command
 
       if engine.proto.hasOwnProperty('$signatures') && !force
-        #signatures = {}
         for property, value of engine.proto.$signatures
           engine.signatures[property] = value
-        #engine.signatures = signatures
       else
 
         for property, value of engine

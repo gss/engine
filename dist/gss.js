@@ -24662,7 +24662,7 @@ Linear.prototype.Remove = Command.extend({
   if (c.isUnordered == null) {
     obj = {
       '10': 1,
-      9: 1
+      '9': 1
     };
     for (property in obj) {
       break;
