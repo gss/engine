@@ -486,7 +486,6 @@ class Command
       if engine.proto.hasOwnProperty('$signatures') && !force
         #signatures = {}
         for property, value of engine.proto.$signatures
-          console.info(property, engine.displayName)
           engine.signatures[property] = value
         #engine.signatures = signatures
       else
@@ -498,7 +497,6 @@ class Command
 
         engine.proto.$signatures = {} 
         for property, value of engine.signatures
-          console.error(property, engine.displayName)
           engine.proto.$signatures[property] = value
 
       return

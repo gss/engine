@@ -20366,7 +20366,6 @@ Command = (function() {
         _ref = engine.proto.$signatures;
         for (property in _ref) {
           value = _ref[property];
-          console.info(property, engine.displayName);
           engine.signatures[property] = value;
         }
       } else {
@@ -20382,7 +20381,6 @@ Command = (function() {
         _ref1 = engine.signatures;
         for (property in _ref1) {
           value = _ref1[property];
-          console.error(property, engine.displayName);
           engine.proto.$signatures[property] = value;
         }
       }
