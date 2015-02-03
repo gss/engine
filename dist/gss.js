@@ -22484,11 +22484,12 @@ Query = (function(_super) {
   };
 
   Query.prototype.getCanonicalPath = function(continuation, compact) {
-    var bits, last, regexp;
-    bits = this.delimit(continuation).split(this.DESCEND);
+    var PopDirectives, RemoveForkMarks, bits, last;
+    PopDirectives = Query.PopDirectives || (Query.PopDirectives = new RegExp("" + "@[^@" + this.DESCEND + "]+" + this.DESCEND + "$", "g"));
+    bits = this.delimit(continuation.replace(PopDirectives, '')).split(this.DESCEND);
     last = bits[bits.length - 1];
-    regexp = Query.CanonicalizeRegExp || (Query.CanonicalizeRegExp = new RegExp("" + "([^" + this.PAIR + ",@])" + "\\$[^\[" + this.ASCEND + "]+" + "(?:" + this.ASCEND + "|$)", "g"));
-    last = bits[bits.length - 1] = last.replace(regexp, '$1');
+    RemoveForkMarks = Query.RemoveForkMarks || (Query.RemoveForkMarks = new RegExp("" + "([^" + this.PAIR + ",@])" + "\\$[^\[" + this.ASCEND + "]+" + "(?:" + this.ASCEND + "|$)", "g"));
+    last = bits[bits.length - 1] = last.replace(RemoveForkMarks, '$1');
     if (compact) {
       return last;
     }

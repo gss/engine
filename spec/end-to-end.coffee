@@ -2744,6 +2744,55 @@ describe 'End - to - End', ->
           """
         engine.once 'solve', listen
     
+
+    describe 'contextual @if @else with relative pseudo-selectors', ->
+      
+      # This one will require some serious surgery...
+      
+      it 'should compute values', (done) ->
+        listen = (e) ->
+          # TODO
+          expect(engine.values).to.eql 
+            "$container[width]": 5
+            "$container[intrinsic-width]": 5
+            "$box2[x]": 1
+
+          engine.id('container').style.width = '15px'
+          engine.then ->
+            expect(engine.values).to.eql 
+              "$container[width]": 15
+              "$container[intrinsic-width]": 15
+              "$box1[x]": 1
+            done()          
+    
+        container.innerHTML =  """
+            <div id="container" style="width:5px">
+              <div id="box1" class="box">
+                <div id="inside1" class="inside"></div>
+              </div>
+              <div id="box2" class="box">
+                <div id="inside2" class="inside"></div>
+              </div>
+            </div>
+            <style type="text/gss">
+            
+            #container {
+              width: == &intrinsic-width;
+              .box {
+                @if ^width < 10 {
+                  :next[x] == 1;
+                }
+                @else {
+                  :previous[x] == 1;
+                }
+              }            
+            }
+          
+            </style>
+          """
+        engine.once 'solve', listen
+  
+
     describe 'contextual @if @else inner nesting', ->
       
       # This one will require some serious surgery...
