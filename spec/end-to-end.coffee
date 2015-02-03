@@ -2750,30 +2750,33 @@ describe 'End - to - End', ->
       # This one will require some serious surgery...
       
       it 'should compute values', (done) ->
+        counter = 0
         listen = (e) ->
-          # TODO
-          expect(engine.values).to.eql 
-            "$container[width]": 5
-            "$container[intrinsic-width]": 5
-            "$box2[x]": 1
+          if ++counter == 1
+            expect(engine.values).to.eql 
+              "$container[width]": 5
+              "$container[intrinsic-width]": 5
+              "$box2[x]": 1
 
-          engine.id('container').style.width = '15px'
-          engine.then ->
+            engine.id('container').setAttribute('style', 'width: 15px')
+
+          else if counter == 2
             expect(engine.values).to.eql 
               "$container[width]": 15
               "$container[intrinsic-width]": 15
               "$box1[x]": 1
-            engine.id('container').style.width = '25px'
-            engine.then ->
-              expect(engine.values).to.eql 
-                "$container[width]": 25
-                "$container[intrinsic-width]": 25
-                "$box1[x]": 2
-              engine.scope.innerHTML = ""
-              engine.then ->
-                expect(engine.values).to.eql {}
-                done()
-    
+            engine.id('container').setAttribute('style', 'width: 25px')
+          else if counter == 3
+            expect(engine.values).to.eql 
+              "$container[width]": 25
+              "$container[intrinsic-width]": 25
+              "$box1[x]": 2
+            engine.scope.innerHTML = ""
+          else
+            engine.removeEventListener('solve', listen)
+            expect(engine.values).to.eql {}
+            done()
+
         container.innerHTML =  """
             <div id="container" style="width:5px">
               <div id="box1" class="box">
@@ -2803,7 +2806,7 @@ describe 'End - to - End', ->
           
             </style>
           """
-        engine.once 'solve', listen
+        engine.addEventListener 'solve', listen
   
 
     describe 'contextual @if @else inner nesting', ->
