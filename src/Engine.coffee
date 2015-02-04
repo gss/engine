@@ -356,7 +356,7 @@ class Engine
       unless src.match(/gss/i)
         # Select a script from document that has gss in its src
         scripts = document.querySelectorAll('script[src*=gss]')[0]
-        if scripts.length
+        if scripts?.length
           src = scripts[0].src
     return (url) ->
       unless typeof url == 'string'
