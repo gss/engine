@@ -2084,7 +2084,7 @@ describe 'End - to - End', ->
 
   describe "single file with ^ and id rulesets", ->
   
-    it 'should compute', (done) ->
+    xit 'should compute', (done) ->
       counter = 0
       listen = (e) ->     
         counter++
