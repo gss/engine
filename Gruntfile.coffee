@@ -4,26 +4,29 @@ module.exports = ->
     pkg: @file.readJSON 'package.json'
 
     clean:
-      nuke_components:
-        src: ['components/*/']
-      nuke_bower:
-        src: ['bower_components']
-      nuke_built:
-        src: ['dist']
+      dist:
+        src: ['dist/**/*.js']
+      spec:
+        src: ['spec/js/**/*.js']
 
     browserify:
+      options:
+        transform: ['coffeeify']
+        browserifyOptions:
+          extensions: ['.coffee']
+          fullPaths: false
       dist:
-        files:
-          'dist/gss.js': ['dist/document.parser.coffee']
-        options:
-          transform: ['coffeeify']
-          browserifyOptions:
-            extensions: ['.coffee']
-            fullPaths: false
-            #standalone: 'GSS'
+        files: [{
+          expand: true
+          cwd: 'bundles'
+          src: '**/*.coffee'
+          dest: 'dist'
+          ext: '.js'
+          extDot: 'last'
+        }]
       spec:
         files:
-          'spec/js/specs.js': ['spec/all.coffee']
+          'spec/js/specs.js': ['spec/specs.coffee']
         options:
           transform: ['coffeeify']
           browserifyOptions:
@@ -48,9 +51,15 @@ module.exports = ->
     uglify:
       options:
         report: 'min'
-      engine:
-        files:
-          './dist/gss.min.js': ['./dist/gss.js']
+      dist:
+        files: [{
+          expand: true
+          cwd: 'dist'
+          src: '**/*.js'
+          dest: 'dist'
+          ext: '.min.js'
+          extDot: 'last'
+        }]
 
     # Adding version information to the generated files
     banner: '/* <%= pkg.name %> - version <%= pkg.version %> (<%= grunt.template.today("yyyy-mm-dd") %>) - http://gridstylesheets.org */'
@@ -60,33 +69,26 @@ module.exports = ->
           position: 'top'
           banner: '<%= banner %>'
         files:
-          src: [
-            'dist/gss.js'
-            'dist/gss.min.js'
-          ]
+          src: ['dist/**/*.js']
 
     # Syntax checking
     coffeelint:
+      options:
+        'max_line_length':
+          level: 'ignore'
+        'no_trailing_whitespace':
+          level: 'ignore'
+        'no_backticks':
+          level: 'ignore'
+      bundle:
+        files:
+          src: ['src/**/*.coffee']
       src:
         files:
-          src: ['src/*.coffee', 'src/**/*.coffee']
-        options:
-          'max_line_length':
-            level: 'ignore'
-          'no_trailing_whitespace':
-            level: 'ignore'
-          'no_backticks':
-            level: 'ignore'
+          src: ['src/**/*.coffee']
       spec:
         files:
           src: ['spec/*.coffee']
-        options:
-          'max_line_length':
-            level: 'ignore'
-          'no_trailing_whitespace':
-            level: 'ignore'
-          'no_backticks':
-            level: 'ignore'
 
     docco:
       src:
@@ -173,9 +175,8 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-connect'
   @loadNpmTasks 'grunt-saucelabs'
 
-  @registerTask 'build', ['browserify:spec', 'uglify:engine', 'usebanner']
-  @registerTask 'test', ['coffeelint', 'build', 'phantom']
+  @registerTask 'build', ['coffeelint:src', 'coffeelint:bundle', 'clean:dist', 'browserify:dist', 'uglify:dist', 'usebanner:dist']
+  @registerTask 'test', ['coffeelint:spec', 'clean:spec', 'browserify:spec', 'build', 'phantom']
   @registerTask 'phantom', ['connect', 'mocha_phantomjs']
-  @registerTask 'crossbrowser', ['build', 'coffeelint', 'connect', 'mocha_phantomjs', 'saucelabs-mocha']
-  @registerTask 'default', ['build']
-  @registerTask 'nuke', ['clean']
+  @registerTask 'crossbrowser', ['test', 'saucelabs-mocha']
+  @registerTask 'default', ['test']
