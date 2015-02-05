@@ -358,9 +358,7 @@ class Engine
       src = scripts[scripts.length - 1].src
       unless src.match(/gss/i)
         # Select a script from document that has gss in its src
-        scripts = document.querySelectorAll('script[src*=gss]')[0]
-        if scripts?.length
-          src = scripts[0].src
+        src = document.querySelectorAll('script[src*=gss]')?[0]?.src
     return (url) ->
       unless typeof url == 'string'
         url = src
@@ -373,7 +371,7 @@ class Engine
             `<script src="my-custom-path/my-gss.js"></script>`
 
           - or provide worker path explicitly: 
-            `GSS(<scope>, "http://absolute.path/to/worker")`
+            `GSS(<scope>, "http://absolute.path/to/worker.js")`
         """
 
       return url
