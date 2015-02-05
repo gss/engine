@@ -2745,7 +2745,8 @@ describe 'End - to - End', ->
         engine.once 'solve', listen
     
 
-    describe 'contextual @if @else with relative pseudo-selectors', ->
+
+    xdescribe 'contextual @if @else with relative pseudo-selectors', ->
       
       # This one will require some serious surgery...
       
