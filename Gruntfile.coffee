@@ -26,7 +26,7 @@ module.exports = ->
         }]
       spec:
         files:
-          'spec/js/specs.js': ['spec/specs.coffee']
+          'spec/js/specs.js': ['spec/all.coffee']
         options:
           transform: ['coffeeify']
           browserifyOptions:
