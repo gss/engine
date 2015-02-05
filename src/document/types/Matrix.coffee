@@ -9,7 +9,7 @@ class Matrix extends Command
 
   matrix3d: ->
 
-  mat3: (matrix = @_mat3.create(), method, a, b, c) ->
+  mat3: (matrix = @_mat4.create(), method, a, b, c) ->
     if matrix.length == 9
       return @_mat3[method](matrix, matrix, a, b, c)
     else
@@ -22,6 +22,25 @@ class Matrix extends Command
 
   for property, method of Matrix::Library
     Matrix::['_' + property] = method
+
+  format: (matrix) ->
+    return 'matrix3d(' + 
+      matrix[0].toFixed(20) + ',' + 
+      matrix[1].toFixed(20) + ',' + 
+      matrix[2].toFixed(20) + ',' + 
+      matrix[3].toFixed(20) + ',' + 
+      matrix[4].toFixed(20) + ',' + 
+      matrix[5].toFixed(20) + ',' + 
+      matrix[6].toFixed(20) + ',' + 
+      matrix[7].toFixed(20) + ',' + 
+      matrix[8].toFixed(20) + ',' + 
+      matrix[9].toFixed(20) + ',' + 
+      matrix[10].toFixed(20) + ',' +
+      matrix[11].toFixed(20) + ',' +
+      matrix[12].toFixed(20) + ',' +
+      matrix[13].toFixed(20) + ',' +
+      matrix[14].toFixed(20) + ',' +
+      matrix[15].toFixed(20) + ')'
 
 class Matrix::Sequence extends Command.Sequence
 
@@ -36,13 +55,13 @@ class Matrix.Transformation1 extends Matrix
   @define
 
     translateX:  (matrix, x) ->
-      @mat3       matrix, 'translate', [x, 1, 1]
+      @mat3       matrix, 'translate', [x, 0, 0]
  
     translateY:  (matrix, y) ->
-      @mat3       matrix, 'translate', [1, y, 1]
+      @mat3       matrix, 'translate', [0, y, 0]
  
     translateZ:  (matrix, z) ->
-      @mat4       matrix, 'translate', [1, 1, z]
+      @mat4       matrix, 'translate', [0, 0, z]
  
     translate:   (matrix, x) ->
       @mat3       matrix, 'translate', [x, x]

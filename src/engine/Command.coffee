@@ -6,19 +6,12 @@ class Command
   constructor: (operation, parent, index, context) ->
     unless command = operation.command
       match = Command.match(@, operation, parent, index, context)
-      unless command = match.instance
-        command = new match(operation, @)
-      operation.command = command
-      if context
-        operation.context = context
-      if command.key?
-        command.push(operation, context)
-      else
-        (command.definition || match).instance = command
+      command = Command.assign(@, operation, match, context)
       unless parent
         command = Command.descend(command, @, operation)
 
     return command
+
 
   # Evaluate operation arguments, execute command, propagate result
   solve: (engine, operation, continuation, scope, ascender, ascending) ->
@@ -155,6 +148,7 @@ class Command
           argument.parent ?= operation
           command = (argument.domain || engine).Command(argument, operation, i, implicit)
           type = command.type
+
           if i
             if implicit
               implicit = argument
@@ -211,18 +205,33 @@ class Command
     else
       throw new Error "[" + engine.displayName + "] Too many arguments: got `" + type + "` in `" + @prototype.toExpression(operation) + "`"
         
+  @assign: (engine, operation, match, context) ->
+    unless command = match.instance
+      command = new match(operation, engine)
+    if context
+      operation.context = context
+    operation.command = command
+    if command.key?
+      command.push(operation, context)
+    else
+      (command.definition || match).instance = command
+    return command
+
   # Choose a sub type for command
   @descend: (command, engine, operation) ->
     if advices = command.advices
       for type in advices
-        if (proto = type::).condition
-          unless result = proto.condition(engine, operation, command)
-            continue 
-          if result != true
-            type = result
-        else
-          type(engine, operation, command)
+        result = 
+          if (proto = type::).condition
+            proto.condition(engine, operation, command)
+          else
+            type(engine, operation, command)
+
+        unless result
           continue
+
+        if result != true
+          type = result
 
         unless command = type.instance
           command = new type(operation)
@@ -368,8 +377,8 @@ class Command
     unless ascend == false
       for argument in operation
         unless ascend == argument
-          if argument.push && argument?.domain == engine
-            if argument[0] == 'get'
+          if argument.push && (engine == true || argument?.domain == engine)
+            if argument[0] == 'get' && engine != true
               return ascend
             @sanitize(engine, argument, false, replacement)
 

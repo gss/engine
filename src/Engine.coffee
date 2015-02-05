@@ -281,7 +281,7 @@ class Engine
   # Compile all static definitions in the engine
   compile: () ->
     for name, domain of @
-      if domain != @ && domain.engine
+      if domain && domain != @ && domain.engine
         domain.compile?()
     @running = true
     @triggerEvent('compile', @)

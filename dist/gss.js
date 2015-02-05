@@ -15780,7 +15780,7 @@ Engine = (function() {
     var domain, name;
     for (name in this) {
       domain = this[name];
-      if (domain !== this && domain.engine) {
+      if (domain && domain !== this && domain.engine) {
         if (typeof domain.compile === "function") {
           domain.compile();
         }
@@ -16543,7 +16543,9 @@ Shorthand = (function() {
     switch (typeof operation) {
       case 'object':
         name = operation[0];
-        if ((_ref = this.styles.engine.signatures[name]) != null ? (_ref1 = _ref.Number) != null ? _ref1.resolved : void 0 : void 0) {
+        if (typeof name === 'number') {
+          return styles.engine.Matrix.prototype.format(operation);
+        } else if ((_ref = this.styles.engine.signatures[name]) != null ? (_ref1 = _ref.Number) != null ? _ref1.resolved : void 0 : void 0) {
           return this.toExpressionString(key, operation[1], true) + name;
         } else {
           string = name + '(';
@@ -17669,7 +17671,7 @@ Selector.define({
       ey = engine.data.watch(node, 'computed-y', operation, continuation, scope);
       eh = engine.data.watch(node, 'computed-height', operation, continuation, scope);
       sy = engine.data.watch(engine.scope, 'scroll-top', operation, continuation, scope);
-      sh = engine.data.watch(engine.scope, 'computed-height', operation, continuation, scope);
+      sh = engine.data.watch(engine.scope, (engine.scope.nodeType === 1 && 'computed-' || '') + "height", operation, continuation, scope);
       if ((ey <= sy && ey + eh > sy + sh) || (ey > sy && ey < sy + sh) || (ey + eh > sy && ey + eh < sy + sh)) {
         return node;
       }
@@ -17686,7 +17688,7 @@ Selector.define({
       ex = engine.data.watch(node, 'computed-x', operation, continuation, scope);
       ew = engine.data.watch(node, 'computed-width', operation, continuation, scope);
       sx = engine.data.watch(engine.scope, 'scroll-left', operation, continuation, scope);
-      sw = engine.data.watch(engine.scope, 'computed-width', operation, continuation, scope);
+      sw = engine.data.watch(engine.scope, (engine.scope.nodeType === 1 && 'computed-' || '') + "height", operation, continuation, scope);
       if ((ex <= sx && ex + ew > sx + sw) || (ex > sx && ex < sx + sw) || (ex + ew > sx && ex < sx + sw)) {
         return node;
       }
@@ -18941,11 +18943,11 @@ Styles = (function() {
 
   Styles.prototype.color = ['color'];
 
-  Styles.prototype.columns = ['length'];
+  Styles.prototype.columns = ['Length'];
 
-  Styles.prototype['column-gap'] = ['length'];
+  Styles.prototype['column-gap'] = ['Length'];
 
-  Styles.prototype['column-width'] = ['length'];
+  Styles.prototype['column-width'] = ['Length'];
 
   Styles.prototype['column-count'] = ['Integer'];
 
@@ -19220,7 +19222,7 @@ Matrix = (function(_super) {
 
   Matrix.prototype.mat3 = function(matrix, method, a, b, c) {
     if (matrix == null) {
-      matrix = this._mat3.create();
+      matrix = this._mat4.create();
     }
     if (matrix.length === 9) {
       return this._mat3[method](matrix, matrix, a, b, c);
@@ -19244,6 +19246,10 @@ Matrix = (function(_super) {
     method = _ref[property];
     Matrix.prototype['_' + property] = method;
   }
+
+  Matrix.prototype.format = function(matrix) {
+    return 'matrix3d(' + matrix[0].toFixed(20) + ',' + matrix[1].toFixed(20) + ',' + matrix[2].toFixed(20) + ',' + matrix[3].toFixed(20) + ',' + matrix[4].toFixed(20) + ',' + matrix[5].toFixed(20) + ',' + matrix[6].toFixed(20) + ',' + matrix[7].toFixed(20) + ',' + matrix[8].toFixed(20) + ',' + matrix[9].toFixed(20) + ',' + matrix[10].toFixed(20) + ',' + matrix[11].toFixed(20) + ',' + matrix[12].toFixed(20) + ',' + matrix[13].toFixed(20) + ',' + matrix[14].toFixed(20) + ',' + matrix[15].toFixed(20) + ')';
+  };
 
   return Matrix;
 
@@ -19279,13 +19285,13 @@ Matrix.Transformation1 = (function(_super) {
 
   Transformation1.define({
     translateX: function(matrix, x) {
-      return this.mat3(matrix, 'translate', [x, 1, 1]);
+      return this.mat3(matrix, 'translate', [x, 0, 0]);
     },
     translateY: function(matrix, y) {
-      return this.mat3(matrix, 'translate', [1, y, 1]);
+      return this.mat3(matrix, 'translate', [0, y, 0]);
     },
     translateZ: function(matrix, z) {
-      return this.mat4(matrix, 'translate', [1, 1, z]);
+      return this.mat4(matrix, 'translate', [0, 0, z]);
     },
     translate: function(matrix, x) {
       return this.mat3(matrix, 'translate', [x, x]);
@@ -19837,18 +19843,7 @@ Command = (function() {
     var command, match;
     if (!(command = operation.command)) {
       match = Command.match(this, operation, parent, index, context);
-      if (!(command = match.instance)) {
-        command = new match(operation, this);
-      }
-      operation.command = command;
-      if (context) {
-        operation.context = context;
-      }
-      if (command.key != null) {
-        command.push(operation, context);
-      } else {
-        (command.definition || match).instance = command;
-      }
+      command = Command.assign(this, operation, match, context);
       if (!parent) {
         command = Command.descend(command, this, operation);
       }
@@ -20058,21 +20053,34 @@ Command = (function() {
     }
   };
 
+  Command.assign = function(engine, operation, match, context) {
+    var command;
+    if (!(command = match.instance)) {
+      command = new match(operation, engine);
+    }
+    if (context) {
+      operation.context = context;
+    }
+    operation.command = command;
+    if (command.key != null) {
+      command.push(operation, context);
+    } else {
+      (command.definition || match).instance = command;
+    }
+    return command;
+  };
+
   Command.descend = function(command, engine, operation) {
     var advices, argument, cmd, proto, result, type, _i, _j, _len, _len1;
     if (advices = command.advices) {
       for (_i = 0, _len = advices.length; _i < _len; _i++) {
         type = advices[_i];
-        if ((proto = type.prototype).condition) {
-          if (!(result = proto.condition(engine, operation, command))) {
-            continue;
-          }
-          if (result !== true) {
-            type = result;
-          }
-        } else {
-          type(engine, operation, command);
+        result = (proto = type.prototype).condition ? proto.condition(engine, operation, command) : type(engine, operation, command);
+        if (!result) {
           continue;
+        }
+        if (result !== true) {
+          type = result;
         }
         if (!(command = type.instance)) {
           command = new type(operation);
@@ -20231,8 +20239,8 @@ Command = (function() {
       for (_j = 0, _len = operation.length; _j < _len; _j++) {
         argument = operation[_j];
         if (ascend !== argument) {
-          if (argument.push && (argument != null ? argument.domain : void 0) === engine) {
-            if (argument[0] === 'get') {
+          if (argument.push && (engine === true || (argument != null ? argument.domain : void 0) === engine)) {
+            if (argument[0] === 'get' && engine !== true) {
               return ascend;
             }
             this.sanitize(engine, argument, false, replacement);
@@ -24160,7 +24168,7 @@ module.exports = Data;
 
 
 },{"../Command":29,"../Domain":30,"../commands/Variable":36}],38:[function(require,module,exports){
-var Command, Constraint, Domain, Input, Top, Variable,
+var Command, Constraint, Domain, Input, Sequential, Top, Variable,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty,
   __slice = [].slice;
@@ -24264,8 +24272,14 @@ Top = Input.prototype.Default.extend({
   },
   extras: 4,
   execute: function() {
-    var args, continuation, domain, engine, meta, operation, scope, wrapper, _i;
+    var args, continuation, domain, engine, meta, operation, parent, scope, wrapper, _i;
     args = 5 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 4) : (_i = 0, []), engine = arguments[_i++], operation = arguments[_i++], continuation = arguments[_i++], scope = arguments[_i++];
+    if (parent = operation.parent) {
+      if ((parent.command instanceof Command.Sequence) && !parent.command.boundaries) {
+        this.sanitize(true, operation, null, engine.output);
+        return engine.output.solve(operation, continuation, scope);
+      }
+    }
     meta = {
       key: this.delimit(continuation)
     };
@@ -24280,9 +24294,7 @@ Top = Input.prototype.Default.extend({
       wrapper.parent = operation.parent;
       wrapper.domain || (wrapper.domain = domain);
     }
-    if (engine.update(wrapper, void 0, void 0, domain) === void 0) {
-      return engine.data.solve(args);
-    }
+    engine.update(wrapper, void 0, void 0, domain);
   },
   produce: function(meta, args) {
     return [meta, args];
@@ -24297,7 +24309,32 @@ Top = Input.prototype.Default.extend({
   }
 });
 
-Input.prototype.Default.prototype.advices = [Top];
+Sequential = function(engine, operation, command) {
+  var index, parent;
+  if (parent = operation.parent) {
+    if ((parent.command instanceof Command.Sequence) && !(parent.command instanceof Command.List)) {
+      index = parent.indexOf(operation);
+      return Sequential.patch(engine.output, operation, parent, index, parent[index - 1]);
+    }
+  }
+};
+
+Sequential.patch = function(engine, operation, parent, index, context) {
+  var argument, match, _i, _len;
+  operation.domain = engine.output;
+  index = parent.indexOf(operation);
+  match = engine.Command.match(engine.output, operation, parent, index, context);
+  Command.assign(engine, operation, match, context);
+  for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
+    argument = operation[index];
+    if (argument.push) {
+      Sequential.patch(engine, argument, operation, index);
+    }
+  }
+  return match;
+};
+
+Input.prototype.Default.prototype.advices = [Sequential, Top];
 
 Input.prototype.List = Command.List;
 

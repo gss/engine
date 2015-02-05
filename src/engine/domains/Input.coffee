@@ -67,6 +67,10 @@ Top = Input::Default.extend
   extras: 4
 
   execute: (args..., engine, operation, continuation, scope) ->
+    if parent = operation.parent
+      if (parent.command instanceof Command.Sequence) && !parent.command.boundaries
+        @sanitize(true, operation, null, engine.output)
+        return engine.output.solve(operation, continuation, scope)
     meta = 
       key: @delimit(continuation)
       #index: operation.index
@@ -83,8 +87,8 @@ Top = Input::Default.extend
       wrapper.parent = operation.parent
       wrapper.domain ||= domain
 
-    if engine.update(wrapper, undefined, undefined, domain) == undefined
-      return engine.data.solve(args)
+    engine.update(wrapper, undefined, undefined, domain)
+    return
 
   produce: (meta, args)->
     return [meta, args]
@@ -94,8 +98,25 @@ Top = Input::Default.extend
       if domain = parent.command.domains?[parent.indexOf(operation)]
         return engine[domain]
 
+Sequential = (engine, operation, command) ->
+  if parent = operation.parent
+    if (parent.command instanceof Command.Sequence) && !(parent.command instanceof Command.List)
+      index = parent.indexOf(operation)
+      Sequential.patch(engine.output, operation, parent, index, parent[index - 1])
+
+Sequential.patch = (engine, operation, parent, index, context) ->
+  operation.domain = engine.output
+  index = parent.indexOf(operation)
+  match = engine.Command.match(engine.output, operation, parent, index, context)
+  Command.assign(engine, operation, match, context)
+  for argument, index in operation
+    if argument.push
+      Sequential.patch(engine, argument, operation, index)
+  return match
+
+
 # Register subclasses to be dispatched by condition
-Input::Default::advices = [Top]
+Input::Default::advices = [Sequential, Top]
 
 # Array of commands, stops command propagation
 Input::List = Command.List

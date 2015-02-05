@@ -76,6 +76,7 @@ Style = (definition, name, styles,
     keys = undefined
 
   matcher = new Matcher(name, keywords, types, keys, required, pad, max, initial, callback)
+  
   if initial?.displayName
     initial::style = matcher
     initial::styles = styles
@@ -160,7 +161,9 @@ class Shorthand
     switch typeof operation
       when 'object'
         name = operation[0]
-        if @styles.engine.signatures[name]?.Number?.resolved
+        if typeof name == 'number'
+          return styles.engine.Matrix.prototype.format(operation)
+        else if @styles.engine.signatures[name]?.Number?.resolved
           return @toExpressionString(key, operation[1], true) + name
         else
           string = name + '('

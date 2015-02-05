@@ -137,9 +137,9 @@ class Styles
                        'n-resize', 'se-resize', 'sw-resize', 's-resize', 'w-resize', 'text', 'wait', 'help']
   color:               ['color']
 
-  columns:             ['length']
-  'column-gap':        ['length']
-  'column-width':      ['length']
+  columns:             ['Length']
+  'column-gap':        ['Length']
+  'column-width':      ['Length']
   'column-count':      ['Integer']
 
 

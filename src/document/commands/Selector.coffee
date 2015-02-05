@@ -766,7 +766,8 @@ Selector.define
       ey = engine.data.watch(node,         'computed-y',      operation, continuation, scope)
       eh = engine.data.watch(node,         'computed-height', operation, continuation, scope)
       sy = engine.data.watch(engine.scope, 'scroll-top',      operation, continuation, scope)
-      sh = engine.data.watch(engine.scope, 'computed-height', operation, continuation, scope)
+
+      sh = engine.data.watch(engine.scope, "#{engine.scope.nodeType == 1 && 'computed-' || ''}height", operation, continuation, scope)
         
       if (ey <= sy && ey + eh > sy + sh)  || # mid
          (ey > sy && ey < sy + sh)        || # top
@@ -780,7 +781,7 @@ Selector.define
       ex = engine.data.watch(node,         'computed-x',     operation, continuation, scope)
       ew = engine.data.watch(node,         'computed-width', operation, continuation, scope)
       sx = engine.data.watch(engine.scope, 'scroll-left',    operation, continuation, scope)
-      sw = engine.data.watch(engine.scope, 'computed-width', operation, continuation, scope)
+      sw = engine.data.watch(engine.scope, "#{engine.scope.nodeType == 1 && 'computed-' || ''}height", operation, continuation, scope)
 
       if (ex <= sx && ex + ew > sx + sw)  || # mid
          (ex > sx && ex < sx + sw)        || # left
