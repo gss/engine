@@ -867,9 +867,12 @@ class Query extends Command
   # Remove all fork marks from a path. 
   # Allows multiple query paths have shared destination 
   getCanonicalPath: (continuation, compact) ->
-    PopDirectives = new RegExp("(?:" +
+    PopDirectives = new RegExp("" +
         "@[^@"   + this.DESCEND   + "]+" +
-        this.DESCEND + ")+$", "g")
+        this.DESCEND + "$", "g")
+    while (replaced = continuation.replace(PopDirectives, '')) != continuation
+      continuation = replaced
+      
     bits = @delimit(continuation.replace(PopDirectives, '')).split(@DESCEND)
     last = bits[bits.length - 1]
     RemoveForkMarks = Query.RemoveForkMarks ||= new RegExp("" +
