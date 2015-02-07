@@ -11,7 +11,10 @@ class Condition extends Query
     ]
   ]
 
-  List: true
+  List: {
+    2: true
+    3: true
+  }
 
   
   cleaning: true

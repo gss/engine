@@ -149,15 +149,16 @@ class Command
           command = (argument.domain || engine).Command(argument, operation, i, implicit)
           type = command.type
 
+          if operation[0] == ','
+            debugger
           if i
-            if implicit
+            if implicit && (!Default || !Default::proxy)
               implicit = argument
           else
-            if Default = command.Sequence
+            if (Default = command.Sequence)
               implicit = argument
             else
               Default = Command.Sequence
-
         else if i
           type = @typeOfObject(argument)
         else
@@ -805,7 +806,12 @@ class Command.Sequence extends Command
   constructor: ->
 
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
-    for argument, index in operation by 1
+    if ascender > -1
+      index = ascender + 1
+      result = ascending
+    console.log(index , result, 666)
+    for index in [index || 0 ... operation.length] by 1
+      argument = operation[index]
       argument.parent ||= operation
       if command = argument.command || engine.Command(argument)
         result = command.solve(engine, argument, continuation, scope, -1, result)
@@ -840,7 +846,7 @@ class Command.List extends Command.Sequence
 
   condition: (engine, operation) ->
     if parent = operation.parent
-      return parent.command.List || parent[0] == true #FIXME, parser thing
+      return parent.command.List?[parent.indexOf(operation)] || parent[0] == true #FIXME, parser thing
     else
       return !operation[0].command.Sequence
 

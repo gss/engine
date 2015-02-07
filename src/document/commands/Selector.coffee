@@ -329,6 +329,8 @@ class Selector extends Query
 
 class Selector::Sequence extends Query.Sequence
   type: 'Selector'
+
+Selector::Sequence::Sequence = Selector::Sequence
   
 Selector::checkers.selector = (command, other, parent, operation) ->
   if !other.head
@@ -608,10 +610,12 @@ Selector.define
     hidden: true
 
     Element: (parameter, engine, operation, continuation, scope) ->
+      if operation.parent.indexOf(operation) == 0
+        debugger
       return scope
 
-    retrieve: ->
-      return @execute arguments ...
+    retrieve: (engine, operation, continuation, scope) ->
+      return @execute(undefined, engine, operation, continuation, scope)
 
     # A little hack to avoid adding & multiple times
     continue: (engine, operation, continuation = '') ->
@@ -649,10 +653,15 @@ Selector.define
         if scope != engine.scope
           node = scope
 
+      if node == -1
+        debugger
+
       prefix = @getScope(engine, node, continuation) || '$'
+
       return prefix + '"' + value + '"'
 
     prefix: '"'
+    virtual: true
 
     unexpiring: true
 
@@ -801,6 +810,9 @@ Selector.define
     signature: false
 
     separator: ','
+
+    # Pass implicit context to each argument
+    proxy: true
 
     # Comma only serializes arguments
     serialize: ->
