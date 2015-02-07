@@ -159,7 +159,7 @@ class Query extends Command
         if !result
           removed = old
         @clean(engine, path, undefined, operation, scope)
-      else
+      else unless @unexpiring
         return
 
     # Register newly found nodes

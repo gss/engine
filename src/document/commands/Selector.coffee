@@ -654,6 +654,8 @@ Selector.define
 
     prefix: '"'
 
+    unexpiring: true
+
     #after: (args, result) ->
     #  return result
 
