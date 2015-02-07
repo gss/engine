@@ -327,11 +327,22 @@ class Selector extends Query
     update[type].push(value)
 
 
-class Selector::Sequence extends Query.Sequence
-  type: 'Selector'
+class Selector::Sequence extends Selector
+  constructor: (operation) ->
+    last = operation[operation.length - 1].command
+    @key = ""
+    @path = last.path
+    if last.path == last.selector
+      @selector = last.selector
+      @tags = last.tags
 
-Selector::Sequence::Sequence = Selector::Sequence
-  
+
+for property, value of Query::Sequence::
+  unless property == 'constructor' || property == 'retrieve' || property == 'type'
+    Selector::Sequence::[property] = value
+
+Selector::Sequence::push = ->
+
 Selector::checkers.selector = (command, other, parent, operation) ->
   if !other.head
     # Native selectors cant start with combinator other than whitespace
@@ -610,8 +621,6 @@ Selector.define
     hidden: true
 
     Element: (parameter, engine, operation, continuation, scope) ->
-      if operation.parent.indexOf(operation) == 0
-        debugger
       return scope
 
     retrieve: (engine, operation, continuation, scope) ->
@@ -622,6 +631,8 @@ Selector.define
       if (key = @key) == '&' && continuation.charAt(continuation.length - 1) == '&'
         return continuation
       return continuation + @key
+
+    #reference: true
 
   # Parent element (alias for !> *)
   '^':

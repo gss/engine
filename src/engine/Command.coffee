@@ -149,10 +149,8 @@ class Command
           command = (argument.domain || engine).Command(argument, operation, i, implicit)
           type = command.type
 
-          if operation[0] == ','
-            debugger
           if i
-            if implicit && (!Default || !Default::proxy)
+            if implicit
               implicit = argument
           else
             if (Default = command.Sequence)
@@ -186,6 +184,8 @@ class Command
         else unless (Default ||= signature.Default || engine.Default)
           return @unexpected(type, operation, signature, engine)
 
+      if Default?::proxy
+        implicit = context
 
     if command = Default || signature?.resolved || engine.Default
       return command
@@ -803,13 +803,13 @@ class Command
 
 # Operation iterator where result is passed as a first argument to next command
 class Command.Sequence extends Command
-  constructor: ->
+  constructor: () ->
 
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
     if ascender > -1
       index = ascender + 1
       result = ascending
-    console.log(index , result, 666)
+
     for index in [index || 0 ... operation.length] by 1
       argument = operation[index]
       argument.parent ||= operation
@@ -820,6 +820,7 @@ class Command.Sequence extends Command
 
   log: ->
   unlog: ->
+  sequence: true
 
   execute: (result) ->
     return result
@@ -845,6 +846,7 @@ class Command.List extends Command.Sequence
   type: 'List'
 
   condition: (engine, operation) ->
+    debugger
     if parent = operation.parent
       return parent.command.List?[parent.indexOf(operation)] || parent[0] == true #FIXME, parser thing
     else

@@ -360,6 +360,8 @@ class Stylesheet extends Command.List
     Query::continue.apply(@, arguments)# + @DESCEND
 
 class Stylesheet.Import extends Query
+  Sequence: undefined
+  
   type: 'Import'
 
   relative: true

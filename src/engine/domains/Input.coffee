@@ -68,7 +68,7 @@ Top = Input::Default.extend
 
   execute: (args..., engine, operation, continuation, scope) ->
     if parent = operation.parent
-      if (parent.command instanceof Command.Sequence) && !parent.command.boundaries
+      if (parent.command.sequence) && !parent.command.boundaries
         @sanitize(true, operation, null, engine.output)
         return engine.output.solve(operation, continuation, scope)
     meta = 
@@ -100,7 +100,7 @@ Top = Input::Default.extend
 
 Sequential = (engine, operation, command) ->
   if parent = operation.parent
-    if (parent.command instanceof Command.Sequence) && !(parent.command instanceof Command.List)
+    if parent.command.sequence && parent.command.type != 'List'
       index = parent.indexOf(operation)
       Sequential.patch(engine.output, operation, parent, index, parent[index - 1])
 

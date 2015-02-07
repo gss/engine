@@ -50,11 +50,13 @@ class Query extends Command
 
   push: (operation, context) ->
     if context
-      @inherit(context.command, inherited)
+      if @proxy
+        @proxied = context.command.path
+      @inherit(context.command, inherited, context)
 
     for index in [1 ... operation.length]
       if cmd = operation[index]?.command
-        inherited = @inherit(cmd, inherited)
+        inherited = @inherit(cmd, inherited, context)
 
 
     if tags = @tags
@@ -81,10 +83,12 @@ class Query extends Command
 
     return @
   
-  inherit: (command, inherited) ->
+  inherit: (command, inherited, context) ->
     if command.scoped
       @scoped = command.scoped
     if path = command.path
+      if proxied = (proxied = @proxied)
+        path = path.slice(proxied.length)
       if inherited
         @path += @separator + path
       else
@@ -564,6 +568,7 @@ class Query extends Command
 
   onLeft: (engine, operation, parent, continuation, scope) ->
     left = @getCanonicalPath(continuation)
+    debugger
     if engine.indexOfTriplet(engine.lefts, parent, left, scope) == -1
       parent.right = operation
       engine.lefts.push parent, left, scope
@@ -597,6 +602,7 @@ class Query extends Command
     # Attempt pairing
     last = continuation.lastIndexOf(@PAIR)
     if last > -1 && !operation.command.reference
+      debugger
       # Found right side
       prev = -1
       while (index = continuation.indexOf(@PAIR, prev + 1)) > -1
@@ -1036,4 +1042,7 @@ class Query extends Command
           return object[0].nodeType
         when "undefined"
           return object.length == 0
+
+
+  Sequence: Command.Sequence
 module.exports = Query
