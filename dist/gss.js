@@ -1,15 +1,39 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var GSS;
+
+GSS = require('./gss.engine');
+
+GSS.Document = require('../src/Document');
+
+module.exports = GSS;
+
+
+
+},{"../src/Document":16,"./gss.engine":3}],2:[function(require,module,exports){
+var GSS;
+
+GSS = require('./gss.document');
+
+GSS.Parser = require('gss-parser');
+
+module.exports = GSS;
+
+
+
+},{"./gss.document":1,"gss-parser":6}],3:[function(require,module,exports){
 (function (global){
-global.GSS = require('../src/GSS');
+var GSS;
 
-global.GSS.Document = require('../src/Document');
+GSS = require('../src/GSS');
 
-global.GSS.Parser = require('ccss-compiler');
+global.GSS = GSS;
+
+module.exports = GSS;
 
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../src/Document":13,"../src/GSS":15,"ccss-compiler":3}],2:[function(require,module,exports){
+},{"../src/GSS":18}],4:[function(require,module,exports){
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -31,121 +55,7 @@ var l=this.rows.get(this._objective);a.trace&&console.log(l);var m=b.strength.sy
       (module.compiled = true && module) : this
 );
 
-},{}],3:[function(require,module,exports){
-var ErrorReporter, parse, parser, scoper, vfl, vflHook, vgl, vglHook;
-
-if (typeof window !== "undefined" && window !== null) {
-  parser = require('./parser');
-  scoper = require('./scoper');
-} else {
-  parser = require('../lib/parser');
-  scoper = require('../lib/scoper');
-}
-
-vfl = require('vfl-compiler');
-
-vgl = require('vgl-compiler');
-
-ErrorReporter = require('error-reporter');
-
-parse = function(source) {
-  var columnNumber, error, errorReporter, lineNumber, message, results;
-  results = null;
-  try {
-    results = parser.parse(source);
-  } catch (_error) {
-    error = _error;
-    errorReporter = new ErrorReporter(source);
-    message = error.message, lineNumber = error.line, columnNumber = error.column;
-    errorReporter.reportError(message, lineNumber, columnNumber);
-  }
-  return scoper(results);
-};
-
-vflHook = function(name, terms, commands) {
-  var i, nestedCommand, newCommands, o, ruleSet, s, selector, _i, _j, _len, _len1, _ref, _ref1, _ref2;
-  if (commands == null) {
-    commands = [];
-  }
-  newCommands = [];
-  o = vfl.parse("@" + name + " " + terms);
-  _ref = o.statements;
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    s = _ref[_i];
-    newCommands = newCommands.concat(parse(s).commands);
-  }
-  if (commands.length > 0 && o.selectors.length > 0) {
-    ruleSet = "";
-    _ref1 = o.selectors;
-    for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
-      selector = _ref1[i];
-      /* to prepend ::scope inside parans
-      prefix = ''
-      if selector[0] is "("
-        prefix = "("
-        selector = selector.substr(1,selector.length-1)
-      
-      # prepend selector with ::scope unless
-      if selector.indexOf("&") isnt 0
-        if selector.indexOf("::") isnt 0
-          if selector.indexOf('"') isnt 0
-            prefix += "::scope "
-      
-      ruleSet += prefix + selector
-      */
-
-      ruleSet += selector;
-      if (i !== o.selectors.length - 1) {
-        ruleSet += ", ";
-      }
-    }
-    ruleSet += " {}";
-    nestedCommand = parse(ruleSet).commands[0];
-    nestedCommand[2] = commands;
-    newCommands.push(nestedCommand);
-    if (typeof window !== "undefined" && window !== null ? (_ref2 = window.GSS) != null ? _ref2.console : void 0 : void 0) {
-      window.GSS.console.row('@' + name, o.statements.concat([ruleSet]), terms);
-    }
-  }
-  return {
-    commands: newCommands
-  };
-};
-
-vglHook = function(name, terms, commands) {
-  var newCommands, s, statements, _i, _len;
-  if (commands == null) {
-    commands = [];
-  }
-  newCommands = [];
-  statements = vgl.parse("@" + name + " " + terms);
-  for (_i = 0, _len = statements.length; _i < _len; _i++) {
-    s = statements[_i];
-    newCommands = newCommands.concat(parse(s).commands);
-  }
-  return {
-    commands: commands.concat(newCommands)
-  };
-};
-
-parser.hooks = {
-  directives: {
-    'h': vflHook,
-    'v': vflHook,
-    'horizontal': vflHook,
-    'vertical': vflHook,
-    'grid-template': vglHook,
-    'grid-rows': vglHook,
-    'grid-cols': vglHook
-  }
-};
-
-module.exports = {
-  parse: parse,
-  scope: scoper
-};
-
-},{"../lib/parser":5,"../lib/scoper":6,"./parser":5,"./scoper":6,"error-reporter":7,"vfl-compiler":10,"vgl-compiler":8}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var Grammar, cloneCommand;
 
 cloneCommand = function(command) {
@@ -173,33 +83,6 @@ Grammar = (function() {
       return input.join('');
     }
     return '';
-  };
-
-  Grammar._unpack2DExpression = function(expression) {
-    var expressions, item, mapping, properties, property, _i, _len;
-    mapping = {
-      'bottom-left': ['left', 'bottom'],
-      'bottom-right': ['right', 'bottom'],
-      center: ['center-x', 'center-y'],
-      'intrinsic-size': ['intrinsic-width', 'intrinsic-height'],
-      position: ['x', 'y'],
-      size: ['width', 'height'],
-      'top-left': ['left', 'top'],
-      'top-right': ['right', 'top']
-    };
-    expressions = [expression];
-    property = expression[2];
-    properties = mapping[property];
-    if (properties != null) {
-      expressions = [];
-      for (_i = 0, _len = properties.length; _i < _len; _i++) {
-        item = properties[_i];
-        expression = expression.slice();
-        expression[2] = item;
-        expressions.push(expression);
-      }
-    }
-    return expressions;
   };
 
   Grammar.prototype._Error = null;
@@ -337,7 +220,7 @@ Grammar = (function() {
   }
 
   Grammar.prototype.constraint = function(head, tail, strengthAndWeight) {
-    var command, commands, firstExpression, headExpression, headExpressions, index, item, operator, secondExpression, tailExpression, tailExpressions, _i, _j, _len, _len1;
+    var command, commands, firstExpression, index, item, operator, secondExpression, _i, _len;
     commands = [];
     firstExpression = head;
     if ((strengthAndWeight == null) || strengthAndWeight.length === 0) {
@@ -347,20 +230,9 @@ Grammar = (function() {
       item = tail[index];
       operator = tail[index][1];
       secondExpression = tail[index][3];
-      headExpressions = Grammar._unpack2DExpression(firstExpression);
-      tailExpressions = Grammar._unpack2DExpression(secondExpression);
-      if (headExpressions.length > tailExpressions.length) {
-        tailExpressions.push(tailExpressions[0]);
-      } else if (headExpressions.length < tailExpressions.length) {
-        headExpressions.push(headExpressions[0]);
-      }
-      for (index = _j = 0, _len1 = tailExpressions.length; _j < _len1; index = ++_j) {
-        tailExpression = tailExpressions[index];
-        headExpression = headExpressions[index];
-        if ((headExpression != null) && (tailExpression != null)) {
-          command = [operator, headExpression, tailExpression].concat(strengthAndWeight);
-          commands.push(command);
-        }
+      if ((firstExpression != null) && (secondExpression != null)) {
+        command = [operator, firstExpression, secondExpression].concat(strengthAndWeight);
+        commands.push(command);
       }
       firstExpression = secondExpression;
     }
@@ -540,7 +412,7 @@ Grammar = (function() {
   Grammar.prototype.stay = function(variables) {
     var command, commands, expression, expressions, index, stay, _i, _len;
     stay = ['stay'].concat(variables);
-    expressions = Grammar._unpack2DExpression(stay[1]);
+    expressions = [stay[1]];
     commands = [];
     for (index = _i = 0, _len = expressions.length; _i < _len; index = ++_i) {
       expression = expressions[index];
@@ -574,7 +446,124 @@ Grammar = (function() {
 
 module.exports = Grammar;
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
+var ErrorReporter, parse, pegparser, scoper, twoDimensionUnpacker, vfl, vflHook, vgl, vglHook;
+
+if (typeof window !== "undefined" && window !== null) {
+  pegparser = require('./peg-parser');
+  scoper = require('./scoper');
+  twoDimensionUnpacker = require('./twodunpacker');
+} else {
+  pegparser = require('../lib/peg-parser');
+  scoper = require('../lib/scoper');
+  twoDimensionUnpacker = require('../lib/twodunpacker');
+}
+
+vfl = require('vfl-compiler');
+
+vgl = require('vgl-compiler');
+
+ErrorReporter = require('error-reporter');
+
+parse = function(source) {
+  var columnNumber, error, errorReporter, lineNumber, message, results;
+  results = null;
+  try {
+    results = pegparser.parse(source);
+  } catch (_error) {
+    error = _error;
+    errorReporter = new ErrorReporter(source);
+    message = error.message, lineNumber = error.line, columnNumber = error.column;
+    errorReporter.reportError(message, lineNumber, columnNumber);
+  }
+  return scoper(twoDimensionUnpacker(results));
+};
+
+vflHook = function(name, terms, commands) {
+  var i, nestedCommand, newCommands, o, ruleSet, s, selector, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+  if (commands == null) {
+    commands = [];
+  }
+  newCommands = [];
+  o = vfl.parse("@" + name + " " + terms);
+  _ref = o.statements;
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    s = _ref[_i];
+    newCommands = newCommands.concat(parse(s).commands);
+  }
+  if (commands.length > 0 && o.selectors.length > 0) {
+    ruleSet = "";
+    _ref1 = o.selectors;
+    for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
+      selector = _ref1[i];
+      /* to prepend ::scope inside parans
+      prefix = ''
+      if selector[0] is "("
+        prefix = "("
+        selector = selector.substr(1,selector.length-1)
+      
+      # prepend selector with ::scope unless
+      if selector.indexOf("&") isnt 0
+        if selector.indexOf("::") isnt 0
+          if selector.indexOf('"') isnt 0
+            prefix += "::scope "
+      
+      ruleSet += prefix + selector
+      */
+
+      ruleSet += selector;
+      if (i !== o.selectors.length - 1) {
+        ruleSet += ", ";
+      }
+    }
+    ruleSet += " {}";
+    nestedCommand = parse(ruleSet).commands[0];
+    nestedCommand[2] = commands;
+    newCommands.push(nestedCommand);
+    if (typeof window !== "undefined" && window !== null ? (_ref2 = window.GSS) != null ? _ref2.console : void 0 : void 0) {
+      window.GSS.console.row('@' + name, o.statements.concat([ruleSet]), terms);
+    }
+  }
+  return {
+    commands: newCommands
+  };
+};
+
+vglHook = function(name, terms, commands) {
+  var newCommands, s, statements, _i, _len;
+  if (commands == null) {
+    commands = [];
+  }
+  newCommands = [];
+  statements = vgl.parse("@" + name + " " + terms);
+  for (_i = 0, _len = statements.length; _i < _len; _i++) {
+    s = statements[_i];
+    newCommands = newCommands.concat(parse(s).commands);
+  }
+  return {
+    commands: commands.concat(newCommands)
+  };
+};
+
+pegparser.hooks = {
+  directives: {
+    'h': vflHook,
+    'v': vflHook,
+    'horizontal': vflHook,
+    'vertical': vflHook,
+    'grid-template': vglHook,
+    'grid-rows': vglHook,
+    'grid-cols': vglHook
+  }
+};
+
+module.exports = {
+  parse: parse,
+  scope: scoper,
+  twoDimensionUnpack: twoDimensionUnpacker
+};
+
+},{"../lib/peg-parser":7,"../lib/scoper":8,"../lib/twodunpacker":9,"./peg-parser":7,"./scoper":8,"./twodunpacker":9,"error-reporter":10,"vfl-compiler":13,"vgl-compiler":11}],7:[function(require,module,exports){
 module.exports = (function() {
   /*
    * Generated by PEG.js 0.8.0.
@@ -6459,7 +6448,7 @@ module.exports = (function() {
     parse:       parse
   };
 })();
-},{"./grammar":4}],6:[function(require,module,exports){
+},{"./grammar":5}],8:[function(require,module,exports){
 var analyze, mutate, _analyze, _mutate,
   _this = this;
 
@@ -6586,7 +6575,171 @@ _mutate = function(node) {
   }
 };
 
-},{}],7:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
+var analyze, expand2dProperties, propertyMapping, _addConstraintForUnpacking, _analyze, _changePropertyName, _clone, _removeTempState, _routeTraversalFor2DExpansion, _traverseAstFor2DProperties, _unpackRuleset2dConstraints,
+  _this = this;
+
+module.exports = function(ast) {
+  var buffer;
+  buffer = [];
+  analyze(ast, buffer);
+  expand2dProperties(buffer);
+  return ast;
+};
+
+analyze = function(ast, buffer) {
+  var node, _i, _len, _ref, _results;
+  if (ast.commands != null) {
+    _ref = ast.commands;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      node = _ref[_i];
+      _results.push(_analyze(node, ast.commands, true, buffer));
+    }
+    return _results;
+  }
+};
+
+_analyze = function(node, commands, firstLevelCmd, buffer) {
+  var commandName, headNode, tailNode;
+  if (node.length >= 2) {
+    commandName = node[0];
+    headNode = node[1];
+    if (node.length >= 3) {
+      tailNode = node[2];
+    }
+    if (commandName === 'rule') {
+      return _unpackRuleset2dConstraints(node, tailNode, commands, buffer);
+    } else {
+      _traverseAstFor2DProperties(node, headNode, commands, buffer, true);
+      if (tailNode != null) {
+        _traverseAstFor2DProperties(node, tailNode, commands, buffer);
+      }
+      if (!node._has2dProperty && (headNode._has2dProperty || ((tailNode != null) && tailNode._has2dProperty))) {
+        node._has2dProperty = true;
+      }
+      if (firstLevelCmd && node._has2dProperty) {
+        return _addConstraintForUnpacking(commands, node, buffer);
+      }
+    }
+  }
+};
+
+_unpackRuleset2dConstraints = function(node, tailNode, commands, buffer) {
+  var i, subCommand, _i, _len, _ref, _results;
+  _ref = tailNode.slice(0, +node.length + 1 || 9e9);
+  _results = [];
+  for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+    subCommand = _ref[i];
+    if (subCommand instanceof Array) {
+      _analyze(subCommand, commands, false, buffer);
+      if (subCommand._has2dProperty) {
+        _results.push(_addConstraintForUnpacking(tailNode, subCommand, buffer));
+      } else {
+        _results.push(void 0);
+      }
+    } else {
+      _results.push(void 0);
+    }
+  }
+  return _results;
+};
+
+_traverseAstFor2DProperties = function(parentNode, node, commands, buffer, isHeadConstraint) {
+  var nodeLastItem;
+  if (node instanceof Array && node.length > 0) {
+    nodeLastItem = node[node.length - 1];
+    if (!(nodeLastItem instanceof Array) && (propertyMapping[nodeLastItem] != null)) {
+      node._has2dProperty = true;
+      node._2DPropertyName = nodeLastItem;
+    } else {
+      _analyze(node, commands, false, buffer);
+    }
+    if (node._has2dProperty != null) {
+      if (isHeadConstraint) {
+        parentNode._has2dHeadNode = node._has2dProperty;
+      }
+      if (!isHeadConstraint) {
+        return parentNode._has2dTailNode = node._has2dProperty;
+      }
+    }
+  }
+};
+
+_addConstraintForUnpacking = function(commands, node, buffer) {
+  return buffer.push({
+    toExpand: {
+      parent: commands,
+      nodeWith2DProp: node
+    }
+  });
+};
+
+expand2dProperties = function(buffer) {
+  var clonedConstraint, expandNode, insertionIndex, _i, _len, _results;
+  _results = [];
+  for (_i = 0, _len = buffer.length; _i < _len; _i++) {
+    expandNode = buffer[_i];
+    clonedConstraint = _clone(expandNode.toExpand.nodeWith2DProp);
+    insertionIndex = (expandNode.toExpand.parent.indexOf(expandNode.toExpand.nodeWith2DProp)) + 1;
+    expandNode.toExpand.parent.splice(insertionIndex, 0, clonedConstraint);
+    _routeTraversalFor2DExpansion(expandNode.toExpand.nodeWith2DProp, 0);
+    _results.push(_routeTraversalFor2DExpansion(clonedConstraint, 1));
+  }
+  return _results;
+};
+
+_routeTraversalFor2DExpansion = function(node, index1DPropertyName) {
+  if (node._has2dHeadNode) {
+    _changePropertyName(node[1], index1DPropertyName);
+  }
+  if (node._has2dTailNode) {
+    _changePropertyName(node[2], index1DPropertyName);
+  }
+  return _removeTempState(node);
+};
+
+_changePropertyName = function(node, onedPropIndex) {
+  if (node instanceof Array) {
+    if (node[node.length - 1] === node._2DPropertyName) {
+      return node[node.length - 1] = propertyMapping[node._2DPropertyName][onedPropIndex];
+    } else {
+      return _routeTraversalFor2DExpansion(node, onedPropIndex);
+    }
+  }
+};
+
+_clone = function(obj) {
+  var key, temp;
+  if (obj === null || typeof obj !== "object") {
+    return obj;
+  }
+  temp = new obj.constructor();
+  for (key in obj) {
+    temp[key] = _clone(obj[key]);
+  }
+  return temp;
+};
+
+_removeTempState = function(node) {
+  delete node._has2dHeadNode;
+  delete node._has2dTailNode;
+  delete node._2DPropertyName;
+  return delete node._has2dProperty;
+};
+
+propertyMapping = {
+  'bottom-left': ['left', 'bottom'],
+  'bottom-right': ['right', 'bottom'],
+  center: ['center-x', 'center-y'],
+  'intrinsic-size': ['intrinsic-width', 'intrinsic-height'],
+  position: ['x', 'y'],
+  size: ['width', 'height'],
+  'top-left': ['left', 'top'],
+  'top-right': ['right', 'top']
+};
+
+},{}],10:[function(require,module,exports){
 var ErrorReporter,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -6681,7 +6834,7 @@ ErrorReporter = (function() {
 
 module.exports = ErrorReporter;
 
-},{}],8:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 var ErrorReporter, parse;
 
 if (typeof window !== "undefined" && window !== null) {
@@ -6708,7 +6861,7 @@ module.exports = {
   }
 };
 
-},{"../lib/parser":9,"./parser":9,"error-reporter":7}],9:[function(require,module,exports){
+},{"../lib/parser":12,"./parser":12,"error-reporter":10}],12:[function(require,module,exports){
 module.exports = (function() {
   /*
    * Generated by PEG.js 0.8.0.
@@ -10828,9 +10981,9 @@ module.exports = (function() {
     parse:       parse
   };
 })();
-},{}],10:[function(require,module,exports){
-arguments[4][8][0].apply(exports,arguments)
-},{"../lib/parser":11,"./parser":11,"dup":8,"error-reporter":12}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
+arguments[4][11][0].apply(exports,arguments)
+},{"../lib/parser":14,"./parser":14,"dup":11,"error-reporter":15}],14:[function(require,module,exports){
 module.exports = (function() {
   /*
    * Generated by PEG.js 0.8.0.
@@ -14817,9 +14970,9 @@ module.exports = (function() {
     parse:       parse
   };
 })();
-},{}],12:[function(require,module,exports){
-arguments[4][7][0].apply(exports,arguments)
-},{"dup":7}],13:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
+arguments[4][10][0].apply(exports,arguments)
+},{"dup":10}],16:[function(require,module,exports){
 var Document, Engine,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -15468,7 +15621,7 @@ module.exports = Document;
 
 
 
-},{"./Engine":14,"./document/Style":16,"./document/commands/Selector":17,"./document/commands/Stylesheet":18,"./document/commands/Unit":19,"./document/properties/Getters":20,"./document/properties/Styles":21,"./document/types/Color":22,"./document/types/Easing":23,"./document/types/Gradient":24,"./document/types/Matrix":25,"./document/types/Measurement":26,"./document/types/Primitive":27,"./document/types/URL":28}],14:[function(require,module,exports){
+},{"./Engine":17,"./document/Style":19,"./document/commands/Selector":20,"./document/commands/Stylesheet":21,"./document/commands/Unit":22,"./document/properties/Getters":23,"./document/properties/Styles":24,"./document/types/Color":25,"./document/types/Easing":26,"./document/types/Gradient":27,"./document/types/Matrix":28,"./document/types/Measurement":29,"./document/types/Primitive":30,"./document/types/URL":31}],17:[function(require,module,exports){
 
 /* Base class: Engine
 
@@ -15855,15 +16008,12 @@ Engine = (function() {
   };
 
   Engine.prototype.getWorkerURL = (function() {
-    var scripts, src;
+    var scripts, src, _ref, _ref1;
     if (typeof document !== "undefined" && document !== null) {
       scripts = document.getElementsByTagName('script');
       src = scripts[scripts.length - 1].src;
       if (!src.match(/gss/i)) {
-        scripts = document.querySelectorAll('script[src*=gss]')[0];
-        if (scripts.length) {
-          src = scripts[0].src;
-        }
+        src = (_ref = document.querySelectorAll('script[src*=gss]')) != null ? (_ref1 = _ref[0]) != null ? _ref1.src : void 0 : void 0;
       }
     }
     return function(url) {
@@ -15871,7 +16021,7 @@ Engine = (function() {
         url = src;
       }
       if (!url) {
-        throw new Error("Can not detect GSS source file to set up worker.\n\n- You can rename the gss file to contain \"gss\" in it:\n  `<script src=\"my-custom-path/my-gss.js\"></script>`\n\n- or provide worker path explicitly: \n  `GSS(<scope>, \"http://absolute.path/to/worker\")`");
+        throw new Error("Can not detect GSS source file to set up worker.\n\n- You can rename the gss file to contain \"gss\" in it:\n  `<script src=\"my-custom-path/my-gss.js\"></script>`\n\n- or provide worker path explicitly: \n  `GSS(<scope>, \"http://absolute.path/to/worker.js\")`");
       }
       return url;
     };
@@ -16256,7 +16406,7 @@ module.exports = Engine;
 
 
 
-},{"./engine/Command":29,"./engine/Domain":30,"./engine/Query":31,"./engine/Update":32,"./engine/domains/Data":37,"./engine/domains/Input":38,"./engine/domains/Linear":39,"./engine/domains/Output":40,"./engine/utilities/Console":41,"./engine/utilities/Exporter":42,"./engine/utilities/Inspector":43}],15:[function(require,module,exports){
+},{"./engine/Command":32,"./engine/Domain":33,"./engine/Query":34,"./engine/Update":35,"./engine/domains/Data":40,"./engine/domains/Input":41,"./engine/domains/Linear":42,"./engine/domains/Output":43,"./engine/utilities/Console":44,"./engine/utilities/Exporter":45,"./engine/utilities/Inspector":46}],18:[function(require,module,exports){
 
 /* Constructor: GSS
   Dispatches arguments by type, returns engine
@@ -16318,7 +16468,7 @@ module.exports = GSS;
 
 
 
-},{"./Engine":14}],16:[function(require,module,exports){
+},{"./Engine":17}],19:[function(require,module,exports){
 var Matcher, Shorthand, Style;
 
 Style = function(definition, name, styles, keywords, types, keys, properties, required, optional, depth) {
@@ -16691,7 +16841,7 @@ module.exports = Style;
 
 
 
-},{}],17:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 
 /* Selectors with custom combinators 
 inspired by Slick of mootools fame (shout-out & credits)
@@ -17879,7 +18029,7 @@ module.exports = Selector;
 
 
 
-},{"../../../vendor/MutationObserver.js":44,"../../../vendor/weakmap.js":46,"../../engine/Query":31}],18:[function(require,module,exports){
+},{"../../../vendor/MutationObserver.js":47,"../../../vendor/weakmap.js":49,"../../engine/Query":34}],21:[function(require,module,exports){
 var Command, GSS, Query, Stylesheet,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -18538,7 +18688,7 @@ module.exports = Stylesheet;
 
 
 
-},{"../../GSS":15,"../../engine/Command":29,"../../engine/Query":31}],19:[function(require,module,exports){
+},{"../../GSS":18,"../../engine/Command":32,"../../engine/Query":34}],22:[function(require,module,exports){
 var Unit, Variable,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -18631,7 +18781,7 @@ module.exports = Unit;
 
 
 
-},{"../../engine/commands/Variable":36}],20:[function(require,module,exports){
+},{"../../engine/commands/Variable":39}],23:[function(require,module,exports){
 var Getters;
 
 Getters = (function() {
@@ -18733,7 +18883,7 @@ module.exports = Getters;
 
 
 
-},{}],21:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 var Styles;
 
 Styles = (function() {
@@ -19009,7 +19159,7 @@ module.exports = Styles;
 
 
 
-},{}],22:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 var Color, Command,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -19122,7 +19272,7 @@ module.exports = Color;
 
 
 
-},{"../../engine/Command":29}],23:[function(require,module,exports){
+},{"../../engine/Command":32}],26:[function(require,module,exports){
 var Command, Easing,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -19160,7 +19310,7 @@ module.exports = Easing;
 
 
 
-},{"../../engine/commands/Variable":36}],24:[function(require,module,exports){
+},{"../../engine/commands/Variable":39}],27:[function(require,module,exports){
 var Command, Gradient,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -19196,7 +19346,7 @@ module.exports = Gradient;
 
 
 
-},{"../../engine/Command":29}],25:[function(require,module,exports){
+},{"../../engine/Command":32}],28:[function(require,module,exports){
 var Command, Matrix,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -19441,7 +19591,7 @@ module.exports = Matrix;
 
 
 
-},{"../../../vendor/gl-matrix":45,"../../engine/Command":29}],26:[function(require,module,exports){
+},{"../../../vendor/gl-matrix":48,"../../engine/Command":32}],29:[function(require,module,exports){
 var Measurement, Unit,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -19633,7 +19783,7 @@ module.exports = Measurement;
 
 
 
-},{"../commands/Unit":19}],27:[function(require,module,exports){
+},{"../commands/Unit":22}],30:[function(require,module,exports){
 var Command, Primitive,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -19793,7 +19943,7 @@ module.exports = Primitive;
 
 
 
-},{"../../engine/Command":29}],28:[function(require,module,exports){
+},{"../../engine/Command":32}],31:[function(require,module,exports){
 var Command, URL,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -19828,7 +19978,7 @@ module.exports = URL;
 
 
 
-},{"../../engine/Command":29}],29:[function(require,module,exports){
+},{"../../engine/Command":32}],32:[function(require,module,exports){
 var Command,
   __slice = [].slice,
   __hasProp = {}.hasOwnProperty,
@@ -20917,7 +21067,7 @@ module.exports = Command;
 
 
 
-},{}],30:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 
 /* Domain: Observable object. 
 
@@ -21434,7 +21584,7 @@ module.exports = Domain;
 
 
 
-},{}],31:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 var Command, Query,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -22729,7 +22879,7 @@ module.exports = Query;
 
 
 
-},{"./Command":29}],32:[function(require,module,exports){
+},{"./Command":32}],35:[function(require,module,exports){
 var Update, Updater,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -23361,7 +23511,7 @@ module.exports = Update;
 
 
 
-},{}],33:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 var Condition, Query,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -23588,7 +23738,7 @@ module.exports = Condition;
 
 
 
-},{"../Query":31}],34:[function(require,module,exports){
+},{"../Query":34}],37:[function(require,module,exports){
 var Command, Constraint;
 
 Command = require('../Command');
@@ -23904,7 +24054,7 @@ module.exports = Constraint;
 
 
 
-},{"../Command":29}],35:[function(require,module,exports){
+},{"../Command":32}],38:[function(require,module,exports){
 var Command, Iterator,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -23973,7 +24123,7 @@ module.exports = Iterator;
 
 
 
-},{"../Command":29}],36:[function(require,module,exports){
+},{"../Command":32}],39:[function(require,module,exports){
 var Command, Variable,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -24076,7 +24226,7 @@ module.exports = Variable;
 
 
 
-},{"../Command":29}],37:[function(require,module,exports){
+},{"../Command":32}],40:[function(require,module,exports){
 
 /* Domain: Given values
 
@@ -24167,7 +24317,7 @@ module.exports = Data;
 
 
 
-},{"../Command":29,"../Domain":30,"../commands/Variable":36}],38:[function(require,module,exports){
+},{"../Command":32,"../Domain":33,"../commands/Variable":39}],41:[function(require,module,exports){
 var Command, Constraint, Domain, Input, Sequential, Top, Variable,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty,
@@ -24459,7 +24609,7 @@ module.exports = Input;
 
 
 
-},{"../Command":29,"../Domain":30,"../commands/Condition":33,"../commands/Constraint":34,"../commands/Iterator":35,"../commands/Variable":36}],39:[function(require,module,exports){
+},{"../Command":32,"../Domain":33,"../commands/Condition":36,"../commands/Constraint":37,"../commands/Iterator":38,"../commands/Variable":39}],42:[function(require,module,exports){
 var Command, Constraint, Domain, Linear, Variable, c,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty,
@@ -24725,7 +24875,7 @@ module.exports = Linear;
 
 
 
-},{"../Command":29,"../Domain":30,"../commands/Constraint":34,"../commands/Variable":36,"cassowary":2}],40:[function(require,module,exports){
+},{"../Command":32,"../Domain":33,"../commands/Constraint":37,"../commands/Variable":39,"cassowary":4}],43:[function(require,module,exports){
 var Constraint, Data, Output,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
@@ -24768,7 +24918,7 @@ Output.prototype.Constraint = Constraint.extend({
     return a || b;
   },
   "!=": function(a, b) {
-    return a === b;
+    return a !== b;
   },
   "==": function(a, b) {
     return a === b;
@@ -24791,7 +24941,7 @@ module.exports = Output;
 
 
 
-},{"../commands/Constraint":34,"./Data":37}],41:[function(require,module,exports){
+},{"../commands/Constraint":37,"./Data":40}],44:[function(require,module,exports){
 var Console, method, _i, _len, _ref,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -25060,7 +25210,7 @@ module.exports = Console;
 
 
 
-},{}],42:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 var Exporter,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -25179,7 +25329,7 @@ module.exports = Exporter;
 
 
 
-},{}],43:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 var Inspector,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   __hasProp = {}.hasOwnProperty;
@@ -25843,7 +25993,7 @@ module.exports = Inspector;
 
 
 
-},{}],44:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 (function (global){
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
@@ -26390,7 +26540,7 @@ if (typeof window != 'undefined') {
     global.MutationObserver = JsMutationObserver;
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],45:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 /**
  * @fileoverview gl-matrix - High performance matrix and vector operations
  * @author Brandon Jones
@@ -30509,7 +30659,7 @@ if(typeof(exports) !== 'undefined') {
   })(shim.exports);
 })(this);
 
-},{}],46:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
  * Use of this source code is governed by a BSD-style
@@ -30548,4 +30698,4 @@ if (typeof WeakMap === 'undefined') {
   })();
 }
 
-},{}]},{},[1]);
+},{}]},{},[2]);

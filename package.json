@@ -39,7 +39,7 @@
     "./vendor"
   ],
   "dependencies": {
-    "ccss-compiler": "~1.1.2",
+    "gss-parser": "~1.1.4",
     "vfl-compiler": "~1.1.3",
     "cassowary": "git://github.com/slightlyoff/cassowary.js.git#829729cb602d4a17341b4d1a5dba6767bf1cfd5c"
   }

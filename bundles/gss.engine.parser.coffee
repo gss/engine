@@ -1,3 +1,3 @@
 GSS = require './gss.engine'
-GSS.Parser = require 'ccss-compiler'
+GSS.Parser = require 'gss-parser'
 module.exports = GSS
