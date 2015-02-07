@@ -17649,7 +17649,8 @@ Selector.define({
       prefix = this.getScope(engine, node, continuation) || '$';
       return prefix + '"' + value + '"';
     },
-    prefix: '"'
+    prefix: '"',
+    unexpiring: true
   }
 });
 
@@ -21783,7 +21784,7 @@ Query = (function(_super) {
           removed = old;
         }
         this.clean(engine, path, void 0, operation, scope);
-      } else {
+      } else if (!this.unexpiring) {
         return;
       }
     }
