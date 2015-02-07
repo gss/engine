@@ -3,6 +3,8 @@ Query = require('../Query')
 class Condition extends Query
   type: 'Condition'
 
+  Sequence: undefined
+
   signature: [
     if: ['Query', 'Selector', 'Variable', 'Constraint', 'Default'],
     then: ['Any'],

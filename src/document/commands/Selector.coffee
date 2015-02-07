@@ -664,9 +664,6 @@ Selector.define
         if scope != engine.scope
           node = scope
 
-      if node == -1
-        debugger
-
       prefix = @getScope(engine, node, continuation) || '$'
 
       return prefix + '"' + value + '"'

@@ -3092,7 +3092,7 @@ describe 'End - to - End', ->
               <style type="text/gss">                        
                         
                 .section {
-                  @h |-(p + p, $ #h1)-| gap(10) in($ #container);
+                  @h |-(p + p, $ #h1)-| gap(10) in ($(#container));
                 }
               
                 #container {

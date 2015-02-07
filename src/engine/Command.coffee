@@ -129,8 +129,8 @@ class Command
     # Stateful commands have link to previous op so they can fetch value
     else if context = operation.context
       # Quickly restore stateful value
-      method = (command = context.command).key && 'retrieve' || 'solve'
-      args[0] = command[method](context.domain || engine, context, continuation, scope)
+      method = (command = context.command).key? && 'retrieve' || 'solve'
+      args[0] = command[method](context.domain || engine, context, continuation, scope, false)
       return 1
     return 0
 
@@ -825,6 +825,11 @@ class Command.Sequence extends Command
   execute: (result) ->
     return result
 
+  release: (result, engine, operation, continuation, scope) ->
+    parent = operation.parent
+    if operation == parent[parent.length - 1]
+      parent.parent.command.release?(result, engine, parent, continuation, scope)
+
   yield: (result, engine, operation, continuation, scope, ascender, ascending) ->
     parent = operation.parent
 
@@ -846,7 +851,6 @@ class Command.List extends Command.Sequence
   type: 'List'
 
   condition: (engine, operation) ->
-    debugger
     if parent = operation.parent
       return parent.command.List?[parent.indexOf(operation)] || parent[0] == true #FIXME, parser thing
     else

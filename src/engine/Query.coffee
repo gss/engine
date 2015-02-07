@@ -568,7 +568,6 @@ class Query extends Command
 
   onLeft: (engine, operation, parent, continuation, scope) ->
     left = @getCanonicalPath(continuation)
-    debugger
     if engine.indexOfTriplet(engine.lefts, parent, left, scope) == -1
       parent.right = operation
       engine.lefts.push parent, left, scope
@@ -602,7 +601,6 @@ class Query extends Command
     # Attempt pairing
     last = continuation.lastIndexOf(@PAIR)
     if last > -1 && !operation.command.reference
-      debugger
       # Found right side
       prev = -1
       while (index = continuation.indexOf(@PAIR, prev + 1)) > -1
