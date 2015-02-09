@@ -129,8 +129,11 @@ class Command
     # Stateful commands have link to previous op so they can fetch value
     else if context = operation.context
       # Quickly restore stateful value
-      method = (command = context.command).key? && 'retrieve' || 'solve'
-      args[0] = command[method](context.domain || engine, context, continuation, scope, false)
+      method = (command = context.command).key && 'retrieve' || 'solve'
+      if context[0] == '&'
+        args[0] = scope
+      else
+        args[0] = command[method](context.domain || engine, context, continuation, scope, false)
       return 1
     return 0
 
@@ -835,7 +838,7 @@ class Command.Sequence extends Command
 
     # Recurse to the next operation in sequence when stateful op yielded
     if next = parent[parent.indexOf(operation) + 1]
-      if operation.command.key?
+      if operation.command.path?
         return next
     else
       # Recurse to sequence parent 

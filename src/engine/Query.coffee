@@ -272,7 +272,11 @@ class Query extends Command
       scopes.splice(index, 0, scope)
       @chain engine, collection[index - 1], node, continuation
       @chain engine, node, collection[index + 1], continuation
-      if operation.parent[0] == 'rule'
+      if (parent = operation.parent).command.sequence
+        if parent[parent.length - 1] == operation
+          parent = parent.parent
+      console.info(parent, parent.command)
+      if parent[0] == 'rule'
         engine.Stylesheet?.match(engine, node, continuation, true)
 
       return true
@@ -504,10 +508,11 @@ class Query extends Command
 
     # Check if collection was resorted
     if (collection = @get(engine, path))?.continuations
-      sorted = collection.slice().sort (a, b) =>
+      self = @
+      sorted = collection.slice().sort (a, b) ->
         i = collection.indexOf(a)
         j = collection.indexOf(b)
-        return @comparePosition(a, b, collection.continuations[i], collection.continuations[j]) && -1 || 1
+        return self.comparePosition(a, b, collection.continuations[i], collection.continuations[j]) && -1 || 1
       
 
       updated = undefined

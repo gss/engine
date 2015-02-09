@@ -337,6 +337,8 @@ class Selector::Sequence extends Selector
       @tags = last.tags
 
 
+
+
 for property, value of Query::Sequence::
   unless property == 'constructor' || property == 'retrieve' || property == 'type'
     Selector::Sequence::[property] = value
@@ -609,7 +611,9 @@ Selector.define
 
     serialize: (operation) ->
       # A little cheat code to serialize `&.filter` properly
-      if Selector[operation.parent[0]]?::Qualifier
+      if typeof (parent = operation.parent)[0] == 'object'
+        parent = parent[parent.indexOf(operation) + 1]
+      if Selector[parent[0]]?::Qualifier
         return '&'
       else
         return ''
@@ -624,7 +628,8 @@ Selector.define
       return scope
 
     retrieve: (engine, operation, continuation, scope) ->
-      return @execute(undefined, engine, operation, continuation, scope)
+      unless @key
+        return @execute(undefined, engine, operation, continuation, scope)
 
     # A little hack to avoid adding & multiple times
     continue: (engine, operation, continuation = '') ->

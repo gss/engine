@@ -267,7 +267,7 @@ class Stylesheet extends Command.List
     command = operation.command
     path = command.path
     if path.charAt(0) == '&'
-      if (key = path.substring(1)) == command.key
+      if (key = path.substring(1)) == command.key || !command.key
         return key
       else
         return @getCustomSelector((parent || command).path)
