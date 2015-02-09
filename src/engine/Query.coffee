@@ -275,7 +275,7 @@ class Query extends Command
       if (parent = operation.parent).command.sequence
         if parent[parent.length - 1] == operation
           parent = parent.parent
-      console.info(parent, parent.command)
+
       if parent[0] == 'rule'
         engine.Stylesheet?.match(engine, node, continuation, true)
 

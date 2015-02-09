@@ -133,7 +133,7 @@ class Command
       if context[0] == '&'
         args[0] = scope
       else
-        args[0] = command[method](context.domain || engine, context, continuation, scope, false)
+        args[0] = command[method](context.domain || engine, context, continuation, scope, -1)
       return 1
     return 0
 
@@ -835,6 +835,8 @@ class Command.Sequence extends Command
 
   yield: (result, engine, operation, continuation, scope, ascender, ascending) ->
     parent = operation.parent
+    if ascender == -1 && ascending == undefined
+      return
 
     # Recurse to the next operation in sequence when stateful op yielded
     if next = parent[parent.indexOf(operation) + 1]
