@@ -8,7 +8,7 @@ class Getters
       return Math.min(window.innerWidth, document.documentElement.clientWidth)
 
     height: ->
-      return document.documentElement.clientHeight
+      return Math.min(window.innerHeight, document.documentElement.clientHeight)
     x: 0
     y: 0
 
