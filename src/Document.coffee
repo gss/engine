@@ -362,12 +362,12 @@ class Document extends Engine
       if properties = @data.subscribers[id]
         if node.nodeType == 9
           node = node.documentElement
-          
+
         for prop of properties
           switch prop
-            when "x",      "intrinsic-x",      "computed-x"
+            when "x", "intrinsic-x", "computed-x", "intrinsic-left", "computed-left"
               @set id, prop, x + node.offsetLeft
-            when "y",      "intrinsic-y",      "computed-y"
+            when "y", "intrinsic-y", "computed-y", "intrinsic-top", "computed-top"
               @set id, prop, y + node.offsetTop
             when "width",  "intrinsic-width",  "computed-width"
               @set id, prop, node.offsetWidth
