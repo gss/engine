@@ -125,17 +125,18 @@ class Command
     # Stateless commands recieve context as ascending value
     if ascender == -1 && ascending?
       args[0] = ascending
-      return operation.context && 1 || 0
     # Stateful commands have link to previous op so they can fetch value
-    else if context = operation.context
+    else if context = operation.context || operation.parent?.context
       # Quickly restore stateful value
-      method = (command = context.command).key && 'retrieve' || 'solve'
-      if context[0] == '&'
-        args[0] = scope
+      if (command = context.command).key?
+        if context[0] == '&'
+          args[0] = scope
+        else
+          args[0] = @getByPath(engine, @delimit(continuation))
       else
-        args[0] = command[method](context.domain || engine, context, continuation, scope, -1)
-      return 1
-    return 0
+        args[0] = command.solve(context.domain || engine, context, continuation, scope, -1)
+    
+    return operation.context && 1 || 0
 
   # Process arguments and match appropriate command
   @match: (engine, operation, parent, index, context) ->
@@ -814,7 +815,7 @@ class Command.Sequence extends Command
       result = ascending
     else if ascender == -1 && ascending
       result = ascending
-      continuation += @ASCEND
+      continuation = @delimit(continuation, @ASCEND)
 
     for index in [index || 0 ... operation.length] by 1
       argument = operation[index]

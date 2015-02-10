@@ -108,7 +108,7 @@ class Query extends Command
       return tail[1].command.solve(engine, tail[1], continuation, scope)
 
 
-    return @perform(engine, @head, continuation, scope, ascender, ascending)
+    return @head.command.perform(engine, @head, continuation, scope, ascender, ascending)
 
   prepare: ->
     

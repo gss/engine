@@ -1441,6 +1441,106 @@ describe 'Nested Rules', ->
                 done()
         engine.solve rules
 
+      it 'should handle mix of global and local flattened selectors in subscoped rule', (done) ->
+        rules = [
+          ['rule', 
+            [
+              ['.','vessel']
+              [['.', 'box']]
+            ]
+
+            ["<=", 
+              ["get", ["&"], "width"], 
+              ["get", [['$'], [["#", "vessel1"]]], "width"]]
+          ]
+        ]
+        GSS.console.info('.vessel .box { ::[width] == #vessel1[width] } ')
+        container.innerHTML =  """
+          <div id="box0" class="box"></div>
+          <div id="vessel1" class="vessel">
+            <div id="box1" class="box"></div>
+            <div id="box2" class="box"></div>
+          </div>
+          <div id="box3" class="box"></div>
+          <div id="box4" class="box"></div>
+          """
+        
+
+
+        engine.once 'solve', ->
+          expect(stringify(engine.updated.getProblems())).to.eql stringify [[
+            [
+              key: ".vessel$vessel1↑.box$box1↓$↑#vessel1"
+              scope: "$box1"
+              ["<=",
+                ["get","$box1[width]"],
+                ["get","$vessel1[width]"]]
+            ]
+            [
+              key: ".vessel$vessel1↑.box$box2↓$↑#vessel1"
+              scope: "$box2"
+              ["<=",
+                ["get","$box2[width]"],
+                ["get","$vessel1[width]"]]
+            ]
+          ]]
+          vessel1 = engine.id('vessel1')
+          vessel1.parentNode.removeChild(vessel1)
+          engine.once 'solve', ->
+            expect(stringify(engine.updated.getProblems())).to.eql stringify [
+              [
+                ["remove", ".vessel$vessel1↑.box$box1↓$↑#vessel1"], 
+                ["remove", ".vessel$vessel1↑.box$box1↓$"],
+                ["remove", ".vessel$vessel1↑.box$box1"], 
+                ["remove", ".vessel$vessel1↑.box$box2↓$↑#vessel1"], 
+                ["remove", ".vessel$vessel1↑.box$box2↓$"],
+                ["remove", ".vessel$vessel1↑.box$box2"],
+                ["remove", ".vessel$vessel1"]
+              ]
+              [
+                ["remove", ".vessel$vessel1↑.box$box1↓$↑#vessel1",
+                           ".vessel$vessel1↑.box$box2↓$↑#vessel1"]
+              ]
+            ]
+            container.appendChild(vessel1)
+            engine.once 'solve', ->
+              expect(stringify(engine.updated.getProblems())).to.eql stringify [[
+                [
+                  key: ".vessel$vessel1↑.box$box1↓$↑#vessel1"
+                  scope: "$box1"
+                  ["<=",
+                    ["get","$box1[width]"],
+                    ["get","$vessel1[width]"]]
+                ]
+                [
+                  key: ".vessel$vessel1↑.box$box2↓$↑#vessel1"
+                  scope: "$box2"
+                  ["<=",
+                    ["get","$box2[width]"],
+                    ["get","$vessel1[width]"]]
+                ]
+              ]]
+              vessel1.parentNode.removeChild(vessel1)
+              engine.once 'solve', ->
+                expect(stringify(engine.updated.getProblems())).to.eql stringify [
+                  [
+                    ["remove", ".vessel$vessel1↑.box$box1↓$↑#vessel1"], 
+                    ["remove", ".vessel$vessel1↑.box$box1↓$"],
+                    ["remove", ".vessel$vessel1↑.box$box1"], 
+                    ["remove", ".vessel$vessel1↑.box$box2↓$↑#vessel1"], 
+                    ["remove", ".vessel$vessel1↑.box$box2↓$"],
+                    ["remove", ".vessel$vessel1↑.box$box2"],
+                    ["remove", ".vessel$vessel1"]
+                  ]
+                  [
+                    ["remove", ".vessel$vessel1↑.box$box1↓$↑#vessel1",
+                               ".vessel$vessel1↑.box$box2↓$↑#vessel1"]
+                  ]
+                ]
+                done()
+        engine.solve rules
+
+
 
 
       it 'should handle mix of global and local selector', (done) ->
@@ -1579,6 +1679,104 @@ describe 'Nested Rules', ->
         engine.solve rules
 
     describe '2 level', ->
+      it 'Runs flat commands from sourceNode', (done) ->
+        rules = 
+          ['rule', 
+            [
+              ['.', 'vessel']
+              [['.', 'box']]
+            ]
+
+
+            ['<=', ["get",["&"], "x"], 100]
+          ]
+        container.innerHTML =  """
+          <div id="box0" class="box"></div>
+          <div class="vessel" id="vessel0">
+            <div id="box1" class="box"></div>
+            <div id="box2" class="box"></div>
+          </div>
+          <div id="box3" class="box"></div>
+          <div id="box4" class="box"></div>
+          """
+        
+        box1 = container.getElementsByClassName('box')[1] 
+        vessel0 = container.getElementsByClassName('vessel')[0] 
+        engine.once 'solve', ->
+          expect(stringify engine.updated.getProblems()).to.eql stringify [[
+            [{"key":".vessel$vessel0↑.box$box1","scope":"$box1"},
+            ["<=",["get","$box1[x]"],100]]
+          ]
+          [
+            [{"key":".vessel$vessel0↑.box$box2","scope":"$box2"},
+            ["<=",["get","$box2[x]"],100]]
+          ]]
+          box1.setAttribute('class', '')
+
+          engine.once 'solve', ->
+            expect(stringify engine.updated.getProblems()).to.eql stringify [
+              [['remove', ".vessel$vessel0↑.box$box1"]]
+              [['remove', ".vessel$vessel0↑.box$box1"]]
+            ]
+            box1.setAttribute('class', 'box')
+
+            engine.once 'solve', ->
+              expect(stringify engine.updated.getProblems()).to.eql stringify [[
+                [{"key":".vessel$vessel0↑.box$box1","scope":"$box1"},
+                ["<=",["get","$box1[x]"],100]]
+              ]]
+              vessel0.setAttribute('class', '')
+
+              engine.once 'solve', ->
+                expect(stringify engine.updated.getProblems()).to.eql stringify [
+                  [
+                    ['remove', ".vessel$vessel0↑.box$box1"], 
+                    ['remove', ".vessel$vessel0↑.box$box2"], 
+                    ['remove', ".vessel$vessel0"]
+                  ]
+                  [['remove', ".vessel$vessel0↑.box$box2"]]
+                  [['remove', ".vessel$vessel0↑.box$box1"]]
+                ]
+                vessel0.setAttribute('class', 'vessel')
+
+                engine.once 'solve', ->
+                  expect(stringify engine.updated.getProblems()).to.eql stringify [[
+                    [{"key":".vessel$vessel0↑.box$box1","scope":"$box1"},
+                    ["<=",["get","$box1[x]"],100]]
+                  ]
+                  [
+                    [{"key":".vessel$vessel0↑.box$box2","scope":"$box2"},
+                    ["<=",["get","$box2[x]"],100]]
+                  ]]
+                  box1.parentNode.removeChild(box1)
+
+                  engine.once 'solve', ->
+                    expect(stringify engine.updated.getProblems()).to.eql stringify [
+                      [['remove', ".vessel$vessel0↑.box$box1"]]
+                      [['remove', ".vessel$vessel0↑.box$box1"]]
+                    ]
+                    vessel0.insertBefore(box1, vessel0.firstChild)
+
+                    engine.once 'solve', ->
+                      expect(stringify engine.updated.getProblems()).to.eql stringify [[
+                        [{"key":".vessel$vessel0↑.box$box1","scope":"$box1"},
+                        ["<=",["get","$box1[x]"],100]]
+                      ]]
+                      engine.scope.innerHTML = ""
+
+                      engine.once 'solve', ->
+                        expect(stringify engine.updated.getProblems()).to.eql stringify [
+                          [
+                            ['remove', ".vessel$vessel0↑.box$box1"],
+                            ['remove', ".vessel$vessel0↑.box$box2"],
+                            ['remove', ".vessel$vessel0"]
+                          ]
+                          [['remove', ".vessel$vessel0↑.box$box2"]]
+                          [['remove', ".vessel$vessel0↑.box$box1"]]
+                        ]
+                        engine.scope.innerHTML = ""
+                        done()
+        engine.solve rules
       it 'Runs commands from sourceNode', (done) ->
         rules = 
           ['rule', 
@@ -1678,6 +1876,111 @@ describe 'Nested Rules', ->
         engine.solve rules
 
     describe '2 level /w multiple selectors in parent', (e) ->
+      it 'Runs flat commands', (done) ->
+        rules = 
+          ['rule', 
+            [
+              [','
+                ['.', 'vessel']
+                ['#', 'group1']
+              ],
+              [
+                ['.', 'box']
+                [':last-child']
+              ]
+            ]
+
+
+              ['==', ["get",["&"], "x"], 100]
+            ]
+        container.innerHTML =  """
+          <div id="box0" class="box"></div>
+          <div class="vessel" id="vessel0">
+            <div id="box1" class="box"></div>
+            <div id="box2" class="box"></div>
+          </div>
+          <div class="group" id="group1">
+            <div id="box3" class="box"></div>
+            <div id="box4" class="box"></div>
+          </div>
+          """
+        
+        box2 = container.getElementsByClassName('box')[2] 
+        vessel0 = container.getElementsByClassName('vessel')[0] 
+
+        engine.once 'solve', ->
+          expect(engine.updated.getProblems()).to.eql [[
+            [{"key":".vessel,#group1$vessel0↑.box:last-child$box2","scope":"$box2"},
+              ["==",["get","$box2[x]"],100]]],
+            [[{"key":".vessel,#group1$group1↑.box:last-child$box4","scope":"$box4"},
+              ["==",["get","$box4[x]"],100]]]]
+          box2.setAttribute('class', '')
+          
+          engine.once 'solve', ->
+            expect(stringify engine.updated.getProblems()).to.eql stringify [
+              [["remove",".vessel,#group1$vessel0↑.box:last-child$box2"]]
+              [["remove",".vessel,#group1$vessel0↑.box:last-child$box2"]]
+            ]
+            box2.setAttribute('class', 'box')
+
+            engine.once 'solve', ->
+              expect(engine.updated.getProblems()).to.eql [[
+                [{"key":".vessel,#group1$vessel0↑.box:last-child$box2","scope":"$box2"},
+                  ["==",["get","$box2[x]"],100]]
+              ]]
+              vessel0.setAttribute('class', '')
+                  
+              engine.once 'solve', ->
+                expect(stringify engine.updated.getProblems()).to.eql  stringify [
+                  [
+                    ["remove",".vessel,#group1$vessel0↑.box:last-child$box2"], 
+                    ["remove",".vessel,#group1$vessel0"]
+                  ]
+                  [["remove",".vessel,#group1$vessel0↑.box:last-child$box2"]]
+                ]
+                vessel0.setAttribute('class', 'vessel')
+                    
+                engine.once 'solve', ->
+
+                  [{"key":".vessel,#group1$vessel0↑.box:last-child$box2","scope":"$box2"},
+                    ["==",["get","$box2[x]"],100]]
+
+                  vessel0.removeChild(box2)
+                      
+                  engine.once 'solve', ->
+                    expect(stringify engine.updated.getProblems()).to.eql stringify [
+                      [["remove",".vessel,#group1$vessel0↑.box:last-child$box2"]]
+                      [["remove", ".vessel,#group1$vessel0↑.box:last-child$box2"]]
+                      [[{"key":".vessel,#group1$vessel0↑.box:last-child$box1","scope":"$box1"},
+                        ["==",["get","$box1[x]"],100]]]
+                      
+                    ]
+                    vessel0.appendChild(box2)
+                        
+                    engine.once 'solve', ->
+                      expect(stringify engine.updated.getProblems()).to.eql stringify [
+                        [["remove",".vessel,#group1$vessel0↑.box:last-child$box1"]]
+                        [["remove",".vessel,#group1$vessel0↑.box:last-child$box1"]]
+                        [[{"key":".vessel,#group1$vessel0↑.box:last-child$box2","scope":"$box2"},
+                          ["==",["get","$box2[x]"],100]]]
+                        
+                      ]
+                      engine.scope.innerHTML = ""
+
+                      engine.once 'solve', ->
+                        expect(stringify engine.updated.getProblems()).to.eql stringify [
+                          [
+                            ["remove", ".vessel,#group1$vessel0↑.box:last-child$box2"]
+                            ["remove", ".vessel,#group1$vessel0"]
+                            ["remove", ".vessel,#group1$group1↑.box:last-child$box4"]
+                            ["remove", ".vessel,#group1$group1"]
+                          ]
+                          [["remove", ".vessel,#group1$group1↑.box:last-child$box4"]]
+                          [["remove", ".vessel,#group1$vessel0↑.box:last-child$box2"]]
+                        ]
+                        done()
+        engine.solve rules
+
       it 'Runs commands from sourceNode', (done) ->
         rules = 
           ['rule', 

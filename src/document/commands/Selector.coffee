@@ -43,10 +43,8 @@ class Selector extends Query
     args = [scope, selector]
     if ascender?
       args[0] = ascending
-    else if context = @tail.context
-      context.command.contextualize(args, engine, @tail, continuation, scope)
-    else if context = @tail.parent.context
-      args[0] = context.command.retrieve(engine, context, @delimit(continuation), scope)
+    else
+      @tail.command.contextualize(args, engine, @tail, continuation, scope)
 
 
     command.log(args, engine, operation, continuation, scope, command.selecting && 'select' || 'match')
