@@ -373,6 +373,8 @@ class Document extends Engine
               @set id, prop, node.offsetWidth
             when "height", "intrinsic-height", "computed-height"
               @set id, prop, node.offsetHeight
+            when "scroll-top", "scroll-left"
+              
             else
               style = prop.replace(/^(?:computed|intrinsic)-/, '')
               if @properties[style]
