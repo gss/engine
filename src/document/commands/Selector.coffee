@@ -49,7 +49,7 @@ class Selector extends Query
 
     command.log(args, engine, operation, continuation, scope, command.selecting && 'select' || 'match')
     result  = command.before(args, engine, operation, continuation, scope)
-    node = args[0] || scope
+    node = @precontextualize(engine, scope, args[0])
     if command.selecting
       result ?= node.querySelectorAll(args[1])
     else if (result != node) && node.matches(args[1])
@@ -58,6 +58,17 @@ class Selector extends Query
     if result = command.after(args, result, engine, operation, continuation, scope)
       return command.ascend(engine, operation, continuation + selector, scope, result, ascender)
 
+  precontextualize: (engine, scope, element) ->
+    unless @relative
+      if typeof (element ||= scope) == 'string'
+        if (i = element.indexOf('"')) > -1
+          id = element.substring(0, i)
+          if id == '$'
+            return engine.scope
+          return engine.identity[id]
+        else
+          return scope
+    return element || scope
 
     
   # String to be used to join tokens in a list

@@ -128,7 +128,7 @@ class Query extends Command
   after: (args, result, engine, operation, continuation, scope) ->
     updating = engine.updating
 
-    node = if args[0]?.nodeType == 1 then args[0] else scope
+    node = @precontextualize engine, scope, args[0]
     path = @getLocalPath(engine, operation, continuation, node)
     # Compute once, reference result subsequently
     unless @relative# || @type == 'Condition'

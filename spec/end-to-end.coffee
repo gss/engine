@@ -289,6 +289,48 @@ describe 'End - to - End', ->
           done()
 
 
+    it 'in inverted VFL', (done) ->
+      engine = window.$engine = GSS(container)
+      container.style.width = '400px'
+      container.style.height = '100px'
+      container.innerHTML = """
+
+        <button id="box" class="box foo" onclick="this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')"></button>
+    
+        <style type="text/gss">
+          [col-gap] == 16;
+          $[size] == $[intrinsic-size];
+          $[left] == 0;
+        
+          @h |($"col-1...8")-[col-gap]-...| in($) !require {
+            width: == $[col-width] !require;
+          }
+          
+          "col-6" {
+            @h |(.box.bar)|;
+          }
+          "col-3" {
+            @h |(.box.foo)|;
+          }
+          .box {          
+            @v |(&)| in(::window);
+          }
+        </style>
+        
+      """
+      engine.then (solution) ->
+        expect(Math.floor solution["col-width"]).to.eql (400 - 16 * 7) / 8
+        expect(Math.floor solution["$box[width]"]).to.eql (400 - 16 * 7) / 8
+        expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 2
+
+        engine.id('box').click()
+
+        engine.then (solution) ->
+          expect(Math.floor solution["$box[width]"]).to.eql (400 - 16 * 7) / 8
+          expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 5
+          done()
+
+
 
     it 'in comma', (done) ->
       engine = window.$engine = GSS(container)
