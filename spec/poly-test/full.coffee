@@ -84,10 +84,15 @@ DEMOS =
     $[height] == $[intrinsic-height];
     $[width] == $[intrinsic-width];
 
+    .box {
+      "zone" {
+        @h |-(&)-| in(&.w-virtual) gap(20);
+        @h |(&.w-virtual .innie)|;
+      }
+    }
+
     .box.w-virtual {
-      @h |-(&"zone")-| in(&) gap(20);
       @v |-(&"zone")-| in(&) gap(20);
-      @h |(& .innie)| in(&"zone");
       @v |(& .innie)| in(&"zone");
     }
     .box.wo-virtual {
@@ -174,7 +179,7 @@ DEMOS =
 
       main {
         // Bind things to scroll position
-        ::[top] == $[scroll-top];// + (header)[intrinsic-y];
+        ::[top] == $scroll-top;// + header[intrinsic-y];
         ::[width] == $(aside)[intrinsic-width];
         ::[left] == $(header)[right];
 
