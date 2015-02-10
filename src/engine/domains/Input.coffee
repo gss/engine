@@ -31,6 +31,15 @@ class Input extends Domain
       y: (scope, path) ->
         id = @identify(scope)
         return ['+', ['get', @getPath(id, 'y')], ['/', ['get', @getPath(id, 'height')], 2]]
+
+    computed: 
+      right: (scope) ->
+        id = @identify(scope)
+        return ['+', ['get', @getPath(id, 'computed-x')], ['get', @getPath(id, 'computed-width')]]
+
+      bottom: (scope, path) ->
+        id = @identify(scope)
+        return ['+', ['get', @getPath(id, 'computed-y')], ['get', @getPath(id, 'computed-height')]]
         
 
 
