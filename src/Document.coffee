@@ -49,7 +49,13 @@ class Document extends Engine
     perform: ->
       if arguments.length < 4 && @data.subscribers
         @console.start('Measure', @values)
-        @each @scope, 'measure'
+    
+        scope = @scope
+        if scope.nodeType == 9
+          @measure(scope, 0, 0)
+          scope = scope.body
+
+        @each scope, 'measure'
         @console.end(@changes)
       return @commit()
       
@@ -308,11 +314,6 @@ class Document extends Engine
   # Iterate elements and measure intrinsic offsets
   each: (parent, callback, x = 0,y = 0, a,r,g,s) ->
     scope = @engine.scope
-    
-    if (parent ||= scope).nodeType == 9
-      @data.verify(parent, 'width')
-      @data.verify(parent, 'height')
-      parent = parent.body
 
     # Calculate new offsets for given element and styles
     if offsets = @[callback](parent, x, y, a,r,g,s)
@@ -359,6 +360,9 @@ class Document extends Engine
   measure: (node, x, y, full) ->
     if id = node._gss_id
       if properties = @data.subscribers[id]
+        if node.nodeType == 9
+          node = node.documentElement
+          
         for prop of properties
           switch prop
             when "x",      "intrinsic-x",      "computed-x"
