@@ -125,7 +125,7 @@ class Command
     # Stateless commands recieve context as ascending value
     if ascender == -1 && ascending?
       args[0] = ascending
-      return 1
+      return operation.context && 1 || 0
     # Stateful commands have link to previous op so they can fetch value
     else if context = operation.context
       # Quickly restore stateful value
@@ -812,6 +812,9 @@ class Command.Sequence extends Command
     if ascender > -1
       index = ascender + 1
       result = ascending
+    else if ascender == -1 && ascending
+      result = ascending
+      continuation += @ASCEND
 
     for index in [index || 0 ... operation.length] by 1
       argument = operation[index]

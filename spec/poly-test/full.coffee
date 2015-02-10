@@ -162,23 +162,23 @@ DEMOS =
         }
       }
       footer {
-        ::[top] == ($ main)[height]; 
+        ::[top] == $(main)[height]; 
         ::[height] == $[intrinsic-height] * 2;
       }
 
       aside {
         ::[left] == ($ main)[right];
         ::[height] == 100;
-        ::[top] == ($ header)[intrinsic-height] + ($ header)[intrinsic-y];
+        ::[top] == $(header)[intrinsic-height] + $(header)[intrinsic-y];
       }
 
       main {
         // Bind things to scroll position
         ::[top] == $[scroll-top];// + (header)[intrinsic-y];
-        ::[width] == ($ aside)[intrinsic-width];
-        ::[left] == ($ header)[right];
+        ::[width] == $(aside)[intrinsic-width];
+        ::[left] == $(header)[right];
 
-        ::[height] == $[intrinsic-height] - ($ header)[intrinsic-height];
+        ::[height] == $[intrinsic-height] - $(header)[intrinsic-height];
       } 
       // Custom combinators
       ul li !~ li {

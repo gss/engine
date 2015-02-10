@@ -27,23 +27,28 @@ class Selector extends Query
     
     # Register every selector step within a composite selector
     if @tail
+      if context = operation.context
+        if context.command.head == (parent || @).head 
+          context.command.prepare(context, parent || @)
       for argument in operation
         if argument.command?.head == (parent || @).head
           argument.command.prepare(argument, parent || @)
+
     return
 
   # Do an actual DOM lookup by composed native selector
   perform: (engine, operation, continuation, scope, ascender, ascending) ->
     command = operation.command
     selector = command.selector
-    args = [
-      if ascender?
-        ascending
-      else
-        scope
+    args = [scope, selector]
+    if ascender?
+      args[0] = ascending
+    else if context = @tail.context
+      context.command.contextualize(args, engine, @tail, continuation, scope)
+    else if context = @tail.parent.context
+      args[0] = context.command.retrieve(engine, context, @delimit(continuation), scope)
 
-      selector
-    ]
+
     command.log(args, engine, operation, continuation, scope, command.selecting && 'select' || 'match')
     result  = command.before(args, engine, operation, continuation, scope)
     node = args[0] || scope
@@ -335,9 +340,6 @@ class Selector::Sequence extends Selector
     if last.path == last.selector
       @selector = last.selector
       @tags = last.tags
-
-
-
 
 for property, value of Query::Sequence::
   unless property == 'constructor' || property == 'retrieve' || property == 'type'

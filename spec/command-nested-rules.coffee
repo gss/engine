@@ -1156,7 +1156,293 @@ describe 'Nested Rules', ->
                         container.innerHTML = ""
                         done()
         engine.solve(rules)
-    
+
+
+      it 'should resolve flattened selector on ^', (done) ->
+        rules = [
+          ['rule',
+            ['.', 'group']
+
+            ['rule', 
+              ['.', 'vessel']
+
+              ["<=", 
+                ["get",
+                  [
+                    ["^"]
+                    [
+                      ['.', 'box']
+                      [':last-child']
+                    ]
+                  ]
+                  'width']
+              100]]
+            ]
+        ] 
+
+        container.innerHTML =  """
+          <div id="group1" class="group">
+            <div id="box0" class="box"></div>
+            <div id="vessel1" class="vessel">
+              <div id="box1" class="box"></div>
+              <div id="box2" class="box"></div>
+            </div>
+            <div id="box3" class="box"></div>
+            <div id="box4" class="box"></div>
+          </div>
+          """
+        clone = container.cloneNode()
+        clone.setAttribute('id', 'container1')
+        clone.innerHTML = container.innerHTML.replace /\d+/g, (d) ->
+          return "1" + d
+
+
+        engine.once 'solve', ->       
+          expect(stringify(engine.updated.getProblems())).to.eql stringify [
+              [[
+                key: ".group$group1↓.vessel$vessel1↓^↑.box:last-child$box2"
+                scope: "$vessel1"
+
+                ['<=',['get', '$box2[width]'], 100]
+              ]]
+              [[
+                key: ".group$group1↓.vessel$vessel1↓^↑.box:last-child$box4"
+                scope: "$vessel1"
+
+                ['<=',['get', '$box4[width]'], 100]
+              ]]
+            ]
+          newLast = document.createElement('div')
+          newLast.id = 'box5'
+          newLast.className = 'box'
+          container.firstElementChild.appendChild(newLast)
+          console.log(1)
+
+          engine.once 'solve', -> 
+            expect(stringify(engine.updated.getProblems())).to.eql stringify [
+                [["remove", ".group$group1↓.vessel$vessel1↓^↑.box:last-child$box4"]],
+                [["remove", ".group$group1↓.vessel$vessel1↓^↑.box:last-child$box4"]]
+                [[
+                  key: ".group$group1↓.vessel$vessel1↓^↑.box:last-child$box5"
+                  scope: "$vessel1"
+
+                  ['<=',['get', '$box5[width]'], 100]
+                ]]
+              ]
+            container.firstElementChild.setAttribute('class', '')
+            console.log(1)
+
+
+            engine.once 'solve', -> 
+              expect(stringify(engine.updated.getProblems())).to.eql stringify [
+                  [
+                    ['remove', '.group$group1↓.vessel$vessel1↓^↑.box:last-child$box2'], 
+                    ['remove', '.group$group1↓.vessel$vessel1↓^↑.box:last-child$box5'], 
+                    ['remove', '.group$group1↓.vessel$vessel1↓^'], 
+                    ['remove', ".group$group1↓.vessel$vessel1"],
+                    ['remove', ".group$group1"]
+                  ]
+                  [
+                    ['remove', '.group$group1↓.vessel$vessel1↓^↑.box:last-child$box2']
+                  ]
+                  [
+                    ['remove', '.group$group1↓.vessel$vessel1↓^↑.box:last-child$box5']
+                  ]
+                ]
+              container.firstElementChild.setAttribute('class', 'group')
+              console.log(1)
+
+
+              engine.once 'solve', -> 
+                expect(stringify(engine.updated.getProblems())).to.eql stringify [
+                  [[
+                    key: ".group$group1↓.vessel$vessel1↓^↑.box:last-child$box2"
+                    scope: "$vessel1"
+
+                    ['<=',['get', '$box2[width]'], 100]
+                  ]]
+                  [[
+                    key: ".group$group1↓.vessel$vessel1↓^↑.box:last-child$box5"
+                    scope: "$vessel1"
+
+                    ['<=',['get', '$box5[width]'], 100]
+                  ]]
+
+                  ]
+                container.appendChild(clone)
+
+                engine.once 'solve', -> 
+                  expect(stringify(engine.updated.getProblems())).to.eql stringify [
+                    [[
+                      key: ".group$group11↓.vessel$vessel11↓^↑.box:last-child$box12"
+                      scope: "$vessel11"
+
+                      ['<=',['get', '$box12[width]'], 100]
+                    ]]
+                    [[
+                      key: ".group$group11↓.vessel$vessel11↓^↑.box:last-child$box14"
+                      scope: "$vessel11"
+
+                      ['<=',['get', '$box14[width]'], 100]
+                    ]]
+
+                    ]
+                  container.replaceChild(container.firstElementChild, container.lastElementChild)
+
+                  engine.once 'solve', -> 
+                    expect(stringify(engine.updated.getProblems())).to.eql stringify [
+                      [
+                        ['remove', '.group$group11↓.vessel$vessel11↓^↑.box:last-child$box12'],
+                        ['remove', '.group$group11↓.vessel$vessel11↓^↑.box:last-child$box14'],
+                        ['remove', '.group$group11↓.vessel$vessel11↓^'],
+                        ['remove', ".group$group11↓.vessel$vessel11"]
+                        ['remove', ".group$group11"]
+                      ]
+                      [
+                        ['remove', '.group$group11↓.vessel$vessel11↓^↑.box:last-child$box12']
+                      ]
+                      [
+                        ['remove', '.group$group11↓.vessel$vessel11↓^↑.box:last-child$box14']
+                      ]
+                    ]
+                    box2 = container.getElementsByClassName('box')[2]
+                    box2.parentNode.removeChild(box2)
+
+                    engine.once 'solve', -> 
+                      expect(stringify(engine.updated.getProblems())).to.eql stringify [
+                          [["remove", ".group$group1↓.vessel$vessel1↓^↑.box:last-child$box2"]],
+                          [["remove", ".group$group1↓.vessel$vessel1↓^↑.box:last-child$box2"]]
+                          [[
+                            key: ".group$group1↓.vessel$vessel1↓^↑.box:last-child$box1"
+                            scope: "$vessel1"
+
+                            ['<=',['get', '$box1[width]'], 100]
+                          ]]
+                          
+                        ]
+                      vessel = container.getElementsByClassName('vessel')[0]
+                      vessel.parentNode.removeChild(vessel)
+
+                      engine.once 'solve', -> 
+                        expect(stringify(engine.updated.getProblems())).to.eql stringify [
+                          [
+                            ['remove', '.group$group1↓.vessel$vessel1↓^↑.box:last-child$box1'],
+                            ['remove', ".group$group1↓.vessel$vessel1↓^↑.box:last-child$box5"],
+                            ['remove', ".group$group1↓.vessel$vessel1↓^"],
+                            ['remove', ".group$group1↓.vessel$vessel1"]
+                          ]
+                          [
+                            ['remove', ".group$group1↓.vessel$vessel1↓^↑.box:last-child$box5"]
+                          ],
+                          [
+                            ['remove', '.group$group1↓.vessel$vessel1↓^↑.box:last-child$box1']
+                          ]
+                        ]
+                        container.innerHTML = ""
+                        done()
+        engine.solve(rules)
+  
+                
+      it 'should handle mix of global and local flattened selectors', (done) ->
+        rules = [
+          ['rule', 
+            [
+              ['.','vessel']
+              [' '],
+              ['.', 'box']
+            ]
+
+            ["<=", 
+              ["get", ["&"], "width"], 
+              ["get", [['$'], [["#", "vessel1"]]], "width"]]
+          ]
+        ]
+        GSS.console.info('.vessel .box { ::[width] == #vessel1[width] } ')
+        container.innerHTML =  """
+          <div id="box0" class="box"></div>
+          <div id="vessel1" class="vessel">
+            <div id="box1" class="box"></div>
+            <div id="box2" class="box"></div>
+          </div>
+          <div id="box3" class="box"></div>
+          <div id="box4" class="box"></div>
+          """
+        
+
+
+        engine.once 'solve', ->
+          expect(stringify(engine.updated.getProblems())).to.eql stringify [[
+            [
+              key: ".vessel .box$box1↓$↑#vessel1"
+              scope: "$box1"
+              ["<=",
+                ["get","$box1[width]"],
+                ["get","$vessel1[width]"]]
+            ]
+            [
+              key: ".vessel .box$box2↓$↑#vessel1"
+              scope: "$box2"
+              ["<=",
+                ["get","$box2[width]"],
+                ["get","$vessel1[width]"]]
+            ]
+          ]]
+          vessel1 = engine.id('vessel1')
+          vessel1.parentNode.removeChild(vessel1)
+          engine.once 'solve', ->
+            expect(stringify(engine.updated.getProblems())).to.eql stringify [
+              [
+                ["remove", ".vessel .box$box1↓$↑#vessel1"], 
+                ["remove", ".vessel .box$box1↓$"],
+                ["remove", ".vessel .box$box1"], 
+                ["remove", ".vessel .box$box2↓$↑#vessel1"], 
+                ["remove", ".vessel .box$box2↓$"],
+                ["remove", ".vessel .box$box2"]
+              ]
+              [
+                ["remove", ".vessel .box$box1↓$↑#vessel1",
+                           ".vessel .box$box2↓$↑#vessel1"]
+              ]
+            ]
+            container.appendChild(vessel1)
+            engine.once 'solve', ->
+              expect(stringify(engine.updated.getProblems())).to.eql stringify [[
+                [
+                  key: ".vessel .box$box1↓$↑#vessel1"
+                  scope: "$box1"
+                  ["<=",
+                    ["get","$box1[width]"],
+                    ["get","$vessel1[width]"]]
+                ]
+                [
+                  key: ".vessel .box$box2↓$↑#vessel1"
+                  scope: "$box2"
+                  ["<=",
+                    ["get","$box2[width]"],
+                    ["get","$vessel1[width]"]]
+                ]
+              ]]
+              vessel1.parentNode.removeChild(vessel1)
+              engine.once 'solve', ->
+                expect(stringify(engine.updated.getProblems())).to.eql stringify [
+                  [
+                    ["remove", ".vessel .box$box1↓$↑#vessel1"], 
+                    ["remove", ".vessel .box$box1↓$"],
+                    ["remove", ".vessel .box$box1"], 
+                    ["remove", ".vessel .box$box2↓$↑#vessel1"], 
+                    ["remove", ".vessel .box$box2↓$"],
+                    ["remove", ".vessel .box$box2"]
+                  ]
+                  [
+                    ["remove", ".vessel .box$box1↓$↑#vessel1",
+                               ".vessel .box$box2↓$↑#vessel1"]
+                  ]
+                ]
+                done()
+        engine.solve rules
+
+
+
       it 'should handle mix of global and local selector', (done) ->
         rules = [
           ['rule', 
@@ -1181,8 +1467,8 @@ describe 'Nested Rules', ->
           <div id="box3" class="box"></div>
           <div id="box4" class="box"></div>
           """
-        
-                              
+                
+
         engine.once 'solve', ->
           expect(stringify(engine.updated.getProblems())).to.eql stringify [[
             [
