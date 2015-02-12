@@ -1,8 +1,38 @@
 class Styles
   constructor: (@engine) ->
 
+  # Transforms L2-like individual properties
+  rotate: [
+    (element) ->
+      (@updating.transforms ||= {})[element._gss_id] = true
+      
+    x:       ['Length', 'Percentage']
+    [y:      ['Length', 'Percentage']]
+    [z:      ['Length', 'Percentage']]
+    [origin: ['transform-origin']]
+  ]
+  scale: [
+    (element) ->
+      (@updating.transforms ||= {})[element._gss_id] = true
+
+    x:       ['Length', 'Percentage']
+    [y:      ['Length', 'Percentage']]
+    [z:      ['Length', 'Percentage']]
+    [origin: ['transform-origin']]
+  ]
+  translate: [
+    (element) ->
+      (@updating.transforms ||= {})[element._gss_id] = true
+
+    x:       ['Length', 'Percentage']
+    [y:      ['Length', 'Percentage']]
+    [z:      ['Length', 'Percentage']]
+    [origin: ['transform-origin']]
+  ]
+
   transform: [[
-    -> mat4.create(),
+    (element) ->
+      (@updating.transforms ||= {})[element._gss_id] = true
     'Matrix'
   ]]
 

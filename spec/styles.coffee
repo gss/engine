@@ -6,7 +6,9 @@ assert = chai.assert
 describe 'Styles', ->
   doc = engine = null
   before ->
-    engine ||= new GSS(document.createElement('div'))
+    div = document.createElement('div')
+    div.id = 'container'
+    engine ||= new GSS(div)
     engine.compile()
     doc = {}
     for property, value of engine.output.properties
@@ -146,12 +148,3 @@ describe 'Styles', ->
         "border-top-right-radius": 2
         "border-bottom-left-radius": 1
         "border-bottom-right-radius": 2
-      
-  xdescribe 'transformations', ->
-    it 'should generate matrix', ->
-      engine.solve [
-        ['rotateX', ['deg', 10]]
-        ['scaleZ', 2]
-        ['translateY', -2]
-      ]
-      expect(doc['transform']()).to.eql 123

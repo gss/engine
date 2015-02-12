@@ -5,9 +5,46 @@ class Matrix extends Command
   
   Library: require('../../../vendor/gl-matrix')
 
+  @rst: (rX, rY, rZ, sX, sY, sZ, tX, tY, tZ) ->
+    console.log('rst', arguments)
+    mat4 = @prototype._mat4
+    matrix = mat4.create()
+    if rX || rX || rY
+      maxR = Math.max(rX, rY, rZ)
+      mat4.rotate(matrix, matrix, maxR * 2, [rX / maxR, rY / maxR, rZ / maxR])
+    if sX || sY || sZ
+      mat4.scale(matrix, matrix, [sX, sY, sZ])
+    if tX || tY || tZ
+      mat4.scale(matrix, matrix, [tX, tY, tZ])
+    return matrix
+
   matrix: ->
 
   matrix3d: ->
+
+  precontextualize: (engine, scope, argument = scope) ->
+    #if argument.nodeType
+
+    return argument
+
+  ascend: (engine, operation, continuation, scope, result) ->
+
+    #if parent = operation.parent
+    #  while parent.command.sequence
+    #    if parent.indexOf(operation) == parent.length - 1
+    #      unless parent.parent
+    #        break 
+    #      parent = parent.parent
+    #      operation = parent
+    #    else
+    #      return super
+    #  if parent.type == 'Assignment'
+    #    return super
+
+
+    return super
+    console.log(result)
+
 
   mat3: (matrix = @_mat4.create(), method, a, b, c) ->
     if matrix.length == 9
@@ -25,16 +62,16 @@ class Matrix extends Command
 
   format: (matrix) ->
     return 'matrix3d(' + 
-      matrix[0].toFixed(20) + ',' + 
-      matrix[1].toFixed(20) + ',' + 
-      matrix[2].toFixed(20) + ',' + 
-      matrix[3].toFixed(20) + ',' + 
-      matrix[4].toFixed(20) + ',' + 
-      matrix[5].toFixed(20) + ',' + 
-      matrix[6].toFixed(20) + ',' + 
-      matrix[7].toFixed(20) + ',' + 
-      matrix[8].toFixed(20) + ',' + 
-      matrix[9].toFixed(20) + ',' + 
+      matrix[0 ].toFixed(20) + ',' + 
+      matrix[1 ].toFixed(20) + ',' + 
+      matrix[2 ].toFixed(20) + ',' + 
+      matrix[3 ].toFixed(20) + ',' + 
+      matrix[4 ].toFixed(20) + ',' + 
+      matrix[5 ].toFixed(20) + ',' + 
+      matrix[6 ].toFixed(20) + ',' + 
+      matrix[7 ].toFixed(20) + ',' + 
+      matrix[8 ].toFixed(20) + ',' + 
+      matrix[9 ].toFixed(20) + ',' + 
       matrix[10].toFixed(20) + ',' +
       matrix[11].toFixed(20) + ',' +
       matrix[12].toFixed(20) + ',' +
@@ -48,7 +85,7 @@ class Matrix::Sequence extends Command.Sequence
 # 1-axis transform
 class Matrix.Transformation1 extends Matrix
   signature: [
-    [matrix: ['Matrix']]
+    [matrix: ['Matrix', 'Selector']]
     x:       ['Variable', 'Number']
   ]
 
@@ -93,7 +130,7 @@ class Matrix.Transformation1 extends Matrix
 # 2 axis transforms
 class Matrix.Transformation2 extends Matrix
   signature: [
-    [matrix: ['Matrix']]
+    [matrix: ['Matrix', 'Selector']]
     x:       ['Variable', 'Number']
     y:       ['Variable', 'Number']
   ]
@@ -108,7 +145,7 @@ class Matrix.Transformation2 extends Matrix
 # 3 axis transforms
 class Matrix.Transformation3 extends Matrix
   signature: [
-    [matrix: ['Matrix']]
+    [matrix: ['Matrix', 'Selector']]
     x:       ['Variable', 'Number']
     y:       ['Variable', 'Number']
     z:       ['Variable', 'Number']
@@ -130,7 +167,7 @@ class Matrix.Transformation3 extends Matrix
 # 3 axis + angle
 class Matrix.Transformation3A extends Matrix
   signature: [
-    [matrix: ['Matrix']]
+    [matrix: ['Matrix', 'Selector']]
     x:       ['Variable', 'Number']
     y:       ['Variable', 'Number']
     z:       ['Variable', 'Number']

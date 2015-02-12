@@ -144,7 +144,7 @@ class Domain
   get: (object, property) ->
     return @values[@getPath(object, property)]
 
-  merge: (object) ->
+  merge: (object, operation, continuation) ->
     # merge objects/domains
     if object && !object.push
       if object instanceof Domain
@@ -152,20 +152,38 @@ class Domain
       if @updating
         return @merger(object)
       else
-        return @engine.solve @displayName || 'GSS', @merger, object, @
+        return @engine.solve @displayName || 'GSS', @merger, object, @, operation, continuation
 
-  merger: (object, domain = @) ->
+  merger: (object, domain = @, operation, continuation) ->
     transacting = domain.transact()
         
     async = false
     for path, value of object
-      domain.set undefined, path, value
+      domain.set undefined, path, value, operation, continuation
     return domain.commit() if transacting
 
   # Set key-value pair or merge object
-  set: (object, property, value) ->
+  set: (object, property, value, operation, continuation) ->
     path = @getPath(object, property)
     old = @values[path]
+    if continuation
+      for op, i in stack = (@stacks ||= {})[path] ||= [] by 3
+        if op == operation && stack[i + 1] == continuation
+          if value?
+            stack[i + 2] = value
+            if stack.length > i + 3
+              return
+          else
+            stack.splice(i, 3)
+            if stack.length > i + 3
+              return
+            value = stack[stack.length - 1]
+            
+          updated = true
+          break
+      unless updated
+        stack.push(operation, continuation, value)
+
     return if old == value
 
     @transact()

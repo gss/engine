@@ -7,7 +7,7 @@ describe 'Matrix', ->
   engine = null
   before ->
     container = document.createElement('div')
-    engine = new GSS(container, {
+    window.$engine = engine = new GSS(container, {
       half: 0.5
       three: 3
     })
@@ -140,4 +140,13 @@ describe 'Matrix', ->
       engine.data.merge({'half': 0.5, 'three': 3})
       expect(engine.scope.style.transform).to.eql(T_tX3_rZ1of2)
 
+  describe 'use as function call upon selector', ->
+    it 'should mutate element matrix', (done) ->
+      engine.scope.innerHTML = """
+        <div></div>
+        <div></div>
+      """
+      engine.solve([['tag', 'div'], ['translateX', 10]])
+      engine.then ->
+        done()
 

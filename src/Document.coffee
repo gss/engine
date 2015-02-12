@@ -35,6 +35,21 @@ class Document extends Engine
     Percentage:   Document.Measurement.Percentage
     
 
+    retransform: (id) ->
+      if element = @identity[id]
+        matrix = @Matrix.rst(
+          @get(id, 'rotate-x')    || 0
+          @get(id, 'rotate-y')    || 0
+          @get(id, 'rotate-z')    || 0
+          @get(id, 'scale-x')     || 0
+          @get(id, 'scale-y')     || 0
+          @get(id, 'scale-z')     || 0
+          @get(id, 'translate-x') || 0
+          @get(id, 'translate-y') || 0
+          @get(id, 'translate-z') || 0
+        )
+        @setStyle(element, 'transform', matrix)
+
   
   class Document::Data extends Engine::Data
     immediate:    true
@@ -284,11 +299,16 @@ class Document extends Engine
 
     return unless prop = @output.properties[property]
     camel = @camelize property
+    
+    if (shorthand = prop.shorthand) && (shorthand.callback)
+      shorthand.callback.call(@, element, value, operation, continuation)
+
     if typeof value != 'string'
       if value < 0 && (property == 'width' || property == 'height')
         @console.warn(property + ' of', element, ' is negative: ', value)
 
       value = prop.format(value)
+
 
     if property == 'left' || property == 'top'
       @setAbsolutePosition(element, property, value)
@@ -308,7 +328,8 @@ class Document extends Engine
     if @data.watchers?[path]
       return
 
-    element.style[camel] = value
+    if element.style[camel] != undefined
+      element.style[camel] = value
     return
 
   # Iterate elements and measure intrinsic offsets
@@ -374,7 +395,7 @@ class Document extends Engine
             when "height", "intrinsic-height", "computed-height"
               @set id, prop, node.offsetHeight
             when "scroll-top", "scroll-left"
-              
+
             else
               style = prop.replace(/^(?:computed|intrinsic)-/, '')
               if @properties[style]
@@ -399,7 +420,7 @@ class Document extends Engine
   ###
 
   assign: (data, node) ->
-    node ||= @engine.scope
+    node ||= @scope
 
     # Apply changed styles in batch, 
     # leave out positioning properties (Restyle/Reflow)
@@ -423,6 +444,11 @@ class Document extends Engine
     for prop, value of positions
       @write null, prop, value
 
+    if transforms = @updating.transforms
+      for id of transforms
+        @output.retransform(id)
+      @updating.transforms = undefined
+
     return data
 
   write: (id, property, value, positioning) ->
@@ -434,11 +460,13 @@ class Document extends Engine
       property = path.substring(last + 1, path.length - 1)
       id = path.substring(0, last)
 
+    # Find unregistered elements by id
     return unless id.charAt(0) != ':'
     unless element = @engine.identity[id]
       return if id.indexOf('"') > -1
       return unless element = document.getElementById(id.substring(1))
     
+
     if positioning && (property == 'x' || property == 'y')
       (positioning[id] ||= {})[property] = value
     else

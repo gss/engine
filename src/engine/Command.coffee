@@ -126,7 +126,8 @@ class Command
     if ascender == -1 && ascending?
       args[0] = @precontextualize engine, scope, ascending
     # Stateful commands have link to previous op so they can fetch value
-    else if context = operation.context || operation.parent?.context
+    else if context = operation.context || 
+           ((parent = operation.parent) && parent.command?.sequence && parent.context)
       # Quickly restore stateful value
       args[0] = @precontextualize(engine, scope, 
         if (command = context.command).key?
@@ -844,16 +845,13 @@ class Command.Sequence extends Command
 
   yield: (result, engine, operation, continuation, scope, ascender, ascending) ->
     parent = operation.parent
-    if ascender == -1 && ascending == undefined
-      return
 
     # Recurse to the next operation in sequence when stateful op yielded
     if next = parent[parent.indexOf(operation) + 1]
-      if operation.command.path?
+      unless ascender == -1
         return next
     else
       # Recurse to sequence parent 
-      parent = operation.parent
       if parent.parent
         @ascend(engine, parent, continuation, scope, result, parent.parent.indexOf(parent), ascending)
         return true

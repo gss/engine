@@ -23,6 +23,8 @@ Style = (definition, name, styles,
       unless optional == true
         required[property] = optional || requirement
         requirement = property
+
+      # Register properties by type
       if style.types
         for type, index in style.types
           types.push type
@@ -30,6 +32,8 @@ Style = (definition, name, styles,
           keys.push prop
           if properties.indexOf(prop) == -1
             properties.push prop
+
+      # Register properties that accept keywords
       if style.keywords
         for prop, value of style.keywords
           for item in value
@@ -67,21 +71,34 @@ Style = (definition, name, styles,
     callback = initial
     initial = undefined
 
+  # Create a matcher function
+  matcher = new Matcher(keywords, types, keys, required)
+
+  # Prepare value class
   if initial == undefined
     initial = new Shorthand
     initial.displayName = initial::property = name
     for property in properties
       initial::[property] = styles[property].initial
+      styles[property].shorthand = matcher
   else if keys.length == 0
     keys = undefined
 
-  matcher = new Matcher(name, keywords, types, keys, required, pad, max, initial, callback)
-  
+  # Store matcher properties for reflection
+  matcher.displayName = name
+  matcher.keywords = keywords
+  matcher.types    = types
+  matcher.keys     = keys
+  matcher.pad      = pad
+  matcher.matcher  = true
+  matcher.depth    = max
+  matcher.initial  = initial
+  matcher.callback = callback
+
   if initial?.displayName
     initial::style = matcher
     initial::styles = styles
     initial::properties = properties
-
 
   matcher.format = (value) ->
     return Shorthand::toExpressionString(name, value, false, styles)
@@ -184,11 +201,11 @@ class Shorthand
 
 
 # Generate a function that will match set of parsed tokens against style definition
-Matcher = (name, keywords, types, keys, required, pad, depth, initial, callback) ->
+Matcher = (keywords, types, keys, required) ->
   matcher = ->
     result = matched = undefined
 
-    if pad && arguments.length < 4
+    if (pad = matcher.pad) && arguments.length < 4
       args = [
         arguments[0]
         arguments[1] ? arguments[0]
@@ -197,14 +214,15 @@ Matcher = (name, keywords, types, keys, required, pad, depth, initial, callback)
       ]
 
     for argument, i in (args || arguments)
-      # Match keyword
       switch typeof argument
+        # Match sub-array
         when 'object'
           if typeof argument[0] != 'string' || argument.length == 1
             if matched = matcher.apply(@, argument)
-              (result ||= new initial)[i] = matched
+              (result ||= new matcher.initial)[i] = matched
             else return
 
+        # Match keyword
         when 'string'
           if props = keywords[argument]
             if keys
@@ -212,7 +230,7 @@ Matcher = (name, keywords, types, keys, required, pad, depth, initial, callback)
               while (property = props[j++])?
                 if !result || !result.hasOwnProperty(property)
                   if !required[property] || (result && result[required[property]] != undefined)
-                    matched = (result ||= new initial)[property] = argument
+                    matched = (result ||= new matcher.initial)[property] = argument
                     break
                 # Unique keyword for property resolved as value. Use keyword, re-match value
                 else if props.length == 1 && argument != result[property]
@@ -228,15 +246,16 @@ Matcher = (name, keywords, types, keys, required, pad, depth, initial, callback)
             else
               return argument
 
-      # Match argument by type
       if types && !matched?
+        # Match argument by type
         if keys
           for property, index in keys
             if !result || (!result.hasOwnProperty(property) &&
                           (!(req = required[property]) || result.hasOwnProperty(req)))
               if (matched = types[index](argument)) != undefined
-                (result ||= new initial)[property] = argument
+                (result ||= new matcher.initial)[property] = argument
                 break
+        # Validate argument type
         else
           for type, index in types
             if type(argument) != undefined
@@ -245,18 +264,9 @@ Matcher = (name, keywords, types, keys, required, pad, depth, initial, callback)
       return unless matched?
       matched = undefined
 
-    if callback && (returned = callback(result))?
-      return returned
+    #if callback && (returned = callback(result))?
+    #  return returned
     return result
-  matcher.matcher     = true
-  matcher.displayName = name
-  matcher.keywords    = keywords if keywords?
-  matcher.types       = types    if types?
-  matcher.keys        = keys     if keys?
-  matcher.pad         = pad      if pad?
-  matcher.depth       = depth    if depth?
-  matcher.initial     = initial  if initial?
-  matcher.callback    = callback if callback?
   return matcher
 
 
