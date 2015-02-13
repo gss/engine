@@ -34,6 +34,26 @@ Data::Variable = Variable.extend {},
       scope ||= meta.scope && engine.identity[meta.scope] || engine.scope
     return engine.watch(null, path, operation, @delimit(continuation || ''), scope)
 
+Data::Variable.Getter = Data::Variable.extend {
+  signature: [
+    object:   ['Query', 'Selector', 'String']
+    property: ['String']
+  ]
+},
+  'get': (object, property, engine, operation, continuation, scope) ->
+    if engine.queries
+      prefix = engine.Query::getScope(engine, object, continuation)
+
+    if prop = engine.properties[property]
+      unless prop.matcher
+        return prop.call(engine, object, continuation)
+    
+    if !prefix && engine.data.check(engine.scope, property)
+      prefix = engine.scope
+      engine = engine.data
+
+    return engine.watch(prefix, property, operation, @delimit(continuation || ''), scope)
+
 Data::Variable.Expression = Variable.Expression.extend(
   before: (args, engine)->
     for arg in args

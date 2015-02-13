@@ -63,7 +63,7 @@ Input::Default = Command.Default.extend
     return args
 
 # Topmost unknown command returns processed operation back to engine
-Top = Input::Default.extend
+Solving = Input::Default.extend
   
   condition: (engine, operation) ->
     if parent = operation.parent
@@ -76,10 +76,7 @@ Top = Input::Default.extend
   extras: 4
 
   execute: (args..., engine, operation, continuation, scope) ->
-    if parent = operation.parent
-      if (parent.command.sequence) && !parent.command.boundaries
-        @sanitize(true, operation, null, engine.output)
-        return engine.output.solve(operation, continuation, scope)
+
     meta = 
       key: @delimit(continuation)
       #index: operation.index
@@ -107,25 +104,29 @@ Top = Input::Default.extend
       if domain = parent.command.domains?[parent.indexOf(operation)]
         return engine[domain]
 
-Sequential = (engine, operation, command) ->
+Outputting = (engine, operation, command) ->
   if parent = operation.parent
-    if parent.command.sequence && parent.command.type != 'List'
-      index = parent.indexOf(operation)
-      Sequential.patch(engine.output, operation, parent, index, parent[index - 1])
+    if parent.command.sequence 
+      if parent.command.type != 'List'
+        index = parent.indexOf(operation)
+        Outputting.patch(engine.output, operation, parent, index, parent[index - 1])
+    else if operation.command.type == 'Default' && !engine.solver.signatures[operation[0]] && !engine.data.signatures[operation[0]]
+      Outputting.patch(engine.output, operation, parent, false)
 
-Sequential.patch = (engine, operation, parent, index, context) ->
+Outputting.patch = (engine, operation, parent, index, context) ->
   operation.domain = engine.output
-  index = parent.indexOf(operation)
-  match = engine.Command.match(engine.output, operation, parent, index, context)
-  Command.assign(engine, operation, match, context)
-  for argument, index in operation
+  for argument, i in operation
     if argument.push
-      Sequential.patch(engine, argument, operation, index)
+      if index != false || argument.command.type == 'Default' || argument.command.type == 'Variable'
+        Outputting.patch(engine, argument, operation, if index == false then false else i)
+  match = engine.Command.match(engine.output, operation, parent, parent.indexOf(operation), context)
+  Command.assign(engine, operation, match, context)
+  
   return match
 
 
 # Register subclasses to be dispatched by condition
-Input::Default::advices = [Sequential, Top]
+Input::Default::advices = [Outputting, Solving]
 
 # Array of commands, stops command propagation
 Input::List = Command.List
