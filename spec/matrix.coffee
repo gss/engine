@@ -125,6 +125,51 @@ describe 'Matrix', ->
 
         done()
 
+  describe 'when used with known variables', ->
+    it 'should update and recompute matrix', (done) ->
+      container = document.createElement('div')
+      container.innerHTML = '<div id="d1"></div><div id="d2"></div>'
+      document.getElementById('fixtures').appendChild(container)
+      window.$engine = engine = new GSS(container, {
+        half: 0.5
+        three: 3
+      })
+      d1 = engine.id('d1')
+      d2 = engine.id('d2')
+
+      M_tX3_rZ1of2 = engine.output.Matrix::_mat4.create()
+      M_tX3_rZ1of2 = engine.output.Matrix::_mat4.translate(M_tX3_rZ1of2, M_tX3_rZ1of2, [3, 0, 0])
+      M_tX3_rZ1of2 = engine.output.Matrix::_mat4.rotateZ(M_tX3_rZ1of2, M_tX3_rZ1of2, 180 * (Math.PI / 180))
+      expect(engine.solve(['rule', ['tag', 'div'],
+        ['=', ['get', 'transform'], [
+          ['translateX', 3]
+          ['rotateZ', ['get', 'half']]
+        ]]
+      ])).to.eql({'$d1[transform]': M_tX3_rZ1of2, '$d2[transform]': M_tX3_rZ1of2})
+
+      T_tX3_rZ1of2 = d1.style.transform
+      d1.style.transform = engine.output.Matrix::format(M_tX3_rZ1of2)
+      expect(d1.style.transform).to.eql(T_tX3_rZ1of2)
+
+      M_tX3_rZ3of4 = engine.output.Matrix::_mat4.create()
+      M_tX3_rZ3of4 = engine.output.Matrix::_mat4.translate(M_tX3_rZ3of4, M_tX3_rZ3of4, [3, 0, 0])
+      M_tX3_rZ3of4 = engine.output.Matrix::_mat4.rotateZ(M_tX3_rZ3of4, M_tX3_rZ3of4, 270 * (Math.PI / 180))
+
+      engine.data.merge({'half': 0.75})
+      T_tX3_rZ3of4 = d1.style.transform
+      d1.style.transform = engine.output.Matrix::format(M_tX3_rZ3of4)
+      expect(d1.style.transform).to.eql(T_tX3_rZ3of4)
+
+      engine.data.merge({'half': 0.5})
+      expect(d1.style.transform).to.eql(T_tX3_rZ1of2)
+
+      container.innerHTML =  ""
+      engine.then ->
+        expect(engine.values).to.eql({'half': 0.5, 'three': 3})
+
+        done()
+
+      
       
 
   describe 'when used with multiple variables', ->

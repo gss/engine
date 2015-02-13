@@ -100,9 +100,11 @@ class Engine
       strategy = @[@strategy || 'input']
         
       if strategy.solve
+        @data.transact()
         @console.start(strategy.displayName, args)
-        result = strategy.solve.apply(strategy, args)
+        strategy.solve.apply(strategy, args)
         @console.end(result)
+        result = @data.commit()
       else
         result = strategy.apply(@, args)
 
@@ -158,9 +160,7 @@ class Engine
       return if update.blocking
 
 
-      while values = @data.commit()
-        update.apply(values)
-        @output.merge(values)
+      if @data.upstream()
         apply = true
 
       # Evaluate queue of generated constraints
@@ -173,19 +173,12 @@ class Engine
           return update
 
       # Apply values to elements
-      if apply == false && !update.domains.length
-        debugger
-        @triggerEvent('flush', update.solution, update)
-      else
+      @output.merge(update.solution)
+
+      if apply != false || update.domains.length
         @console.start('Apply', update.solution)
-        @triggerEvent('flush', update.solution, update)
 
-
-        while values = @data.commit()
-          update.apply(values)
-          @output.merge(values)
-          apply = true
-
+        @data.upstream()
 
         @triggerEvent('apply', update.solution, update)
         @triggerEvent('write', update.solution, update)
@@ -323,10 +316,6 @@ class Engine
       @Query::branch(@)
     
       return
-
-    # Merge results into a solved domain (updates engine.values)
-    flush: (solution) ->
-      @output.merge solution
 
     # Apply given values to current update object and solved domain
     resume: (solution, update) ->

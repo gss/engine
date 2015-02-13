@@ -389,6 +389,14 @@ class Domain
         return changes
       return
 
+  # Send values to output and apply possible effects
+  upstream: ->
+    while values = @commit()
+      @updating.apply(values)
+      @output.merge(values)
+      applied = values
+    return applied || false
+
   # Make Domain class inherit given engine instance
   # Allows domain to overload engine methods and modules
   @compile: (engine) ->

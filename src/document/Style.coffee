@@ -71,18 +71,19 @@ Style = (definition, name, styles,
     callback = initial
     initial = undefined
 
-  # Create a matcher function
-  matcher = new Matcher(keywords, types, keys, required)
 
   # Prepare value class
   if initial == undefined
+    matcher = new Matcher(keywords, types, keys, required)
     initial = new Shorthand
     initial.displayName = initial::property = name
     for property in properties
       initial::[property] = styles[property].initial
       styles[property].shorthand = matcher
-  else if keys.length == 0
-    keys = undefined
+  else 
+    if keys.length == 0
+      keys = undefined
+    matcher = new Matcher(keywords, types, keys, required)
 
   # Store matcher properties for reflection
   matcher.displayName = name
