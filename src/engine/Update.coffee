@@ -484,7 +484,7 @@ Update.prototype =
     return !@mutations && !@deferred && !@pairs && !@stylesheets && !@branches
 
   isDirty: ->
-    return @restyled || @solved || @reflown
+    return @restyled || @solved || @reflown || @engine.data.changes
     
   hadSideEffects: (solution)->
     return solution || @domains.length > 0 || @hasOwnProperty('restyled')# || @solution

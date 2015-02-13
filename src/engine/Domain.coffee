@@ -144,7 +144,7 @@ class Domain
   get: (object, property) ->
     return @values[@getPath(object, property)]
 
-  merge: (object, operation, continuation) ->
+  merge: (object, continuation, operation) ->
     # merge objects/domains
     if object && !object.push
       if object instanceof Domain
@@ -152,18 +152,18 @@ class Domain
       if @updating
         return @merger(object)
       else
-        return @engine.solve @displayName || 'GSS', @merger, object, @, operation, continuation
+        return @engine.solve @displayName || 'GSS', @merger, object, @, continuation, operation
 
-  merger: (object, domain = @, operation, continuation) ->
+  merger: (object, domain = @, continuation, operation) ->
     transacting = domain.transact()
         
     async = false
     for path, value of object
-      domain.set undefined, path, value, operation, continuation
+      domain.set undefined, path, value, continuation, operation
     return domain.commit() if transacting
 
   # Set key-value pair or merge object
-  set: (object, property, value, operation, continuation) ->
+  set: (object, property, value, continuation, operation) ->
     path = @getPath(object, property)
     old = @values[path]
     if continuation
@@ -178,10 +178,10 @@ class Domain
             if stack.length > i + 3
               return
             value = stack[stack.length - 1]
-            
+
           updated = true
           break
-      unless updated
+      if !updated && value != null
         stack.push(operation, continuation, value)
 
     return if old == value
@@ -310,6 +310,15 @@ class Domain
   # Remove watchers and registered operations by path
   remove: ->
     for path in arguments
+      if stacks = @stacks
+        for property, stack of @stacks
+          while (i = stack.indexOf(path)) > -1
+            stack.splice(i - 1, 3)
+            if stack.length < i
+              @set null, property, stack[stack.length - 1]
+              unless stack.length
+                delete @stacks[property]
+
       if @watched
         for contd in @Query::getVariants(path) || [path]
           if observer = @watched[contd]

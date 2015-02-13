@@ -145,16 +145,23 @@ class Engine
   commit: (solution, update = @updating, apply) ->
     return if update.blocking
     
-    # Start with given solution
+    # Save given solution
     if solution && Object.keys(solution).length
       @triggerEvent('resume', solution, update)
+
         
     until update.isDone() && !update.isDirty()
+
       # Process stylesheets, mutations, pairs, conditions, branches
       until update.isDocumentDone()
         @triggerEvent('commit', update)
       return if update.blocking
 
+
+      while values = @data.commit()
+        update.apply(values)
+        @output.merge(values)
+        apply = true
 
       # Evaluate queue of generated constraints
       if update.domains.length
@@ -167,9 +174,19 @@ class Engine
 
       # Apply values to elements
       if apply == false && !update.domains.length
+        debugger
         @triggerEvent('flush', update.solution, update)
       else
         @console.start('Apply', update.solution)
+        @triggerEvent('flush', update.solution, update)
+
+
+        while values = @data.commit()
+          update.apply(values)
+          @output.merge(values)
+          apply = true
+
+
         @triggerEvent('apply', update.solution, update)
         @triggerEvent('write', update.solution, update)
         @triggerEvent('flush', update.solution, update)
@@ -249,12 +266,13 @@ class Engine
     for other, i in [@data, @output].concat(@domains)
       locals = []
       other.changes = undefined
+      stacks = other.stacks
       for remove in removes
         for path, index in remove
           continue if index == 0
           if other.paths?[path]
             locals.push(path)
-          else if other.watched?[path]
+          else if other.watched?[path] || other.stacks
             other.remove(path)
       if other.changes
         for property, value of other.changes
@@ -262,6 +280,7 @@ class Engine
         other.changes = undefined
 
       if locals.length
+
         #other.remove.apply(other, locals)
         locals.unshift 'remove'
         locals.index = -1
@@ -275,6 +294,8 @@ class Engine
         command[0] != 'remove' || worker.paths?[command[1]]
 
       update.push working, worker, true
+    if result
+      update.apply(result)
     return
 
 
@@ -300,9 +321,6 @@ class Engine
       @Query::commit(@)
       @Query::repair(@)
       @Query::branch(@)
-      
-      if values = @data.commit()
-        @updating.apply(values)
     
       return
 

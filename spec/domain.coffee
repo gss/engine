@@ -36,6 +36,76 @@ describe 'Domain', ->
         result: 0
         a: -5
 
+  describe 'value stacks', ->
+    it 'should fall back to previous values', ->
+      engine = new GSS.Engine()
+      engine.data.merge({
+        a: 1,
+        b: 2  
+      }, 'a')
+
+      expect(engine.data.values).to.eql({a: 1, b: 2})
+
+      engine.data.merge({
+        b: 3,
+        c: 4  
+      }, 'b')
+
+      expect(engine.data.values).to.eql({a: 1, b: 3, c: 4})
+
+      engine.data.remove('b')
+
+      engine.data.merge({
+        d: 6
+        b: 3 
+      }, 'b')
+
+      expect(engine.data.values).to.eql({a: 1, b: 3, d: 6})
+
+      engine.data.merge({
+        a: 5,
+        d: 7 
+      }, 'a')
+
+      expect(engine.data.values).to.eql({a: 5, b: 3, d: 7})
+      engine.data.remove('a')
+
+      expect(engine.data.values).to.eql({b: 3, d: 6})
+      engine.data.remove('b')
+
+
+      expect(engine.data.values).to.eql({})
+
+
+    it 'should define values', ->
+      engine = new GSS.Engine()
+      engine.solve([
+        ['=', ['get', 'A'], 100]
+      ], 'a')
+      expect(engine.values.A).to.eql(100)
+      engine.solve([
+        ['=', ['get', 'A'], 200]
+      ], 'b')
+      expect(engine.values.A).to.eql(200)
+      engine.remove('b')
+      expect(engine.values.A).to.eql(100)
+      engine.remove('a')
+      expect(engine.values.A).to.eql(undefined)
+
+    it 'should find solutions when using nested simple expressions', ->
+      engine = new GSS.Engine()
+      expect(engine.solve [
+        ['==',
+          ['get', 'result']
+          ['+',
+            ['get', 'a']
+            ['+', ['*', 1, 2], 3]
+          ]
+        ]
+      ]).to.eql 
+        result: 0
+        a: -5
+
   describe 'solving and input domains together', ->
     it 'should calculate simplified expression', ->
       window.$engine = engine = new GSS({

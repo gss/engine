@@ -182,13 +182,16 @@ Input::Assignment = Command.extend {
   type: 'Assignment'
   
   signature: [
-    [object:   ['Query', 'Selector']]
-    property: ['String']
-    value:    ['Variable']
+    variable: ['String', 'Variable']
+    value:    ['Variable', 'Number', 'Matrix', 'Command', 'Default']
   ]
 },
-  '=': (object, name, value, engine) ->
-    engine.input.set(object, name, value)
+  '=': (variable, value, engine, operation, continuation) ->
+    if variable[0] == 'get' && variable.length == 2
+      engine.data.set(variable[1], name, value, @delimit(continuation), operation)
+      return
+    else
+      throw new Error '[Input] Unexpected expression on left side of `=`'
 
 # Style assignment
 Input::Assignment.Style = Input::Assignment.extend {
@@ -223,7 +226,7 @@ Input::Assignment.Style = Input::Assignment.extend {
     if engine.data
       engine.setStyle object || scope, property, value, continuation, operation
     else
-      engine.input.set object || scope, property, value
+      engine.data.set object || scope, property, value
     return
 
 module.exports = Input
