@@ -104,21 +104,24 @@ Solving = Input::Default.extend
       if domain = parent.command.domains?[parent.indexOf(operation)]
         return engine[domain]
 
+# Claim unrecognized commands to be executed by Output domain
 Outputting = (engine, operation, command) ->
-  if parent = operation.parent
-    if parent.command.sequence 
-      if parent.command.type != 'List'
-        index = parent.indexOf(operation)
-        Outputting.patch(engine.output, operation, parent, index, parent[index - 1])
-    else if operation.command.type == 'Default' && !engine.solver.signatures[operation[0]] && !engine.data.signatures[operation[0]]
-      Outputting.patch(engine.output, operation, parent, false)
+
+  if (parent = operation.parent) && parent.command.sequence && parent.command.type != 'List'
+    index = parent.indexOf(operation)
+    Outputting.patch(engine.output, operation, parent, index, parent[index - 1])
+  else if operation.command.type == 'Default' && 
+      !engine.solver.signatures[operation[0]] && 
+      (!engine.data.signatures[operation[0]] || operation[0] == '=')
+    Outputting.patch(engine.output, operation, parent, false)
 
 Outputting.patch = (engine, operation, parent, index, context) ->
   operation.domain = engine.output
   for argument, i in operation
     if argument.push
       if index != false || argument.command.type == 'Default' || argument.command.type == 'Variable'
-        Outputting.patch(engine, argument, operation, if index == false then false else i)
+        if engine.output.signatures[argument[0]] && (argument.command.type != 'Variable' || argument.parent[0] != '=' || argument.parent.indexOf(argument) != 1)
+          Outputting.patch(engine, argument, operation, if index == false then false else i)
   match = engine.Command.match(engine.output, operation, parent, parent.indexOf(operation), context)
   Command.assign(engine, operation, match, context)
   
@@ -186,13 +189,7 @@ Input::Assignment = Command.extend {
     variable: ['String', 'Variable']
     value:    ['Variable', 'Number', 'Matrix', 'Command', 'Default']
   ]
-},
-  '=': (variable, value, engine, operation, continuation) ->
-    if variable[0] == 'get' && variable.length == 2
-      engine.data.set(variable[1], name, value, @delimit(continuation), operation)
-      return
-    else
-      throw new Error '[Input] Unexpected expression on left side of `=`'
+}
 
 # Style assignment
 Input::Assignment.Style = Input::Assignment.extend {

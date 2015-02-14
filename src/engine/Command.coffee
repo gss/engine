@@ -864,6 +864,7 @@ class Command.List extends Command.Sequence
 
   condition: (engine, operation) ->
     if parent = operation.parent
+      debugger
       return parent.command.List?[parent.indexOf(operation)] || parent[0] == true #FIXME, parser thing
     else
       return !operation[0].command.Sequence

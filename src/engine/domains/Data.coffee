@@ -27,12 +27,37 @@ class Data extends Domain
     if @values.hasOwnProperty(path)
       @set(null, path, @fetch(path))
 
+# Constant definition
+Data::Assignment = Command.extend {
+  type: 'Assignment'
+  
+  signature: [
+    variable: ['String', 'Variable']
+    value:    ['Variable', 'Number', 'Matrix', 'Command', 'Default']
+  ]
+},
+  '=': (variable, value, engine, operation, continuation) ->
+    if variable[0] == 'get' && variable.length == 2
+      engine.data.set(variable[1], name, value, @delimit(continuation), operation)
+      return
+    else
+      throw new Error '[Input] Unexpected expression on left side of `=`'
+
+
 Data::Variable = Variable.extend {},
   get: (path, engine, operation, continuation, scope) ->
     if meta = @getMeta(operation)
       continuation = meta.key
       scope ||= meta.scope && engine.identity[meta.scope] || engine.scope
-    return engine.watch(null, path, operation, @delimit(continuation || ''), scope)
+    else
+      if engine.queries
+        prefix = engine.Query::getScope(engine, undefined, continuation)
+
+      if !prefix && engine.data.check(engine.scope, property)
+        prefix = engine.scope
+        engine = engine.data
+
+    return engine.watch(prefix, path, operation, continuation, scope)
 
 Data::Variable.Getter = Data::Variable.extend {
   signature: [
@@ -44,15 +69,11 @@ Data::Variable.Getter = Data::Variable.extend {
     if engine.queries
       prefix = engine.Query::getScope(engine, object, continuation)
 
-    if prop = engine.properties[property]
-      unless prop.matcher
-        return prop.call(engine, object, continuation)
-    
     if !prefix && engine.data.check(engine.scope, property)
       prefix = engine.scope
       engine = engine.data
 
-    return engine.watch(prefix, property, operation, @delimit(continuation || ''), scope)
+    return engine.watch(prefix, property, operation, continuation, scope)
 
 Data::Variable.Expression = Variable.Expression.extend(
   before: (args, engine)->

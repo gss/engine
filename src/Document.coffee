@@ -80,7 +80,7 @@ class Document extends Engine
         property = property.replace(/^intrinsic-/, '')
         path = @getPath(id, property)
         if @engine.values.hasOwnProperty(path) || @engine.updating.solution?.hasOwnProperty(path)
-          node.style[property] = ''
+          node.style[@camelize property] = ''
 
     unsubscribe: (id, property, path) ->
       @output.set path, null
@@ -139,6 +139,8 @@ class Document extends Engine
     @scope.addEventListener 'scroll', @engine, true
     window?.addEventListener 'resize', @engine, true
 
+  prefixes: ['moz', 'webkit', 'ms']
+    
 
   $$events:
 
@@ -170,8 +172,19 @@ class Document extends Engine
       @data.remove(path)
 
     compile: ->
+      scope = @scope.body || @scope
+      for property, value of @output.properties
+        unless scope.style[property]?
+          prop = @camelize(property)
+          prop = prop.charAt(0).toUpperCase() + prop.slice(1)
+          for prefix in @prefixes
+            prefixed = prefix + prop
+            if scope.style[prefixed]?
+              value.property = prefixed
+              
       @solve @input.Stylesheet.operations
       @input.Selector.connect(@, true)
+
 
     solve: ->
       if @scope.nodeType == 9
@@ -298,7 +311,7 @@ class Document extends Engine
         property = "top"
 
     return unless prop = @output.properties[property]
-    camel = @camelize property
+    camel = prop.property || @camelize(property)
     
     if (shorthand = prop.shorthand) && (shorthand.callback)
       shorthand.callback.call(@, element, value, operation, continuation)
@@ -497,8 +510,6 @@ class Document extends Engine
                 styles.y = value - y
                 (offsets ||= {}).y = value - y
 
-      # Let other measurements hook up into this batch
-      # @engine.data.update(element, x, y, full)
 
 
     return offsets
