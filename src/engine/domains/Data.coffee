@@ -53,7 +53,7 @@ Data::Variable = Variable.extend {},
       if engine.queries
         prefix = engine.Query::getScope(engine, undefined, continuation)
 
-      if !prefix && engine.data.check(engine.scope, property)
+      if !prefix && engine.scope && engine.data.check(engine.scope, path)
         prefix = engine.scope
         engine = engine.data
 

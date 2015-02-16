@@ -112,7 +112,8 @@ Outputting = (engine, operation, command) ->
     Outputting.patch(engine.output, operation, parent, index, parent[index - 1])
   else if operation.command.type == 'Default' && 
       !engine.solver.signatures[operation[0]] && 
-      (!engine.data.signatures[operation[0]] || operation[0] == '=')
+      (!engine.data.signatures[operation[0]] || operation[0] == '=') && 
+      (engine.output.signatures[operation[0]])
     Outputting.patch(engine.output, operation, parent, false)
 
 Outputting.patch = (engine, operation, parent, index, context) ->
@@ -120,9 +121,14 @@ Outputting.patch = (engine, operation, parent, index, context) ->
   for argument, i in operation
     if argument.push
       if index != false || argument.command.type == 'Default' || argument.command.type == 'Variable'
-        if engine.output.signatures[argument[0]] && (argument.command.type != 'Variable' || argument.parent[0] != '=' || argument.parent.indexOf(argument) != 1)
+        if engine.output.signatures[argument[0]] && (argument.command.type != 'Variable' || operation[0] != '=' || operation.indexOf(argument) != 1)
           Outputting.patch(engine, argument, operation, if index == false then false else i)
-  match = engine.Command.match(engine.output, operation, parent, parent.indexOf(operation), context)
+
+  if operation[0] == true
+    match = Command.List
+  else
+    match = engine.Command.match(engine.output, operation, parent, parent?.indexOf(operation), context)
+  #if operation[0] != true
   Command.assign(engine, operation, match, context)
   
   return match
