@@ -77,7 +77,6 @@ describe 'Matrix', ->
         ['translateX', 3]
         ['rotateZ', ['get', 'unknown']]
       ]])).to.eql(undefined)
-      expect
 
 
   describe 'when used with known variables', ->
@@ -189,7 +188,7 @@ describe 'Matrix', ->
 
         done()
 
-  describe 'use as function call upon selector', ->
+  xdescribe 'use as function call upon selector', ->
     it 'should mutate element matrix', (done) ->
       engine.scope.innerHTML = """
         <div></div>
