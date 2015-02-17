@@ -45,10 +45,12 @@ class Condition extends Query
       path = continuation + @key
       unless engine.queries.hasOwnProperty(path)
         engine.queries[path] = 0
+        evaluate = true
+      @after([], engine.queries[path], engine, operation, continuation, scope)
+      if evaluate
         branch = operation[@conditional]
         branch.command.solve(engine, branch, continuation, scope)
 
-      @after([], engine.queries[path], engine, operation, continuation, scope)
 
     return false
 
