@@ -3,6 +3,15 @@ expect = chai.expect
 assert = chai.assert
 
 
+if document.body.style.transform?
+  property = 'transform'
+else if document.body.style.webkitTransform?
+  property = 'webkitTransform'
+else if document.body.style.mozTransform?
+  property = 'mozTransform'
+
+return unless property
+
 describe 'Matrix', ->
   engine = null
   before ->
@@ -101,21 +110,21 @@ describe 'Matrix', ->
         ]]
       ])).to.eql({'$d1[transform]': M_tX3_rZ1of2, '$d2[transform]': M_tX3_rZ1of2})
 
-      T_tX3_rZ1of2 = d1.style.transform
-      d1.style.transform = engine.output.Matrix::format(M_tX3_rZ1of2)
-      expect(d1.style.transform).to.eql(T_tX3_rZ1of2)
+      T_tX3_rZ1of2 = d1.style[property]
+      d1.style[property] = engine.output.Matrix::format(M_tX3_rZ1of2)
+      expect(d1.style[property]).to.eql(T_tX3_rZ1of2)
 
       M_tX3_rZ3of4 = engine.output.Matrix::_mat4.create()
       M_tX3_rZ3of4 = engine.output.Matrix::_mat4.translate(M_tX3_rZ3of4, M_tX3_rZ3of4, [3, 0, 0])
       M_tX3_rZ3of4 = engine.output.Matrix::_mat4.rotateZ(M_tX3_rZ3of4, M_tX3_rZ3of4, 270 * (Math.PI / 180))
 
       engine.data.merge({'half': 0.75})
-      T_tX3_rZ3of4 = d1.style.transform
-      d1.style.transform = engine.output.Matrix::format(M_tX3_rZ3of4)
-      expect(d1.style.transform).to.eql(T_tX3_rZ3of4)
+      T_tX3_rZ3of4 = d1.style[property]
+      d1.style[property] = engine.output.Matrix::format(M_tX3_rZ3of4)
+      expect(d1.style[property]).to.eql(T_tX3_rZ3of4)
 
       engine.data.merge({'half': 0.5})
-      expect(d1.style.transform).to.eql(T_tX3_rZ1of2)
+      expect(d1.style[property]).to.eql(T_tX3_rZ1of2)
 
       container.innerHTML =  ""
       engine.then ->
@@ -153,34 +162,34 @@ describe 'Matrix', ->
         '$d1[transform]': M_tX3_rZ1of2
         '$d2[transform]': M_tX3_rZ1of2
       )
-      T_tX3_rZ1of2 = d1.style.transform
-      d1.style.transform = engine.output.Matrix::format(M_tX3_rZ1of2)
-      expect(d1.style.transform).to.eql(T_tX3_rZ1of2)
-      expect(d2.style.transform).to.eql(T_tX3_rZ1of2)
+      T_tX3_rZ1of2 = d1.style[property]
+      d1.style[property] = engine.output.Matrix::format(M_tX3_rZ1of2)
+      expect(d1.style[property]).to.eql(T_tX3_rZ1of2)
+      expect(d2.style[property]).to.eql(T_tX3_rZ1of2)
 
       M_tX3_rZ3of4 = engine.output.Matrix::_mat4.create()
       M_tX3_rZ3of4 = engine.output.Matrix::_mat4.translate(M_tX3_rZ3of4, M_tX3_rZ3of4, [3, 0, 0])
       M_tX3_rZ3of4 = engine.output.Matrix::_mat4.rotateZ(M_tX3_rZ3of4, M_tX3_rZ3of4, 270 * (Math.PI / 180))
 
       engine.data.merge({'half': 0.75})
-      T_tX3_rZ3of4 = d1.style.transform
-      d1.style.transform = engine.output.Matrix::format(M_tX3_rZ3of4)
-      expect(d1.style.transform).to.eql(T_tX3_rZ3of4)
+      T_tX3_rZ3of4 = d1.style[property]
+      d1.style[property] = engine.output.Matrix::format(M_tX3_rZ3of4)
+      expect(d1.style[property]).to.eql(T_tX3_rZ3of4)
 
       engine.data.merge({'three': -3})
       M_tXminus3_rZ3of4 = engine.output.Matrix::_mat4.create()
       M_tXminus3_rZ3of4 = engine.output.Matrix::_mat4.translate(M_tXminus3_rZ3of4, M_tXminus3_rZ3of4, [-3, 0, 0])
       M_tXminus3_rZ3of4 = engine.output.Matrix::_mat4.rotateZ(M_tXminus3_rZ3of4, M_tXminus3_rZ3of4, 270 * (Math.PI / 180))
 
-      T_tXminus3_rZ3of4 = d1.style.transform
-      engine.scope.style.transform = engine.output.Matrix::format(M_tXminus3_rZ3of4)
-      expect(d1.style.transform).to.eql(T_tXminus3_rZ3of4)
+      T_tXminus3_rZ3of4 = d1.style[property]
+      engine.scope.style[property] = engine.output.Matrix::format(M_tXminus3_rZ3of4)
+      expect(d1.style[property]).to.eql(T_tXminus3_rZ3of4)
 
 
       engine.data.merge({'half': 0.5, 'three': 3})
-      expect(d1.style.transform).to.eql(T_tX3_rZ1of2)
+      expect(d1.style[property]).to.eql(T_tX3_rZ1of2)
       #engine.data.merge({'three': null})
-      #expect(d1.style.transform).to.eql('')
+      #expect(d1.style[property]).to.eql('')
       container.innerHTML =  ""
       engine.then ->
         expect(engine.values).to.eql({'half': 0.5, 'three': 3})
