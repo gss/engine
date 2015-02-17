@@ -154,9 +154,6 @@ describe 'GSS commands', ->
 
     it 'intrinsic-width with class', (done) ->
 
-      engine.once 'solve', (solution) ->
-
-
       engine.solve [
         ['==', 
           ['get', ['.','box'], 'width'],
@@ -219,6 +216,73 @@ describe 'GSS commands', ->
         <div style="width:333px;" class="box" id="35346">One</div>
       """
 
+
+    it 'intrinsic-top with class', (done) ->
+
+      engine.solve [
+        ['==', 
+          ['get', ['.','box'], 'top'],
+          ['get', ['.','box'], 'intrinsic-top']]
+      ], (solution) ->
+        chai.expect(stringify engine.updated.getProblems()).to.eql stringify  [
+          [
+            ['get','$12322[intrinsic-top]']
+            ['get','$34222[intrinsic-top]']
+            ['get','$35346[intrinsic-top]']
+          ], 
+          [[
+            key: '.box$12322', values: {'$12322[intrinsic-top]': 111}
+            ['==', 
+                ['get','$12322[top]'],
+                ['get','$12322[intrinsic-top]']
+            ]
+          ]], 
+          [[
+            key: '.box$34222', values: {'$34222[intrinsic-top]': 222}
+            ['==', 
+              ['get','$34222[top]'],
+              ['get','$34222[intrinsic-top]']
+            ]
+          ]], 
+          [[
+            key: '.box$35346', values: {'$35346[intrinsic-top]': 333}
+            ['==', 
+              ['get','$35346[top]'],
+              ['get','$35346[intrinsic-top]']
+            ]
+          ]]
+        ]
+        expect(solution).to.eql
+          "$12322[intrinsic-top]": 111
+          "$12322[top]": 111
+          "$12322[top]": 111
+          "$34222[intrinsic-top]": 222
+          "$34222[top]": 222
+          "$34222[top]": 222
+          "$35346[intrinsic-top]": 333
+          "$35346[top]": 333
+          "$35346[top]": 333
+
+
+
+        box0 = scope.getElementsByClassName('box')[0]
+
+        expect(box0.style.position).to.eql('')
+        box0.parentNode.removeChild(box0)
+
+        engine.once 'solve', ->
+          chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [
+            [["remove",".box$12322"]],
+            [["remove",".box$12322"]]
+          ]
+          done()
+
+      scope.innerHTML = """
+        <style>div { position: absolute; }</style>
+        <div style="top:111px;" class="box" id="12322">One</div>
+        <div style="top:222px;" class="box" id="34222">One</div>
+        <div style="top:333px;" class="box" id="35346">One</div>
+      """
 
     it '.box[width] == ::window[width]', (done) ->
       engine.solve [
