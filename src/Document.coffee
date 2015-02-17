@@ -323,9 +323,6 @@ class Document extends Engine
       value = prop.format(value)
 
 
-    if property == 'left' || property == 'top'
-      @setAbsolutePosition(element, property, value)
-
     else if parent = operation
       while parent.parent
         parent = parent.parent
@@ -340,6 +337,9 @@ class Document extends Engine
 
     if @data.watchers?[path]
       return
+
+    if property == 'left' || property == 'top'
+      @setAbsolutePosition(element, property, value)
 
     if element.style[camel] != undefined
       element.style[camel] = value

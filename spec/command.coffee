@@ -218,7 +218,6 @@ describe 'GSS commands', ->
 
 
     it 'intrinsic-top with class', (done) ->
-
       engine.solve [
         ['==', 
           ['get', ['.','box'], 'top'],
@@ -279,9 +278,9 @@ describe 'GSS commands', ->
 
       scope.innerHTML = """
         <style>div { position: absolute; }</style>
-        <div style="top:111px;" class="box" id="12322">One</div>
-        <div style="top:222px;" class="box" id="34222">One</div>
-        <div style="top:333px;" class="box" id="35346">One</div>
+        <div style="margin-top:111px;" class="box" id="12322">One</div>
+        <div style="margin-top:222px;" class="box" id="34222">One</div>
+        <div style="margin-top:333px;" class="box" id="35346">One</div>
       """
 
     it '.box[width] == ::window[width]', (done) ->
