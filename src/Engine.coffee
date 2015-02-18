@@ -113,6 +113,12 @@ class Engine
       
       return @commit(result, undefined, apply)
 
+  upstream: (values)->
+    if values
+      @updating.apply(values)
+      @output.merge(values)
+    return values
+
   # Figure out arguments and prepare to solve given operations
   transact: ->
     if typeof arguments[0] == 'string'
@@ -147,39 +153,31 @@ class Engine
   commit: (solution, update = @updating, apply) ->
     return if update.blocking
     
-    # Save given solution
-    if solution && Object.keys(solution).length
-      @triggerEvent('resume', solution, update)
 
+    # Save given solution
+    if solution
+      @upstream(solution)
         
     until update.isDone() && !update.isDirty()
 
       # Process stylesheets, mutations, pairs, conditions, branches
-      until update.isDocumentDone()
-        @triggerEvent('commit', update)
+      @triggerEvent('commit', update)
 
       return if update.blocking
 
-      unless update.isDataDone()
-        @triggerEvent('assign', update)
+      # Process assignments, queue constraints
+      @triggerEvent('assign', update)
 
-      # Evaluate queue of generated constraints
-      if update.domains.length
-        if !update.busy?.length
-          @console.start('Solvers', update.problems.slice(update.index))
-          update.each @resolve, @
-          @console.end(update.solution)
-        if update.busy?.length
-          return update
+      # Solve found constraint graphs
+      @triggerEvent('perform', update)
 
-      # Apply values to elements
-      @output.merge(update.solution)
+      # Wait for the worker
+      if update.busy?.length
+        return update
 
+      # Apply solved styles
       if apply != false || update.domains.length
         @console.start('Apply', update.solution)
-
-        @data.upstream()
-
         @triggerEvent('apply', update.solution, update)
         @triggerEvent('write', update.solution, update)
         @triggerEvent('flush', update.solution, update)
@@ -302,7 +300,20 @@ class Engine
       
   # Builtin event handlers
   $events:
-    
+
+    # Evaluate queue of generated constraints
+    # Perform & apply computations
+    perform: (update) ->
+      if update.domains.length
+        if !update.busy?.length 
+          @console.start('Solvers', update.problems.slice(update.index))
+          update.each @resolve, @
+          @console.end(update.solution)
+
+        # Apply values to elements
+        @output.merge(update.solution)
+      @upstream(@data.commit())
+
     finish: (solution, update) ->
       @inspector.update()
       @console.end(solution)
@@ -312,18 +323,13 @@ class Engine
         @updated = update
 
     # Perform pending query operations
-    commit: ->
-      @Query::commit(@)
-      @Query::repair(@)
-      @Query::branch(@)
+    commit: (update) ->
+      until update.isDocumentDone()
+        @Query::commit(@)
+        @Query::repair(@)
+        @Query::branch(@)
     
       return
-
-    # Apply given values to current update object and solved domain
-    resume: (solution, update) ->
-      if update.solution != solution
-        update.apply(solution)
-      @output.merge(solution)
 
     # Dispatch remove command
     remove: (path) ->
@@ -341,7 +347,7 @@ class Engine
           index += 4
         update.assignments = undefined
         
-        changes = @data.upstream()
+        changes = @upstream(@data.commit())
 
         @console.end(changes)
 
