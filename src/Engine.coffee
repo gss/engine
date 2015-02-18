@@ -160,7 +160,7 @@ class Engine
 
       return if update.blocking
 
-      until update.isDataDone()
+      unless update.isDataDone()
         @triggerEvent('assign', update)
 
       if @data.upstream()
@@ -335,19 +335,19 @@ class Engine
       @updating?.remove(path)
 
     assign: (update) ->
-      debugger
       # Execute assignments
-      if assignments = update.assignments
-        index = 0
+
+      while assignments = update.assignments
         @console.start('Assignments', assignments)
+        index = 0
         while path = assignments[index]
           @data.set(path, null, assignments[index + 1], assignments[index + 2], assignments[index + 3])
           index += 4
         update.assignments = undefined
         
-        #@data.upstream()
+        changes = @data.upstream()
 
-        @console.end()
+        @console.end(changes)
 
 
       # Schedule constraints

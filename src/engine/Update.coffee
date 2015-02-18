@@ -490,7 +490,7 @@ Update.prototype =
     return @restyled || @solved || @reflown || @engine.data.changes
     
   hadSideEffects: (solution)->
-    return solution || @domains.length > 0 || @hasOwnProperty('restyled')# || @solution
+    return @solution || @domains.length > 0 || @hasOwnProperty('restyled')# || @solution
 
   block: ->
     @blocking++
