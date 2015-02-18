@@ -93,7 +93,7 @@ Solving = Input::Default.extend
       wrapper.parent = operation.parent
       wrapper.domain ||= domain
 
-    engine.update(wrapper, undefined, undefined, domain)
+    (engine.updating.constraints ||= []).push(wrapper, domain)
     return
 
   produce: (meta, args)->

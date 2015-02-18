@@ -1,4 +1,5 @@
 require("./domain")
+require("./assignments")
 require("./cassowary")
 require("./matrix")
 require("./end-to-end")

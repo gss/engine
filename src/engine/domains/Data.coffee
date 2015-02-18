@@ -33,15 +33,20 @@ Data::Assignment = Command.extend {
   
   signature: [
     variable: ['String', 'Variable']
-    value:    ['Variable', 'Number', 'Matrix', 'Command', 'Default']
+    value:    ['Variable', 'Number', 'Matrix', 'Command', 'Object']
   ]
 },
   '=': (variable, value, engine, operation, continuation) ->
-    if variable[0] == 'get' && variable.length == 2
-      engine.data.set(variable[1], name, value, @delimit(continuation), operation)
+    if typeof variable == 'string'
+      name = variable
+    else if variable[0] == 'get' && variable.length == 2
+      name = variable[1]
+
+    if name
+      engine.data.set(name, null, value, @delimit(continuation), operation)
       return
     else
-      throw new Error '[Input] Unexpected expression on left side of `=`'
+      throw new Error '[Input] Unexpected expression on left side of `=`: ' + JSON.stringify(variable)
 
 
 Data::Variable = Variable.extend {},

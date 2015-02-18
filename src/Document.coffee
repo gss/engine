@@ -399,22 +399,24 @@ class Document extends Engine
 
         for prop of properties
           switch prop
-            when "x", "intrinsic-x", "computed-x", "intrinsic-left", "computed-left"
+            when "intrinsic-x", "computed-x", "intrinsic-left", "computed-left"
               @set id, prop, x + node.offsetLeft
-            when "y", "intrinsic-y", "computed-y", "intrinsic-top", "computed-top"
+            when "intrinsic-y", "computed-y", "intrinsic-top", "computed-top"
               @set id, prop, y + node.offsetTop
-            when "width",  "intrinsic-width",  "computed-width"
+            when "intrinsic-width",  "computed-width"
               @set id, prop, node.offsetWidth
-            when "height", "intrinsic-height", "computed-height"
+            when "intrinsic-height", "computed-height"
               @set id, prop, node.offsetHeight
             when "scroll-top", "scroll-left"
 
+            
             else
               style = prop.replace(/^(?:computed|intrinsic)-/, '')
-              if @properties[style]
-                @set id, prop, @get(node, style)
-              else if @output.properties[style]
-                @set id, prop, @getStyle(node, style)
+              if prop != style
+                if @properties[style]
+                  @set id, prop, @get(node, style)
+                else if @output.properties[style]
+                  @set id, prop, @getStyle(node, style)
 
     return
 

@@ -481,7 +481,7 @@ Update.prototype =
     return (@domains.length == @index + 1) && @isDocumentDone()
 
   isDocumentDone: ->
-    return !@mutations && !@deferred && !@pairs && !@stylesheets && !@branches
+    return !@mutations && !@deferred && !@pairs && !@stylesheets && !@branches && !@constraints
 
   isDirty: ->
     return @restyled || @solved || @reflown || @engine.data.changes

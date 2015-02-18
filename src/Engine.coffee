@@ -159,7 +159,6 @@ class Engine
         @triggerEvent('commit', update)
       return if update.blocking
 
-
       if @data.upstream()
         apply = true
 
@@ -194,6 +193,8 @@ class Engine
     # Discard update if it did nothing 
     unless update.hadSideEffects(solution)
       @updating = undefined
+
+      @fireEvent 'finish', update.solution, @update
       @console.end()
       return
 
@@ -204,6 +205,7 @@ class Engine
 
     @inspector.update()
     @console.end(update.solution)
+    @fireEvent 'finish', update.solution, @update
     @fireEvent 'solve', update.solution, @updated
     @fireEvent 'solved', update.solution, @updated
 

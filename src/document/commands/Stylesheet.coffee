@@ -146,7 +146,7 @@ class Stylesheet extends Command.List
       if anchor
         anchor.parentNode.insertBefore(sheet, anchor)
       else
-        engine.scope.appendChild(sheet)
+        (engine.scope.documentElement || engine.scope).appendChild(sheet)
     return sheet
 
   getWatchers: (engine, stylesheet) ->

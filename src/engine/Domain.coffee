@@ -219,7 +219,7 @@ class Domain
         # Remove propagated value and re-match expressions around it
         else
           watcher.command.patch(@, watcher, watchers[index + 1], watchers[index + 2])
-                  
+      
     return if @immutable
 
     # Suggest or remove suggestions for previously added constraints
