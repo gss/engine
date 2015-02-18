@@ -163,9 +163,6 @@ class Engine
       unless update.isDataDone()
         @triggerEvent('assign', update)
 
-      if @data.upstream()
-        apply = true
-
       # Evaluate queue of generated constraints
       if update.domains.length
         if !update.busy?.length
@@ -195,25 +192,15 @@ class Engine
       update.commit()
 
     # Discard update if it did nothing 
-    unless update.hadSideEffects(solution)
-      @updating = undefined
+    if update.hadSideEffects(solution)
+      @triggerEvent('finish', update.solution, update)
 
-      @fireEvent 'finish', update.solution, @update
-      @console.end()
-      return
+      @fireEvent('solve',  update.solution, update)
+      @fireEvent('solved', update.solution, update)
+      return update.solution
+    else
+      @triggerEvent 'finish'
 
-    update.finish()
-
-    @updated = update
-    @updating = undefined
-
-    @inspector.update()
-    @console.end(update.solution)
-    @fireEvent 'finish', update.solution, @update
-    @fireEvent 'solve', update.solution, @updated
-    @fireEvent 'solved', update.solution, @updated
-
-    return update.solution
 
   # Solve problems by given domain/worker
   # Writes messages to lazy buffer, when using worker
@@ -311,9 +298,18 @@ class Engine
     @triggerEvent(name, data, object)
     if @scope
       @dispatchEvent(@scope, name, data, object)
+    return
       
   # Builtin event handlers
   $events:
+    
+    finish: (solution, update) ->
+      @inspector.update()
+      @console.end(solution)
+      @updating = undefined
+
+      if update
+        @updated = update
 
     # Perform pending query operations
     commit: ->
