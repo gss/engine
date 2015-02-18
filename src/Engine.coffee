@@ -157,7 +157,11 @@ class Engine
       # Process stylesheets, mutations, pairs, conditions, branches
       until update.isDocumentDone()
         @triggerEvent('commit', update)
+
       return if update.blocking
+
+      until update.isDataDone()
+        @triggerEvent('assign', update)
 
       if @data.upstream()
         apply = true
@@ -329,6 +333,34 @@ class Engine
     remove: (path) ->
       @output.remove(path)
       @updating?.remove(path)
+
+    assign: (update) ->
+      debugger
+      # Execute assignments
+      if assignments = update.assignments
+        index = 0
+        @console.start('Assignments', assignments)
+        while path = assignments[index]
+          @data.set(path, null, assignments[index + 1], assignments[index + 2], assignments[index + 3])
+          index += 4
+        update.assignments = undefined
+        
+        #@data.upstream()
+
+        @console.end()
+
+
+      # Schedule constraints
+      if constraints = update.constraints
+        index = 0
+        @console.start('Constraints', constraints)
+        while operation = constraints[index]
+          @update(operation, undefined, undefined, constraints[index + 1])
+          index += 2
+        update.constraints = undefined
+        @console.end()
+      
+
 
     # Unsubscribe from worker and forget the engine
     destroy: (e) ->

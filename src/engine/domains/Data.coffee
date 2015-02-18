@@ -43,7 +43,7 @@ Data::Assignment = Command.extend {
       name = variable[1]
 
     if name
-      engine.data.set(name, null, value, @delimit(continuation), operation)
+      (engine.updating.assignments ||= []).push(name, value, @delimit(continuation), operation)
       return
     else
       throw new Error '[Input] Unexpected expression on left side of `=`: ' + JSON.stringify(variable)

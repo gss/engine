@@ -478,10 +478,13 @@ Update.prototype =
     @started ?= @engine.console.getTime()
 
   isDone: ->
-    return (@domains.length == @index + 1) && @isDocumentDone()
+    return (@domains.length == @index + 1) && @isDocumentDone() && @isDataDone()
 
   isDocumentDone: ->
-    return !@mutations && !@deferred && !@pairs && !@stylesheets && !@branches && !@constraints
+    return !@mutations && !@deferred && !@pairs && !@stylesheets && !@branches
+
+  isDataDone: ->
+    return !@constraints && !@assignments
 
   isDirty: ->
     return @restyled || @solved || @reflown || @engine.data.changes

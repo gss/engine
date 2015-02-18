@@ -243,16 +243,6 @@ class Query extends Command
       engine.updating.deferred = undefined
       engine.console.end()
 
-    # Schedule constraints
-    if constraints = engine.updating.constraints
-      index = 0
-      engine.console.start('Constraints', constraints)
-      while operation = constraints[index]
-        engine.update(operation, undefined, undefined, constraints[index + 1])
-        index += 2
-      engine.updating.constraints = undefined
-    engine.console.end()
-    
     return
 
   # Manually add element to collection, handle dups

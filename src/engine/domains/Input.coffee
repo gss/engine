@@ -227,10 +227,8 @@ Input::Assignment.Style = Input::Assignment.extend {
 },
   'set': (object, property, value, engine, operation, continuation, scope) ->
 
-    if engine.data
-      engine.setStyle object || scope, property, value, continuation, operation
-    else
-      engine.data.set object || scope, property, value
+    engine.setStyle? object || scope, property, value, continuation, operation
+    
     return
 
 module.exports = Input
