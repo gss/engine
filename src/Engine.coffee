@@ -181,10 +181,8 @@ class Engine
         return update
 
       # Apply solved styles
-
-      if @write(update) || (update.reflown && update.isDone())
-        @triggerEvent('validate', update.solution, update)
-      
+      if @write(update) || update.isDone()
+        @triggerEvent('validate', update)
       update.commit()
 
     # Discard update if it did nothing 
@@ -304,7 +302,9 @@ class Engine
     perform: (update) ->
       if update.domains.length
         if !update.busy?.length 
-          @console.start('Solvers', update.problems.slice(update.index))
+          if (index = update.index) == -1
+            index = 0;
+          @console.start('Solvers', update.problems.slice(index))
           update.each @resolve, @
           @console.end(update.changes)
 

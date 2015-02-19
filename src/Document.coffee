@@ -64,7 +64,6 @@ class Document extends Engine
     perform: ->
       if arguments.length < 4 && @data.subscribers
         @console.start('Measure', @values)
-        debugger
         scope = @scope
         if scope.nodeType == 9
           @measure(scope, 0, 0)
@@ -72,7 +71,7 @@ class Document extends Engine
 
         @each scope, 'measure'
         @console.end(@changes)
-      return @commit()
+        return @propagate @commit()
       
     # Reset intrinsic style when observed initially
     subscribe: (id, property) ->
@@ -153,18 +152,14 @@ class Document extends Engine
 
   $$events:
 
-    validate: (solution, update) ->
+    validate: (update) ->
       if @data.subscribers && update.domains.indexOf(@data, update.index + 1) == -1
         @data.verify('::window', 'width')
         @data.verify('::window', 'height')
         @data.verify(@scope, 'width')
         @data.verify(@scope, 'height')
         
-        if measured = @data.solve()
-          if true#Object.keys(measured).length
-            update.apply measured
-            @output.merge measured
-    
+        @propagate @data.solve()
     apply: ->
 
 
@@ -446,6 +441,9 @@ class Document extends Engine
         continue if id.indexOf('"') > -1
         continue unless element = document.getElementById(id.substring(1))
       
+      if @values[id + '[intrinsic-' + property + ']']?
+        continue
+
       key = if (property == 'x' || property == 'y') then 'positions' else 'styles'
       (((result || (result = {}))[key] ||= {})[id] ||= {})[property] = value
 
@@ -465,8 +463,9 @@ class Document extends Engine
     @console.start('Apply', data)
     for id, styles of changes.styles
       element = @identity[id] || document.getElementById(id.substring(1))
-      for prop, value of styles
-        @setStyle(element, prop, value)
+      if element.nodeType == 1
+        for prop, value of styles
+          @setStyle(element, prop, value)
 
 
     if changes.positions
@@ -476,7 +475,8 @@ class Document extends Engine
       for id, styles of changes.positions
         element = @identity[id] || document.getElementById(id.substring(1))
         for prop, value of styles
-          @setStyle(element, prop, value)
+          if element.nodeType == 1
+            @setStyle(element, prop, value)
           
     if transforms = @updating.transforms
       for id of transforms
