@@ -481,7 +481,7 @@ Update.prototype =
     return (@domains.length == @index + 1) && @isDocumentDone() && @isDataDone()
 
   isDocumentDone: ->
-    return !@mutations && !@deferred && !@pairs && !@stylesheets && !@branches
+    return !(@mutations || @deferred || @pairs || @stylesheets || @branches)
 
   isDataDone: ->
     return !@constraints && !@assignments

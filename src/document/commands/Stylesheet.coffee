@@ -333,7 +333,7 @@ class Stylesheet extends Command.List
           bits = values
 
         element.setAttribute('matches', bits.join(' '))
-      engine.matches = undefined
+      engine.updating.matches = undefined
 
     if unmatches = engine.updating.unmatches
       for id, values of unmatches
@@ -349,7 +349,7 @@ class Stylesheet extends Command.List
         else
           element.removeAttribute('matches')
 
-      engine.unmatches = undefined
+      engine.updating.unmatches = undefined
   # Dont add @import() to the path for global level stylesheets
   getKey: (engine, operation, continuation, node) ->
     if !node && continuation && continuation.lastIndexOf(@DESCEND) == -1#continuation.indexOf(@DESCEND)

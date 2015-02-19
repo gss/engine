@@ -137,12 +137,12 @@ describe 'Matrix', ->
       engine.data.merge({'half': 0.5})
       expect(d1.style[property]).to.eql(T_tX3_rZ1of2)
 
-      container.innerHTML =  ""
       engine.then ->
         expect(engine.values).to.eql({'half': 0.5, 'three': 3})
         expect(engine.identity['$d1']).to.eql(undefined)
         expect(engine.identity['$d2']).to.eql(undefined)
         done()
+      container.innerHTML =  ""
 
   describe 'when used with known variables before static part', ->
     it 'should update and recompute matrix', (done) ->

@@ -271,7 +271,7 @@ class Document extends Engine
       @scope.removeEventListener 'scroll', @
       window.removeEventListener 'resize', @
 
-      @input.Selector.disconnect(@, true)
+      @input.Selector.disconnect(@)
 
 
   getComputedStyle: (element, force) ->
