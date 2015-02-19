@@ -493,7 +493,6 @@ class Document extends Engine
         @output.retransform(id)
       @updating.transforms = undefined
 
-    console.error('applied', JSON.parse(JSON.stringify(changes)))
     @console.end(JSON.parse(JSON.stringify(changes)))
     return true
 
