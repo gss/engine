@@ -136,7 +136,7 @@ class Command
           else
             @getByPath(engine, @delimit(continuation))
         else
-          command.solve(context.domain || engine, context, continuation, scope, -1)
+          command.solve(context.domain || engine, context, continuation, scope, -2)
       )
     
     return operation.context && 1 || 0
@@ -829,6 +829,7 @@ class Command.Sequence extends Command
       if command = argument.command || engine.Command(argument)
         result = command.solve(engine, argument, continuation, scope, -1, result)
         return if result == undefined
+      break
 
     return [result, engine, operation, continuation, scope]
 
@@ -846,15 +847,13 @@ class Command.Sequence extends Command
       parent.parent.command.release?(result, engine, parent, continuation, scope)
 
   yield: (result, engine, operation, continuation, scope, ascender, ascending) ->
+    return if ascender == -2
+    
     parent = operation.parent
 
     # Recurse to the next operation in sequence when stateful op yielded
-    if (next = parent[parent.indexOf(operation) + 1])# && ascender == -1
-      #if next.command.key?
-      if ascender != -1
-        return next
-      #else if ascender != -1
-      #  return @solve(engine, parent, continuation, scope, parent.indexOf(operation) + 1, result)
+    if (next = parent[parent.indexOf(operation) + 1])
+      return next
     else 
       # Recurse to sequence parent 
       if parent.parent

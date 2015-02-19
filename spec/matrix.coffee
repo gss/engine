@@ -87,6 +87,17 @@ describe 'Matrix', ->
         ['rotateZ', ['get', 'unknown']]
       ]])).to.eql(undefined)
 
+  describe 'when used with units', ->
+    it 'should update and recompute matrix', () ->
+      engine.solve([
+        ['==', ['get', 'a'], ['get', ['::window'], 'width']]
+        ['=', 'transform', [
+          ['translateX', ['vw', 3]]
+          ['rotateZ', 0.5]
+        ]]
+      ])
+
+
 
   describe 'when used with known variables', ->
     it 'should update and recompute matrix', (done) ->
@@ -129,8 +140,53 @@ describe 'Matrix', ->
       container.innerHTML =  ""
       engine.then ->
         expect(engine.values).to.eql({'half': 0.5, 'three': 3})
-        console.log(d1._gss_id)
+        expect(engine.identity['$d1']).to.eql(undefined)
+        expect(engine.identity['$d2']).to.eql(undefined)
+        done()
 
+  describe 'when used with known variables before static part', ->
+    it 'should update and recompute matrix', (done) ->
+      container = document.createElement('div')
+      document.getElementById('fixtures').appendChild(container)
+      container.innerHTML = '<div id="d1"></div><div id="d2"></div>'
+      window.$engine = engine = new GSS(container, {
+        half: 0.5
+        three: 3
+      })
+      d1 = engine.id('d1')
+      d2 = engine.id('d2')
+
+      M_tX3_rZ1of2 = engine.output.Matrix::_mat4.create()
+      M_tX3_rZ1of2 = engine.output.Matrix::_mat4.rotateZ(M_tX3_rZ1of2, M_tX3_rZ1of2, 180 * (Math.PI / 180))
+      M_tX3_rZ1of2 = engine.output.Matrix::_mat4.translate(M_tX3_rZ1of2, M_tX3_rZ1of2, [3, 0, 0])
+      expect(engine.solve(['rule', ['tag', 'div'],
+        ['=', ['get', 'transform'], [
+          ['rotateZ', ['get', ['$'], 'half']]
+          ['translateX', 3]
+        ]]
+      ])).to.eql({'$d1[transform]': M_tX3_rZ1of2, '$d2[transform]': M_tX3_rZ1of2})
+
+      T_tX3_rZ1of2 = d1.style[property]
+      d1.style[property] = engine.output.Matrix::format(M_tX3_rZ1of2)
+      expect(d1.style[property]).to.eql(T_tX3_rZ1of2)
+
+      M_tX3_rZ3of4 = engine.output.Matrix::_mat4.create()
+      M_tX3_rZ3of4 = engine.output.Matrix::_mat4.rotateZ(M_tX3_rZ3of4, M_tX3_rZ3of4, 270 * (Math.PI / 180))
+      M_tX3_rZ3of4 = engine.output.Matrix::_mat4.translate(M_tX3_rZ3of4, M_tX3_rZ3of4, [3, 0, 0])
+
+      engine.data.merge({'half': 0.75})
+      T_tX3_rZ3of4 = d1.style[property]
+      d1.style[property] = engine.output.Matrix::format(M_tX3_rZ3of4)
+      expect(d1.style[property]).to.eql(T_tX3_rZ3of4)
+
+      engine.data.merge({'half': 0.5})
+      expect(d1.style[property]).to.eql(T_tX3_rZ1of2)
+
+      container.innerHTML =  ""
+      engine.then ->
+        expect(engine.values).to.eql({'half': 0.5, 'three': 3})
+        expect(engine.identity['$d1']).to.eql(undefined)
+        expect(engine.identity['$d2']).to.eql(undefined)
         done()
 
 

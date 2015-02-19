@@ -418,7 +418,7 @@ class Query extends Command
   remove: (engine, id, continuation, operation, scope, needle = operation, recursion, contd = continuation) ->
     if typeof id == 'object'
       node = id
-      id = engine.identify(id)
+      id = engine.identity.find(id)
     else
       if id.indexOf('"') > -1
         node = id

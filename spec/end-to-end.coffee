@@ -22,7 +22,7 @@ describe 'End - to - End', ->
     
   afterEach ->
     remove(container)
-  
+    engine.destroy()
 
   describe 'intrinsic properties', ->
     it 'should bind to scrolling', (done) ->
@@ -904,14 +904,7 @@ describe 'End - to - End', ->
   describe "CCSS", ->
   
     describe 'expression chain', ->  
-      it 'should compute values', (done) ->  
-        engine.once 'solve', (e) ->     
-          expect(engine.values).to.eql 
-            "c": 10
-            "x": 0
-            "y": 500
-            "z": 510
-          done()                               
+      it 'should compute values', (done) ->                                
         container.innerHTML =  """
             <style type="text/gss" scoped>              
               [c] == 10 !require;
@@ -920,7 +913,14 @@ describe 'End - to - End', ->
               
               0 <= [z] == [c] + [y] !strong100;
             </style>
-          """
+          """ 
+        engine.once 'solve', (e) ->     
+          expect(engine.values).to.eql 
+            "c": 10
+            "x": 0
+            "y": 500
+            "z": 510
+          done()
           
     describe 'expression chain w/ queryBound connector', ->  
       it 'should be ok', (done) ->                                 
@@ -1023,16 +1023,26 @@ describe 'End - to - End', ->
             }
 
             article {
-              @h |(& section)-...| in(::);
+              left: == 0;
+              @h |(section)...|;
 
               section {
-                @h |(& p)...| in(::);
+                @h |(p)...|;
               }
             }
           </style>
         """
-        engine.then ->
-          done()
+        engine.then (solution) ->
+          expect(solution['$article1[width]']).to.eql(200)
+          expect(solution['$article2[width]']).to.eql(200)
+
+          engine.scope.innerHTML = ""
+          engine.then (solution) ->
+            expect(solution['$article1[width]']).to.eql(null)
+            expect(solution['$article2[width]']).to.eql(null)
+            expect(engine.values).to.eql({})
+
+            done()
 
     describe 'simpliest order dependent selectors', ->
       it 'should work in global scope', (done) ->                        
@@ -1907,7 +1917,19 @@ describe 'End - to - End', ->
             "$sugar2[height]": 10
             "$sugar2[x]": 0
             "$sugar2[y]": 0
-          done()
+
+          engine.scope.innerHTML = ""
+          engine.then (e) ->
+            expect(e).to.eql 
+              "$sugar1[x]": null
+              "$sugar1[y]": null
+              "$sugar1[intrinsic-width]": null
+              "$sugar1[intrinsic-height]": null
+              "$sugar2[width]": null
+              "$sugar2[height]": null
+              "$sugar2[x]": null
+              "$sugar2[y]": null
+            done()
     
     describe 'intrinsic & measurable css in same gss block', ->  
       it 'should compute values', (done) ->                                 
@@ -2126,7 +2148,7 @@ describe 'End - to - End', ->
 
   describe "single file with ^ and id rulesets", ->
   
-    xit 'should compute', (done) ->
+    it 'should compute', (done) ->
       counter = 0
       listen = (e) ->     
         counter++
@@ -2136,6 +2158,7 @@ describe 'End - to - End', ->
         else
           expect(e['$d2[x]']).to.eql(null)
           engine.removeEventListener('solve', listen)
+          expect(engine.identity['$d2']).to.eql(undefined)
           done()     
                      
 
@@ -3595,17 +3618,29 @@ describe 'End - to - End', ->
         container.innerHTML =  """
             <div id="here"></div>
             <div id="container"></div>
-            <style type="text/gss">                        
-              @h |-10-(#here)-(#gone)-(#gone2)-(#gone3)-10-|
-                in(#container)
-                chain-height([but_height] !strong)
-                chain-center-y(#top-nav[center-y]) 
-                !require;                                    
+            <style type="text/gss" id="my-sheet">                        
+              @h |-10-(#here)-(#gone)-(#gone2)-(#gone3)-10-| in(#container) 
+                !require {
+                  height: == $but-height;
+                  center-y: == $(#top-nav)[center-y];
+                };                                    
             </style>
           """
-        engine.once 'solve', (e) ->     
-          assert true
-          done()  
+        engine.once 'solve', (e) ->
+          expect(e).to.eql
+            '$here[height]': 0
+            '$here[x]': 10
+            'but-height': 0
+            '$container[x]': 0
+
+          container.innerHTML = ""
+          engine.then (e) ->
+            expect(e).to.eql
+              '$here[height]': null
+              '$here[x]': null
+              'but-height': null
+              '$container[x]': null
+            done()  
     
       
           

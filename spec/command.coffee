@@ -96,7 +96,6 @@ describe 'GSS commands', ->
 
     it 'lte for class & id selectors', (done) ->
       window.$engine = engine
-
       engine.solve [
         ['<=',['get',['.','box'],'width'],['get',['#','box1'],'width']]
       ], (solution) ->
@@ -109,7 +108,7 @@ describe 'GSS commands', ->
         box2.parentNode.removeChild(box2)
 
         engine.then (solution) ->
-
+          
           expect(engine.updated.getProblems()).to.eql [
             [['remove', '.box$34222'], ['remove', '.box$34222→#box1$box1']]
             [['remove', '.box$34222→#box1$box1']]

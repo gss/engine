@@ -188,13 +188,13 @@ class Engine
 
     # Discard update if it did nothing 
     if update.hadSideEffects()
-      @triggerEvent('finish', update.solution, update)
+      @triggerEvent('finish', update)
 
       @fireEvent('solve',  update.solution, update)
       @fireEvent('solved', update.solution, update)
       return update.solution
     else
-      @triggerEvent 'finish'
+      @triggerEvent('finish')
 
 
   # Solve problems by given domain/worker
@@ -313,8 +313,8 @@ class Engine
         @output.merge(update.solution)
       @propagate(@data.commit())
 
-    finish: (solution, update) ->
-      @console.end(solution)
+    finish: (update) ->
+      @console.end(update?.solution)
       @updating = undefined
 
       if update
@@ -345,10 +345,11 @@ class Engine
           @data.set(path, null, assignments[index + 1], assignments[index + 2], assignments[index + 3])
           index += 4
         update.assignments = undefined
-        
         changes = @propagate(@data.commit())
 
         @console.end(changes)
+        
+      @propagate(@data.commit())
 
 
       # Schedule constraints

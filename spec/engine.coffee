@@ -499,18 +499,17 @@ describe 'GSS engine', ->
           expect(engine1.values['col-width-4']).to.equal 444
           done()
     
-      xit 'Engine after container removed', (done) ->
+      it 'Engine after container removed', ->
+        expect(container._gss_id).to.not.eql undefined
         remove(container)
-        wait = ->
-          expect(engine1.is_destroyed).to.equal true
-          expect(GSS.engines.byId[GSS.getId(container)]?).to.equal false
-          done()
-        setTimeout wait, 1
-    
-      xit 'new Engine after container re-added', () ->      
+        engine1.destroy()
+        expect(container._gss_id).to.eql undefined
+
+      it 'new Engine after container re-added', () ->      
         document.getElementById('fixtures').appendChild container      
         engine3 = GSS(container)
         expect(engine1).to.not.equal engine3
+        expect(container._gss_id).to.not.eql undefined
   
 
   xdescribe 'Nested Engine', ->  

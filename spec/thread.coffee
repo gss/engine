@@ -209,7 +209,7 @@ describe 'Cassowary Thread', ->
       expect(thread.updated.solution).to.eql
         "$112[x]": null
         "$112[width]": null
-    
+
     
     it 'tracking by selector', () ->
       thread = new GSS()

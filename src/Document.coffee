@@ -191,12 +191,12 @@ class Document extends Engine
           html.setAttribute('class', (klass && klass + ' ' || '') + 'gss-ready')
           @input.Selector.connect(@, true)
 
-
+    finish: (update) ->
       # Unreference removed elements
-      if @removed
-        for element in @removed
+      if removed = update?.removed
+        for element in removed
           @identity.unset(element)
-        @removed = undefined
+        update.removed = undefined
 
 
     resize: (e = '::window') ->
@@ -261,6 +261,9 @@ class Document extends Engine
     destroy: ->
       if @scope
         Engine[@scope._gss_id] = undefined
+        for element in @scope.getElementsByTagName('*')
+          @identity.unset(element)
+        @identity.unset(@scope)
         @dispatchEvent(@scope, 'destroy')
       @scope.removeEventListener 'DOMContentLoaded', @
       #if @scope != document
