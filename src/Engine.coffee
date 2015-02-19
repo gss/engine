@@ -181,7 +181,8 @@ class Engine
         return update
 
       # Apply solved styles
-      if @write(update) || update.isDone()
+      if @write(update) || ((update.written || update.reflown) && update.isDone())
+        update.written = true
         @triggerEvent('validate', update)
       update.commit()
 
