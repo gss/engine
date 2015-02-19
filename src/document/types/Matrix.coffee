@@ -27,7 +27,7 @@ class Matrix extends Command
 
     return argument
 
-  ascend: (engine, operation, continuation, scope, result) ->
+  xascend: (engine, operation, continuation, scope, result) ->
 
     #if parent = operation.parent
     #  while parent.command.sequence

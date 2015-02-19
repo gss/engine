@@ -389,7 +389,7 @@ Update.prototype =
             redefined.push(value)
 
         if solution[property] != value
-          @solved ?= true
+          (@changes ||= {})[property] = value
           solution[property] = value
     return solution
 
@@ -464,8 +464,9 @@ Update.prototype =
     
   commit: ->
     @restyled = undefined if @restyled
-    @solved   = undefined if @solved
     @reflown  = undefined if @reflown
+    @changes  = undefined if changes = @changes
+    return changes
 
   getProblems: (callback, bind) ->
     return @engine.clone @problems
@@ -487,7 +488,7 @@ Update.prototype =
     return !@constraints && !@assignments
 
   isDirty: ->
-    return @restyled || @solved || @reflown || @engine.data.changes
+    return @restyled || @changes || @reflown || @engine.data.changes
     
   hadSideEffects: (solution)->
     return @solution || @domains.length > 0 || @hasOwnProperty('restyled')# || @solution

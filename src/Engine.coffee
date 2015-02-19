@@ -95,7 +95,6 @@ class Engine
     if typeof args[0] == 'function'
       if result = args.shift().apply(@, args) 
         @updating.apply result
-        apply = false
     else if args[0]?
       strategy = @[@strategy || 'input']
         
@@ -111,9 +110,10 @@ class Engine
     if transacting
       @transacting = undefined
       
-      return @commit(result, undefined, apply)
+      return @commit(result)
 
-  upstream: (values)->
+  # Apply changes and fire observers
+  propagate: (values)->
     if values
       @updating.apply(values)
       @output.merge(values)
@@ -149,21 +149,26 @@ class Engine
 
     return args
 
-  # Start a solving tick, may cause others
-  commit: (solution, update = @updating, apply) ->
-    return if update.blocking
-    
+  write: (update) ->
+    @propagate(update.changes)
 
-    # Save given solution
+  # Perform computations to solve given
+  commit: (solution, update = @updating) ->
+    if update.blocking
+      return
+    # React to given solution
     if solution
-      @upstream(solution)
+      @propagate(solution)
         
+    # Start computation pass
     until update.isDone() && !update.isDirty()
 
       # Process stylesheets, mutations, pairs, conditions, branches
       @triggerEvent('commit', update)
 
-      return if update.blocking
+      # Wait for asynchronous stylesheets
+      if update.blocking
+        return update
 
       # Process assignments, queue constraints
       @triggerEvent('assign', update)
@@ -176,21 +181,14 @@ class Engine
         return update
 
       # Apply solved styles
-      if apply != false || update.domains.length
-        @console.start('Apply', update.solution)
-        @triggerEvent('apply', update.solution, update)
-        @triggerEvent('write', update.solution, update)
-        @triggerEvent('flush', update.solution, update)
-        @console.end(@values)
 
-        # Re-measure values
-        if update.solved || update.isDone()
-          @triggerEvent('validate', update.solution, update)
+      if @write(update) || (update.reflown && update.isDone())
+        @triggerEvent('validate', update.solution, update)
       
       update.commit()
 
     # Discard update if it did nothing 
-    if update.hadSideEffects(solution)
+    if update.hadSideEffects()
       @triggerEvent('finish', update.solution, update)
 
       @fireEvent('solve',  update.solution, update)
@@ -308,18 +306,18 @@ class Engine
         if !update.busy?.length 
           @console.start('Solvers', update.problems.slice(update.index))
           update.each @resolve, @
-          @console.end(update.solution)
+          @console.end(update.changes)
 
         # Apply values to elements
         @output.merge(update.solution)
-      @upstream(@data.commit())
+      @propagate(@data.commit())
 
     finish: (solution, update) ->
-      @inspector.update()
       @console.end(solution)
       @updating = undefined
 
       if update
+        @inspector.update()
         @updated = update
 
     # Perform pending query operations
@@ -347,7 +345,7 @@ class Engine
           index += 4
         update.assignments = undefined
         
-        changes = @upstream(@data.commit())
+        changes = @propagate(@data.commit())
 
         @console.end(changes)
 

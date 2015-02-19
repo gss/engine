@@ -829,6 +829,7 @@ class Command.Sequence extends Command
       if command = argument.command || engine.Command(argument)
         result = command.solve(engine, argument, continuation, scope, -1, result)
         return if result == undefined
+
     return [result, engine, operation, continuation, scope]
 
   log: ->
@@ -838,6 +839,7 @@ class Command.Sequence extends Command
   execute: (result) ->
     return result
 
+  # Proxy release of tail command to parent operation
   release: (result, engine, operation, continuation, scope) ->
     parent = operation.parent
     if operation == parent[parent.length - 1]
@@ -847,10 +849,13 @@ class Command.Sequence extends Command
     parent = operation.parent
 
     # Recurse to the next operation in sequence when stateful op yielded
-    if next = parent[parent.indexOf(operation) + 1]
-      unless ascender == -1
+    if (next = parent[parent.indexOf(operation) + 1])# && ascender == -1
+      #if next.command.key?
+      if ascender != -1
         return next
-    else
+      #else if ascender != -1
+      #  return @solve(engine, parent, continuation, scope, parent.indexOf(operation) + 1, result)
+    else 
       # Recurse to sequence parent 
       if parent.parent
         @ascend(engine, parent, continuation, scope, result, parent.parent.indexOf(parent), ascending)

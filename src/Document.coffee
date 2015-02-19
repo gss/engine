@@ -64,7 +64,7 @@ class Document extends Engine
     perform: ->
       if arguments.length < 4 && @data.subscribers
         @console.start('Measure', @values)
-    
+        debugger
         scope = @scope
         if scope.nodeType == 9
           @measure(scope, 0, 0)
@@ -142,6 +142,15 @@ class Document extends Engine
   prefixes: ['moz', 'webkit', 'ms']
     
 
+  write: (update) ->
+    @input.Selector.disconnect(@, true)
+    @propagate(update.changes)
+    @input.Stylesheet.rematch(@)
+    if assigned = @assign(update.changes)
+      update.assigned = true
+    @input.Selector.connect(@, true)
+    return assigned
+
   $$events:
 
     validate: (solution, update) ->
@@ -157,15 +166,7 @@ class Document extends Engine
             @output.merge measured
     
     apply: ->
-      @input.Selector.disconnect(@, true)
 
-    write: (solution) ->
-      @input.Stylesheet.rematch(@)
-      if solution
-        @assign(solution)
-
-    flush: ->
-      @input.Selector.connect(@, true)
 
     remove: (path) ->
       @input.Stylesheet.remove(@, path)
@@ -427,6 +428,29 @@ class Document extends Engine
   dasherize: (string) ->
     return string.replace /[A-Z]/g, (match) ->
       return '-' + match[0].toLowerCase()
+
+
+  group: (data) ->
+
+    # Apply changed styles in batch, 
+    # leave out positioning properties (Restyle/Reflow)
+    for path, value of data
+      last = path.lastIndexOf('[')
+      continue if last == -1
+      property = path.substring(last + 1, path.length - 1)
+      id = path.substring(0, last)
+
+      # Find unregistered elements by id
+      continue if id.charAt(0) == ':'
+      unless element = @engine.identity[id]
+        continue if id.indexOf('"') > -1
+        continue unless element = document.getElementById(id.substring(1))
+      
+      key = if (property == 'x' || property == 'y') then 'positions' else 'styles'
+      (((result || (result = {}))[key] ||= {})[id] ||= {})[property] = value
+
+    return result
+
       
   ### 
   Applies style changes in bulk, separates reflows & positions.
@@ -434,58 +458,33 @@ class Document extends Engine
   then sets new positions
   ###
 
-  assign: (data, node) ->
-    node ||= @scope
+  assign: (data) ->
+    unless changes = @group(data)
+      return
 
-    # Apply changed styles in batch, 
-    # leave out positioning properties (Restyle/Reflow)
-    positioning = {}
-    if data
-      for path, value of data
-        unless value == undefined
-          @write null, path, value, positioning
-
-    # Adjust positioning styles to respect element offsets 
-    @each(node, 'placehold', null, null, positioning, !!data)
-
-    # Set new positions in bulk (Reflow)
-    positions = {}
-    for id, styles of positioning
+    @console.start('Apply', data)
+    for id, styles of changes.styles
+      element = @identity[id] || document.getElementById(id.substring(1))
       for prop, value of styles
-        positions[@getPath(id, prop)] = value
+        @setStyle(element, prop, value)
 
-    @engine.fireEvent('positions', positions)
 
-    for prop, value of positions
-      @write null, prop, value
+    if changes.positions
+      # Adjust positioning styles to respect element offsets 
+      @each(@scope, 'placehold', null, null, changes.positions)
 
+      for id, styles of changes.positions
+        element = @identity[id] || document.getElementById(id.substring(1))
+        for prop, value of styles
+          @setStyle(element, prop, value)
+          
     if transforms = @updating.transforms
       for id of transforms
         @output.retransform(id)
       @updating.transforms = undefined
 
-    return data
-
-  write: (id, property, value, positioning) ->
-    # parse $id[property] as [id, property]
-    unless id?
-      path = property
-      last = path.lastIndexOf('[')
-      return if last == -1
-      property = path.substring(last + 1, path.length - 1)
-      id = path.substring(0, last)
-
-    # Find unregistered elements by id
-    return unless id.charAt(0) != ':'
-    unless element = @engine.identity[id]
-      return if id.indexOf('"') > -1
-      return unless element = document.getElementById(id.substring(1))
-    
-
-    if positioning && (property == 'x' || property == 'y')
-      (positioning[id] ||= {})[property] = value
-    else
-      @setStyle(element, property, value)
+    @console.end(changes)
+    return true
 
   # Calculate offsets according to new values (but dont set anything)
   placehold: (element, x, y, positioning, full) ->

@@ -233,17 +233,21 @@ class Selector extends Query
     allRemoved = []
     allMoved = []
     moved = []
-
+    removing = engine.removed
     for child in added
       @prototype.match(engine, child, '!>', undefined, target)
       allAdded.push(child)
       for el in child.getElementsByTagName('*')
         allAdded.push(el)
+      if removing && (i = removing.indexOf(el)) > -1
+        removing.splice(i, 1)
+
     for child in removed
       if allAdded.indexOf(child) == -1
         allRemoved.push(child)
         for el in child.getElementsByTagName('*')
           allRemoved.push(el)
+        (engine.removed ||= []).push(removed)
 
     if Selector.destructuring
       for property, el of engine.identity
@@ -294,11 +298,6 @@ class Selector extends Query
 
       break if parent == engine.scope
       break unless parent = parent.parentNode
-
-    # Clean removed elements by id
-    for removed in allRemoved
-      if allAdded.indexOf(removed) == -1
-        (engine.removed ||= []).push(removed)
 
     return true
 
