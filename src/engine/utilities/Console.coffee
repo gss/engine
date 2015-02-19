@@ -15,9 +15,6 @@ class Console
   onError: (e) =>
     true while @pop(e)
 
-  compile: (engine) ->
-    @DESCEND = engine.Command.prototype.DESCEND
-
   push: (a, b, c, type) ->
     if @level > 0.5 || type
       unless @buffer.length
@@ -109,7 +106,7 @@ class Console
     return if typeof a != 'string'
     p1 = Array(4 - Math.floor((a.length + 1) / 4)).join('\t')
 
-    if (index = c.indexOf(@DESCEND)) > -1
+    if (index = c.indexOf(self.GSS?.Engine::Command::DESCEND)) > -1
       if c.indexOf('style[type*="gss"]') > -1
         c = c.substring(index + 1)
 

@@ -62,16 +62,16 @@ class Command
     shift = @contextualize(args, engine, operation, continuation, scope, ascender, ascending)
 
     while ++index < operation.length
-      # Use ascending value
 
+      # Use ascending value
       if ascender == index
         argument = ascending
 
       else 
         argument = operation[index]
+        
+        # Find a class that will execute the command
         if argument instanceof Array
-
-          # Find a class that will execute the command
           command = argument.command || engine.Command(argument)
           argument.parent ||= operation
 
@@ -82,12 +82,14 @@ class Command
           # Evaluate argument
           argument = command.solve(operation.domain || engine, argument, contd || continuation, scope, undefined, ascending)
 
+          # All arguments must be defined for method to execute
           if argument == undefined
             return false
 
       # Place argument at position enforced by signature
       args[@permutation[index - 1] + shift] = argument
 
+    # Add requested number of meta arguments
     extras = @extras ? @execute.length - length
     if extras > 0
       for i in [0 ... extras] by 1

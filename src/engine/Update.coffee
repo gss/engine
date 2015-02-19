@@ -380,8 +380,7 @@ Update.prototype =
             last = redefined[redefined.length - 1]
             if Math.abs(last - value) < 2
               solution[property] = redefined[redefined.length - 1]
-              if i != redefined.length - 1
-                console?.error(property, 'is looping: ', @redefined[property], ' and now ', value, 'again')
+              (@changes ||= {})[property] = solution[property]
             continue
         if solution == @solution
           redefined = (@redefined ||= {})[property] ||= []

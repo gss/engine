@@ -432,6 +432,7 @@ class Document extends Engine
 
     # Apply changed styles in batch, 
     # leave out positioning properties (Restyle/Reflow)
+    result = undefined
     for path, value of data
       last = path.lastIndexOf('[')
       continue if last == -1
@@ -447,8 +448,14 @@ class Document extends Engine
       if @values[id + '[intrinsic-' + property + ']']?
         continue
 
-      key = if (property == 'x' || property == 'y') then 'positions' else 'styles'
-      (((result || (result = {}))[key] ||= {})[id] ||= {})[property] = value
+      if (property == 'x' || property == 'y') 
+        key = 'positions'
+      else if @output.properties[property]
+        key = 'styles'
+      else
+        continue
+
+      (((result ||= {})[key] ||= {})[id] ||= {})[property] = value
 
     return result
 
@@ -463,7 +470,7 @@ class Document extends Engine
     unless changes = @group(data)
       return
 
-    @console.start('Apply', data)
+    @console.start('Apply', JSON.parse(JSON.stringify(data)))
     for id, styles of changes.styles
       element = @identity[id] || document.getElementById(id.substring(1))
       if element.nodeType == 1
@@ -486,7 +493,8 @@ class Document extends Engine
         @output.retransform(id)
       @updating.transforms = undefined
 
-    @console.end(changes)
+    console.error('applied', JSON.parse(JSON.stringify(changes)))
+    @console.end(JSON.parse(JSON.stringify(changes)))
     return true
 
   # Calculate offsets according to new values (but dont set anything)

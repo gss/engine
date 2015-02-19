@@ -58,6 +58,8 @@ class Selector extends Query
     if result = command.after(args, result, engine, operation, continuation, scope)
       return command.ascend(engine, operation, continuation + selector, scope, result, ascender)
 
+  # Use last "real" node in path as context
+  # So things like virtuals can be used as scope for dom queries
   precontextualize: (engine, scope, element) ->
     unless @relative
       if typeof (element ||= scope) == 'string'

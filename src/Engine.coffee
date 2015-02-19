@@ -303,9 +303,7 @@ class Engine
     perform: (update) ->
       if update.domains.length
         if !update.busy?.length 
-          if (index = update.index) == -1
-            index = 0;
-          @console.start('Solvers', update.problems.slice(index))
+          @console.start('Solvers', update.problems.slice(update.index + 1))
           update.each @resolve, @
           @console.end(update.changes)
 
