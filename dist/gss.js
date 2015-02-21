@@ -15827,11 +15827,13 @@ module.exports = (function() {
 },{}],15:[function(require,module,exports){
 arguments[4][10][0].apply(exports,arguments)
 },{"dup":10}],16:[function(require,module,exports){
-var Document, Engine,
+var Document, Engine, Variable,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
 
 Engine = require('./Engine');
+
+Variable = require('./engine/commands/Variable');
 
 Document = (function(_super) {
   __extends(Document, _super);
@@ -15839,6 +15841,8 @@ Document = (function(_super) {
   Document.Measurement = require('./document/types/Measurement');
 
   Document.Primitive = require('./document/types/Primitive');
+
+  Document.Unit = require('./document/commands/Unit');
 
   Document.prototype.Input = (function(_super1) {
     __extends(Input, _super1);
@@ -15851,7 +15855,7 @@ Document = (function(_super) {
 
     Input.prototype.Stylesheet = require('./document/commands/Stylesheet');
 
-    Input.prototype.Unit = require('./document/commands/Unit');
+    Input.prototype.Unit = Document.Unit.prototype.Macro;
 
     return Input;
 
@@ -15867,6 +15871,8 @@ Document = (function(_super) {
     Output.prototype.Style = require('./document/Style');
 
     Output.prototype.Properties = require('./document/properties/Styles');
+
+    Output.prototype.Unit = Document.Unit.prototype.Numeric;
 
     Output.prototype.Gradient = require('./document/types/Gradient');
 
@@ -15953,8 +15959,9 @@ Document = (function(_super) {
         property = property.replace(/^intrinsic-/, '');
         path = this.getPath(id, property);
         if (this.engine.values.hasOwnProperty(path) || ((_ref = this.engine.updating.solution) != null ? _ref.hasOwnProperty(path) : void 0)) {
-          return node.style[this.camelize(property)] = '';
+          node.style[this.camelize(property)] = '';
         }
+        return this.updating.reflown = true;
       }
     };
 
@@ -16554,7 +16561,7 @@ module.exports = Document;
 
 
 
-},{"./Engine":17,"./document/Style":19,"./document/commands/Selector":20,"./document/commands/Stylesheet":21,"./document/commands/Unit":22,"./document/properties/Getters":23,"./document/properties/Styles":24,"./document/types/Color":25,"./document/types/Easing":26,"./document/types/Gradient":27,"./document/types/Matrix":28,"./document/types/Measurement":29,"./document/types/Primitive":30,"./document/types/URL":31}],17:[function(require,module,exports){
+},{"./Engine":17,"./document/Style":19,"./document/commands/Selector":20,"./document/commands/Stylesheet":21,"./document/commands/Unit":22,"./document/properties/Getters":23,"./document/properties/Styles":24,"./document/types/Color":25,"./document/types/Easing":26,"./document/types/Gradient":27,"./document/types/Matrix":28,"./document/types/Measurement":29,"./document/types/Primitive":30,"./document/types/URL":31,"./engine/commands/Variable":39}],17:[function(require,module,exports){
 
 /* Base class: Engine
 
@@ -19736,12 +19743,23 @@ Unit = (function(_super) {
     'bottom': 'containing-height',
     'height': 'containing-height',
     'font-size': 'containing-font-size',
-    'vertical-align': 'line-height',
-    'background-position-x': 'width',
-    'background-position-y': 'height'
+    'vertical-align': 'computed-line-height',
+    'background-position-x': 'computed-width',
+    'background-position-y': 'computed-height'
   };
 
-  Unit.define({
+  return Unit;
+
+})(Variable);
+
+Unit.prototype.Macro = (function(_super) {
+  __extends(Macro, _super);
+
+  function Macro() {
+    return Macro.__super__.constructor.apply(this, arguments);
+  }
+
+  Macro.define({
     '%': function(value, engine, operation, continuation, scope) {
       var path, property;
       property = this.Dependencies[this.getProperty(operation)] || 'containing-width';
@@ -19772,9 +19790,47 @@ Unit = (function(_super) {
     }
   });
 
-  return Unit;
+  return Macro;
 
-})(Variable);
+})(Unit);
+
+Unit.prototype.Numeric = (function(_super) {
+  __extends(Numeric, _super);
+
+  function Numeric() {
+    return Numeric.__super__.constructor.apply(this, arguments);
+  }
+
+  Numeric.define({
+    '%': function(value, engine, operation, continuation, scope) {
+      var path, property;
+      property = this.Dependencies[this.getProperty(operation)] || 'containing-width';
+      path = engine.getPath(scope, property);
+      return ['*', ['px', value], ['get', path]];
+    },
+    em: function(value, engine, operation, continuation, scope) {
+      return value * engine.data.watch(scope, 'computed-font-size', operation, continuation, scope);
+    },
+    rem: function(value, engine, operation, continuation, scope) {
+      return value * engine.data.watch(engine.scope, 'computed-font-size', operation, continuation, scope);
+    },
+    vw: function(value, engine, operation, continuation, scope) {
+      return value / 100 * engine.data.watch('::window[width]', null, operation, continuation, scope);
+    },
+    vh: function(value, engine, operation, continuation, scope) {
+      return value / 100 * engine.data.watch('::window[height]', null, operation, continuation, scope);
+    },
+    vmin: function(value, engine, operation, continuation, scope) {
+      return value / 100 * Math.min(engine.data.watch('::window[width]', null, operation, continuation, scope), engine.data.watch('::window[height]', null, operation, continuation, scope));
+    },
+    vmax: function(value, engine, operation, continuation, scope) {
+      return value / 100 * Math.max(engine.data.watch('::window[width]', null, operation, continuation, scope), engine.data.watch('::window[height]', null, operation, continuation, scope));
+    }
+  });
+
+  return Numeric;
+
+})(Unit);
 
 module.exports = Unit;
 
@@ -20675,7 +20731,7 @@ var Measurement, Unit,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty;
 
-Unit = require('../commands/Unit');
+Unit = require('../commands/Unit').prototype.Macro;
 
 Measurement = (function(_super) {
   __extends(Measurement, _super);
@@ -25453,6 +25509,9 @@ Data.prototype.Assignment = Command.extend({
       name = variable;
     } else if (variable[0] === 'get' && variable.length === 2) {
       name = variable[1];
+    }
+    if (value !== value) {
+      return;
     }
     if (name) {
       ((_base = engine.updating).assignments || (_base.assignments = [])).push(name, value, this.delimit(continuation), operation);

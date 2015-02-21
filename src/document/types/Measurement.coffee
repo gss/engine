@@ -1,4 +1,4 @@
-Unit     = require '../commands/Unit'
+Unit = require('../commands/Unit')::Macro
 
 
 
