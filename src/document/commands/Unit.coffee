@@ -33,10 +33,11 @@ class Unit extends Variable
     'bottom':                'containing-height'
     'height':                'containing-height'
     'font-size':             'containing-font-size'
-    'vertical-align':        'line-height'
-    'background-position-x': 'width'
-    'background-position-y': 'height'
+    'vertical-align':        'computed-line-height'
+    'background-position-x': 'computed-width'
+    'background-position-y': 'computed-height'
   
+class Unit::Macro extends Unit 
   @define
     '%': (value, engine, operation, continuation, scope) ->
       property = @Dependencies[@getProperty(operation)] || 'containing-width'
@@ -47,10 +48,11 @@ class Unit extends Variable
       path = engine.getPath(scope, 'computed-font-size')
       return ['*', ['px', value] , ['get', path]]
     
+    
     rem: (value, engine, operation, continuation, scope) ->
       path = @engine.getPath(engine.scope._gss_id, 'computed-font-size')
       return ['*', ['px', value] , ['get', path]]
-
+    
     vw: (value, engine, operation, continuation, scope) ->
       return ['*', ['/', ['px', value], 100] , ['get', '::window[width]']]
 
@@ -62,6 +64,36 @@ class Unit extends Variable
       
     vmax: (value, engine, operation, continuation, scope) ->
       return ['*', ['/', ['px', value], 100] , ['max', ['get', '::window[height]'], ['get', '::window[width]']]]
+
+class Unit::Numeric extends Unit
+
+  @define
+    '%': (value, engine, operation, continuation, scope) ->
+      property = @Dependencies[@getProperty(operation)] || 'containing-width'
+      path = engine.getPath(scope, property)
+      return ['*', ['px', value] , ['get', path]]
+
+    em: (value, engine, operation, continuation, scope) ->
+      return value * engine.data.watch(scope, 'computed-font-size', operation, continuation, scope);
+    
+    rem: (value, engine, operation, continuation, scope) ->
+      return value * engine.data.watch(engine.scope, 'computed-font-size', operation, continuation, scope);
+  
+    vw: (value, engine, operation, continuation, scope) ->
+      return value / 100 * engine.data.watch('::window[width]', null, operation, continuation, scope);
+    
+    vh: (value, engine, operation, continuation, scope) ->
+      return value / 100 * engine.data.watch('::window[height]', null, operation, continuation, scope);
+    
+    vmin: (value, engine, operation, continuation, scope) ->
+      return value / 100 * Math.min(
+        engine.data.watch('::window[width]', null, operation, continuation, scope), 
+        engine.data.watch('::window[height]', null, operation, continuation, scope))
+    
+    vmax: (value, engine, operation, continuation, scope) ->
+      return value / 100 * Math.max(
+        engine.data.watch('::window[width]', null, operation, continuation, scope), 
+        engine.data.watch('::window[height]', null, operation, continuation, scope))
 
 
 module.exports = Unit

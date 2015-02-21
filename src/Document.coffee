@@ -1,19 +1,22 @@
 Engine = require('./Engine')
+Variable = require('./engine/commands/Variable')
+
 
 class Document extends Engine
   @Measurement:   require('./document/types/Measurement')
   @Primitive:     require('./document/types/Primitive')
+  @Unit:          require('./document/commands/Unit')
 
   class Document::Input extends Engine::Input
     Selector:     require('./document/commands/Selector')
     Stylesheet:   require('./document/commands/Stylesheet')
-    Unit:         require('./document/commands/Unit')
+    Unit:         Document.Unit::Macro
     
 
   class Document::Output extends Engine::Output
     Style:        require('./document/Style')
     Properties:   require('./document/properties/Styles')
-    #Unit:         require('./document/commands/Unit')
+    Unit:         Document.Unit::Numeric
 
     Gradient:     require('./document/types/Gradient')
     Matrix:       require('./document/types/Matrix')
@@ -80,6 +83,7 @@ class Document extends Engine
         path = @getPath(id, property)
         if @engine.values.hasOwnProperty(path) || @engine.updating.solution?.hasOwnProperty(path)
           node.style[@camelize property] = ''
+        @updating.reflown = true
 
     unsubscribe: (id, property, path) ->
       @output.set path, null

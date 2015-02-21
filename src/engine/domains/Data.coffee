@@ -42,6 +42,8 @@ Data::Assignment = Command.extend {
     else if variable[0] == 'get' && variable.length == 2
       name = variable[1]
 
+    return unless value == value
+    
     if name
       (engine.updating.assignments ||= []).push(name, value, @delimit(continuation), operation)
       return
