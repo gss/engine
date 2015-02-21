@@ -47,6 +47,8 @@ class Stylesheet extends Command.List
     unless sheet = stylesheet.sheet
       stylesheet.parentNode?.removeChild(stylesheet)
       return 
+    if prop = engine.output.properties[property]?.property
+      property = prop
     needle = @getOperation(operation, watchers, rule)
     previous = []
     for ops, index in watchers

@@ -492,6 +492,30 @@ describe 'End - to - End', ->
             expect(getSource(engine.tag('style')[1])).to.equal ""
 
             done()   
+
+    describe 'just with vendor prefix CSS', ->
+      engine = null
+    
+      it 'should dump and clean', (done) ->
+        engine.output.properties['line-height'].property = 'font-size'
+        container.innerHTML =  """
+          <style type="text/gss" scoped>
+            #css-only-dump {
+              line-height: 12px;
+            }
+          </style>
+          <div id="css-only-dump"></div>
+          """
+        engine.once 'solve', (e) ->
+          delete engine.output.properties['line-height']
+          expect(getSource(engine.tag('style')[1])).to.equal "#css-only-dump{font-size:12px;}"
+
+          dumper = engine.id('css-only-dump')
+          dumper.parentNode.removeChild(dumper)
+          engine.once 'solve', (e) ->
+            expect(getSource(engine.tag('style')[1])).to.equal ""
+
+            done()   
       
     describe 'with multiple properties', ->
       it 'should dump background color before color', (done) ->

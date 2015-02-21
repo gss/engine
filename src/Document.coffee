@@ -176,7 +176,8 @@ class Document extends Engine
           for prefix in @prefixes
             prefixed = prefix + prop
             if scope.style[prefixed]?
-              value.property = prefixed
+              value.property = '-' + prefix + '-' + property
+              value.camelized = prefixed
               
       @solve @input.Stylesheet.operations
       @input.Selector.connect(@, true)
@@ -310,7 +311,7 @@ class Document extends Engine
         property = "top"
 
     return unless prop = @output.properties[property]
-    camel = prop.property || @camelize(property)
+    camel = prop.camelized || @camelize(property)
     
     if typeof value != 'string'
       if value < 0 && (property == 'width' || property == 'height')
