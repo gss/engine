@@ -253,12 +253,9 @@ describe 'GSS commands', ->
         expect(solution).to.eql
           "$12322[intrinsic-top]": 111
           "$12322[top]": 111
-          "$12322[top]": 111
           "$34222[intrinsic-top]": 222
           "$34222[top]": 222
-          "$34222[top]": 222
           "$35346[intrinsic-top]": 333
-          "$35346[top]": 333
           "$35346[top]": 333
 
 
@@ -277,9 +274,9 @@ describe 'GSS commands', ->
 
       scope.innerHTML = """
         <style>div { position: absolute; }</style>
-        <div style="top:111px;" class="box" id="12322">One</div>
-        <div style="top:222px;" class="box" id="34222">One</div>
-        <div style="top:333px;" class="box" id="35346">One</div>
+        <div style="margin-top:111px;" class="box" id="12322">One</div>
+        <div style="margin-top:222px;" class="box" id="34222">One</div>
+        <div style="margin-top:333px;" class="box" id="35346">One</div>
       """
 
     it '.box[width] == ::window[width]', (done) ->

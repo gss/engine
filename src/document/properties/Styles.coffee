@@ -3,8 +3,7 @@ class Styles
 
   # Transforms L2-like individual properties
   rotate: [
-    (element) ->
-      (@updating.transforms ||= {})[element._gss_id] = true
+    task:    'pretransform'
       
     x:       ['Length', 'Percentage']
     [y:      ['Length', 'Percentage']]
@@ -12,8 +11,7 @@ class Styles
     [origin: ['transform-origin']]
   ]
   scale: [
-    (element) ->
-      (@updating.transforms ||= {})[element._gss_id] = true
+    task:    'pretransform'
 
     x:       ['Length', 'Percentage']
     [y:      ['Length', 'Percentage']]
@@ -21,8 +19,7 @@ class Styles
     [origin: ['transform-origin']]
   ]
   translate: [
-    (element) ->
-      (@updating.transforms ||= {})[element._gss_id] = true
+    task:    'pretransform'
 
     x:       ['Length', 'Percentage']
     [y:      ['Length', 'Percentage']]
@@ -31,8 +28,6 @@ class Styles
   ]
 
   transform: [[
-    (element) ->
-      (@updating.transforms ||= {})[element._gss_id] = true
     'Matrix'
   ]]
 
@@ -177,11 +172,12 @@ class Styles
   for side, index in sides = ['top', 'right', 'bottom', 'left']
     (Styles::margin  ||= [{'pad'}])[0][side] = ['Length', 'Percentage', 'auto']
     (Styles::padding ||= [{'pad'}])[0][side] = ['Length', 'Percentage', 'auto']
-    (Styles::border  ||= [{'pad'}])[0][side] = [[
+    (Styles::border  ||= [{}])[0][side] = [[
       width: ['Length', 'thin', 'thick', 'medium'],
       style: ['none', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset', 'none']
       color: ['Color']
     ]]
+    Styles::border.push({'pad'})
     for type in ['width', 'color', 'style']
       (Styles::['border-' + type] ||= [[{'pad'}]])[0][+
         0]['border-' + side + '-' + type] = 

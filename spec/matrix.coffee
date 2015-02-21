@@ -249,7 +249,143 @@ describe 'Matrix', ->
       container.innerHTML =  ""
       engine.then ->
         expect(engine.values).to.eql({'half': 0.5, 'three': 3})
-        console.log(d1._gss_id)
+
+        done()
+
+
+  describe 'when used as separate property and transform property together', ->
+    it 'should update and recompute final matrix', (done) ->
+
+      container = document.createElement('div')
+      document.getElementById('fixtures').appendChild(container)
+      container.innerHTML = '<div id="d1"></div><div id="d2"></div>'
+      window.$engine = engine = new GSS(container, {
+        half: 0.5
+        three: 3
+      })
+      d1 = engine.id('d1')
+      d2 = engine.id('d2')
+
+      MT = engine.output.Matrix::_mat4.create()
+      MT = engine.output.Matrix::_mat4.rotateZ(MT, MT, 180 * (Math.PI / 180))
+      MT = engine.output.Matrix::_mat4.translate(MT, MT, [3, 0, 0])
+
+
+      MPT = engine.output.Matrix::_mat4.create()
+      MPT = engine.output.Matrix::_mat4.rotateZ(MPT, MPT, 180 * (Math.PI / 180))
+      MPT = engine.output.Matrix::_mat4.translate(MPT, MPT, [3, 0, 0])
+      MPT = engine.output.Matrix::_mat4.rotateX(MPT, MPT, 3.5 * 360 * (Math.PI / 180))
+
+      expect(engine.solve(['rule', ['tag', 'div'], [
+        ['=', ['get', 'transform'], [
+          ['translateX', ['get', ['$'], 'three']]
+          ['rotateZ', ['get', ['$'], 'half']]
+        ]]
+        ['=', 
+          ['get', 'rotate-x']
+          ['+', ['get', ['$'], 'three'], ['get', ['$'], 'half']]
+        ]
+      ]])).to.eql(
+        '$d1[transform]': MT
+        '$d2[transform]': MT
+        '$d1[rotate-x]': 3.5
+        '$d2[rotate-x]': 3.5
+      )
+      TPT = d1.style[property]
+      d1.style[property] = engine.output.Matrix::format(MPT)
+      expect(d1.style[property]).to.eql(TPT)
+      expect(d2.style[property]).to.eql(TPT)
+
+
+      MPT2 = engine.output.Matrix::_mat4.create()
+      MPT2 = engine.output.Matrix::_mat4.rotateZ(MPT2, MPT2, 270 * (Math.PI / 180))
+      MPT2 = engine.output.Matrix::_mat4.translate(MPT2, MPT2, [3, 0, 0])
+      MPT2 = engine.output.Matrix::_mat4.rotateX(MPT2, MPT2, 3.75 * 360 * (Math.PI / 180))
+
+      engine.data.merge({'half': 0.75})
+      TPT2 = d1.style[property]
+      d1.style[property] = engine.output.Matrix::format(MPT2)
+      expect(d1.style[property]).to.eql(TPT2)
+
+      engine.data.merge({'three': -3})
+      MPT3 = engine.output.Matrix::_mat4.create()
+      MPT3 = engine.output.Matrix::_mat4.rotateZ(MPT3, MPT3, 270 * (Math.PI / 180))
+      MPT3 = engine.output.Matrix::_mat4.translate(MPT3, MPT3, [-3, 0, 0])
+      MPT3 = engine.output.Matrix::_mat4.rotateX(MPT3, MPT3, -2.25 * 360 * (Math.PI / 180))
+
+      TPT3 = d1.style[property]
+      engine.scope.style[property] = engine.output.Matrix::format(MPT3)
+      expect(d1.style[property]).to.eql(TPT3)
+
+
+      engine.data.merge({'half': 0.5, 'three': 3})
+      expect(d1.style[property]).to.eql(TPT)
+      #engine.data.merge({'three': null})
+      #expect(d1.style[property]).to.eql('')
+      container.innerHTML =  ""
+      engine.then ->
+        expect(engine.values).to.eql({'half': 0.5, 'three': 3})
+
+        done()
+
+
+
+  describe 'when used as separate properties', ->
+    it 'should update and recompute matrix', (done) ->
+
+      container = document.createElement('div')
+      document.getElementById('fixtures').appendChild(container)
+      container.innerHTML = '<div id="d1"></div><div id="d2"></div>'
+      window.$engine = engine = new GSS(container, {
+        half: 0.5
+        three: 3
+      })
+      d1 = engine.id('d1')
+      d2 = engine.id('d2')
+
+      M_tX3_rZ1of2 = engine.output.Matrix::_mat4.create()
+      M_tX3_rZ1of2 = engine.output.Matrix::_mat4.rotateZ(M_tX3_rZ1of2, M_tX3_rZ1of2, 180 * (Math.PI / 180))
+      M_tX3_rZ1of2 = engine.output.Matrix::_mat4.translate(M_tX3_rZ1of2, M_tX3_rZ1of2, [3, 0, 0])
+      expect(engine.solve(['rule', ['tag', 'div'], [
+        ['=', ['get', ['&'], 'translate-x'], ['get', ['$'], 'three']]
+        ['=', ['get', ['&'], 'rotate-z'], ['get', ['$'], 'half']]
+      ]])).to.eql(
+        '$d1[translate-x]': 3
+        '$d1[rotate-z]': 0.5
+        '$d2[translate-x]': 3
+        '$d2[rotate-z]': 0.5
+      )
+      T_tX3_rZ1of2 = d1.style[property]
+      d1.style[property] = engine.output.Matrix::format(M_tX3_rZ1of2)
+      expect(d1.style[property]).to.eql(T_tX3_rZ1of2)
+      expect(d2.style[property]).to.eql(T_tX3_rZ1of2)
+
+      M_tX3_rZ3of4 = engine.output.Matrix::_mat4.create()
+      M_tX3_rZ3of4 = engine.output.Matrix::_mat4.rotateZ(M_tX3_rZ3of4, M_tX3_rZ3of4, 270 * (Math.PI / 180))
+      M_tX3_rZ3of4 = engine.output.Matrix::_mat4.translate(M_tX3_rZ3of4, M_tX3_rZ3of4, [3, 0, 0])
+
+      engine.data.merge({'half': 0.75})
+      T_tX3_rZ3of4 = d1.style[property]
+      d1.style[property] = engine.output.Matrix::format(M_tX3_rZ3of4)
+      expect(d1.style[property]).to.eql(T_tX3_rZ3of4)
+
+      engine.data.merge({'three': -3})
+      M_tXminus3_rZ3of4 = engine.output.Matrix::_mat4.create()
+      M_tXminus3_rZ3of4 = engine.output.Matrix::_mat4.rotateZ(M_tXminus3_rZ3of4, M_tXminus3_rZ3of4, 270 * (Math.PI / 180))
+      M_tXminus3_rZ3of4 = engine.output.Matrix::_mat4.translate(M_tXminus3_rZ3of4, M_tXminus3_rZ3of4, [-3, 0, 0])
+
+      T_tXminus3_rZ3of4 = d1.style[property]
+      engine.scope.style[property] = engine.output.Matrix::format(M_tXminus3_rZ3of4)
+      expect(d1.style[property]).to.eql(T_tXminus3_rZ3of4)
+
+
+      engine.data.merge({'half': 0.5, 'three': 3})
+      expect(d1.style[property]).to.eql(T_tX3_rZ1of2)
+      #engine.data.merge({'three': null})
+      #expect(d1.style[property]).to.eql('')
+      container.innerHTML =  ""
+      engine.then ->
+        expect(engine.values).to.eql({'half': 0.5, 'three': 3})
 
         done()
 

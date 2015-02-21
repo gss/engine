@@ -13,7 +13,7 @@ class Document extends Engine
   class Document::Output extends Engine::Output
     Style:        require('./document/Style')
     Properties:   require('./document/properties/Styles')
-    Unit:         require('./document/commands/Unit')
+    #Unit:         require('./document/commands/Unit')
 
     Gradient:     require('./document/types/Gradient')
     Matrix:       require('./document/types/Matrix')
@@ -35,20 +35,20 @@ class Document extends Engine
     Percentage:   Document.Measurement.Percentage
     
 
-    retransform: (id) ->
+    pretransform: (id) ->
       if element = @identity[id]
-        matrix = @Matrix.rst(
+
+        return @Matrix.rst(
           @get(id, 'rotate-x')    || 0
           @get(id, 'rotate-y')    || 0
           @get(id, 'rotate-z')    || 0
-          @get(id, 'scale-x')     || 0
-          @get(id, 'scale-y')     || 0
-          @get(id, 'scale-z')     || 0
+          @get(id, 'scale-x')     ? 1
+          @get(id, 'scale-y')     ? 1
+          @get(id, 'scale-z')     ? 1
           @get(id, 'translate-x') || 0
           @get(id, 'translate-y') || 0
           @get(id, 'translate-z') || 0
         )
-        @setStyle(element, 'transform', matrix)
 
   
   class Document::Data extends Engine::Data
@@ -312,9 +312,6 @@ class Document extends Engine
     return unless prop = @output.properties[property]
     camel = prop.property || @camelize(property)
     
-    if (shorthand = prop.shorthand) && (shorthand.callback)
-      shorthand.callback.call(@, element, value, operation, continuation)
-
     if typeof value != 'string'
       if value < 0 && (property == 'width' || property == 'height')
         @console.warn(property + ' of', element, ' is negative: ', value)
@@ -430,9 +427,12 @@ class Document extends Engine
 
   group: (data) ->
 
+
     # Apply changed styles in batch, 
     # leave out positioning properties (Restyle/Reflow)
-    result = undefined
+    pretransforms = @updating.pretransform
+    transforms = result = undefined
+
     for path, value of data
       last = path.lastIndexOf('[')
       continue if last == -1
@@ -448,15 +448,44 @@ class Document extends Engine
       if @values[id + '[intrinsic-' + property + ']']?
         continue
 
+      console.info(property)
       if (property == 'x' || property == 'y') 
         key = 'positions'
-      else if @output.properties[property]
+      else if prop = @output.properties[property]
         key = 'styles'
+        if prop.task
+          (@updating[prop.task] ||= {})[id] ||= true
+          if prop.task == 'pretransform'
+            pretransforms = @updating.pretransform
+
+        if property == 'transform'
+          (pretransforms ||= {})[id] = @output.pretransform(id)
+          (transforms ||= {})[id] = value
+          continue
       else
         continue
 
       (((result ||= {})[key] ||= {})[id] ||= {})[property] = value
 
+    # Combine matricies
+    if pretransforms
+      for id, pretransform of pretransforms
+        if pretransform == true
+          pretransform = @output.pretransform(id) 
+        
+        transform = transforms?[id] || @values[id + '[transform]']
+
+
+        (((result ||= {}).styles ||= {})[id] ||= {}).transform = 
+          if pretransform && transform
+            @output.Matrix.prototype._mat4.multiply(pretransform, transform, pretransform)
+          else
+            pretransform || transform || null
+
+
+      @updating.pretransform = undefined
+
+      
     return result
 
       
@@ -470,7 +499,8 @@ class Document extends Engine
     unless changes = @group(data)
       return
 
-    @console.start('Apply', JSON.parse(JSON.stringify(data)))
+    @console.start('Apply', data)
+
     for id, styles of changes.styles
       element = @identity[id] || document.getElementById(id.substring(1))
       if element.nodeType == 1
@@ -487,13 +517,8 @@ class Document extends Engine
         for prop, value of styles
           if element.nodeType == 1
             @setStyle(element, prop, value)
-          
-    if transforms = @updating.transforms
-      for id of transforms
-        @output.retransform(id)
-      @updating.transforms = undefined
 
-    @console.end(JSON.parse(JSON.stringify(changes)))
+    @console.end(changes)
     return true
 
   # Calculate offsets according to new values (but dont set anything)

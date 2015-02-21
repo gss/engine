@@ -16,7 +16,7 @@ class Command
   # Evaluate operation arguments, execute command, propagate result
   solve: (engine, operation, continuation, scope, ascender, ascending) ->
     domain = operation.domain || engine
-
+      
     # Let engine modify continuation or return cached result
     switch typeof (result = @retrieve(domain, operation, continuation, scope, ascender, ascending))
       when 'undefined'
@@ -536,12 +536,13 @@ class Command
       if value != Command[property] && property != '__super__'
         if value?.prototype instanceof Command
           unless property.match /^[A-Z]/
-            @register(engine.signatures, property, value, Types)
-            if engine.helps
-              engine.$prototype[property] ||= @Helper(engine, property)
-              if aliases = value.prototype.helpers
-                for name in aliases
-                  engine.$prototype[name] = engine.$prototype[property]
+            if value.__super__ == command
+              @register(engine.signatures, property, value, Types)
+              if engine.helps
+                engine.$prototype[property] ||= @Helper(engine, property)
+                if aliases = value.prototype.helpers
+                  for name in aliases
+                    engine.$prototype[name] = engine.$prototype[property]
 
     @Types = Types
 
@@ -736,7 +737,7 @@ class Command
   # Write cached lookup tables into a given storage (register method by signature)
   @register: (signatures, property, command, types) ->
     storage = signatures[property] ||= {}
-
+    
     for type, subcommand of types
       if proto = command.prototype
         # Command has a handler for this subtype

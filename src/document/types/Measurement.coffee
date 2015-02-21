@@ -35,6 +35,9 @@ class Measurement.Length extends Measurement
     pt: (value) ->
       return value
 
+    dm: (value) ->
+      return value * 378
+
     cm: (value) ->
       return value * 37.8
 

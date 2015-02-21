@@ -6,16 +6,17 @@ class Matrix extends Command
   Library: require('../../../vendor/gl-matrix')
 
   @rst: (rX, rY, rZ, sX, sY, sZ, tX, tY, tZ) ->
-    console.log('rst', arguments)
     mat4 = @prototype._mat4
-    matrix = mat4.create()
-    if rX || rX || rY
+    if rX || rY || rZ
       maxR = Math.max(rX, rY, rZ)
-      mat4.rotate(matrix, matrix, maxR * 2, [rX / maxR, rY / maxR, rZ / maxR])
-    if sX || sY || sZ
+      matrix = mat4.create()
+      mat4.rotate(matrix, matrix, maxR * 360 * (Math.PI / 180), [rX / maxR, rY / maxR, rZ / maxR])
+    if sX != 1 || sY != 1 || sZ != 1
+      matrix ||= mat4.create()
       mat4.scale(matrix, matrix, [sX, sY, sZ])
     if tX || tY || tZ
-      mat4.scale(matrix, matrix, [tX, tY, tZ])
+      matrix ||= mat4.create()
+      mat4.translate(matrix, matrix, [tX, tY, tZ])
     return matrix
 
   matrix: ->
@@ -43,7 +44,6 @@ class Matrix extends Command
 
 
     return super
-    console.log(result)
 
 
   mat3: (matrix = @_mat4.create(), method, a, b, c) ->
@@ -80,7 +80,6 @@ class Matrix extends Command
       matrix[15].toFixed(20) + ')'
 
 class Matrix::Sequence extends Command.Sequence
-
 
 # 1-axis transform
 class Matrix.Transformation1 extends Matrix

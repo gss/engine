@@ -8,18 +8,30 @@
 
 
 Style = (definition, name, styles,
-         keywords = {}, types = [], keys = [], properties = [], required = {}
-         optional, depth = 0) ->
+         options = {}, 
+         keywords, types, keys, properties, required, optional) ->
+
+
+  unless keywords
+    keywords = {}
+    types = []
+    keys = []
+    properties = []
+    required = {}
+    started = true
 
   requirement = true
-  pad = initial = previous = undefined
-  max = depth
+  initial = previous = undefined
   # Group of properties
   if definition.length == undefined
     for key, def of definition
-      continue unless typeof def == 'object'
+      # Collection options
+      unless typeof def == 'object'
+        options[key] = def
+        continue 
+
       property = key.indexOf('-') > -1 && styles[key] && key || name + '-' + key
-      style = @Style(def, property, styles, null, null, null, null, null, null, null, depth)
+      style = @Style(def, property, styles, options)
       unless optional == true
         required[property] = optional || requirement
         requirement = property
@@ -46,10 +58,9 @@ Style = (definition, name, styles,
       # Optional group
       switch typeof property
         when "object"
-          substyle = @Style(property, name, styles, keywords, types, keys, properties, required, 
-                          (property.push && (requirement || true)) || optional, depth + 1)
-          pad = property.pad || substyle.pad
-          max = Math.max(substyle.depth, max)
+          @Style(property, name, styles, options, 
+                 keywords, types, keys, properties, required, 
+                 property.push && (requirement || true) || optional)
         when "string"
           # Predefined value type
           if type = @[property]
@@ -65,12 +76,9 @@ Style = (definition, name, styles,
             initial ?= property
             (keywords[property] ||= []).push(name)
         else
-          initial ?= property  
-
-  if typeof initial == 'function'
-    callback = initial
-    initial = undefined
-
+          initial ?= property 
+     
+  return unless started
 
   # Prepare value class
   if initial == undefined
@@ -90,11 +98,10 @@ Style = (definition, name, styles,
   matcher.keywords = keywords
   matcher.types    = types
   matcher.keys     = keys
-  matcher.pad      = pad
   matcher.matcher  = true
-  matcher.depth    = max
   matcher.initial  = initial
-  matcher.callback = callback
+  for property, value of options
+    matcher[property] = value
 
   if initial?.displayName
     initial::style = matcher
@@ -105,7 +112,7 @@ Style = (definition, name, styles,
     return Shorthand::toExpressionString(name, value, false, styles)
 
   return styles[name] = matcher
-
+  
 # Class that holds matched properties. 
 # Its prototype is extended with default values inferred from style definition
 # Called every time shorthand is parsed, can be a singleton 
@@ -181,7 +188,7 @@ class Shorthand
         name = operation[0]
         if typeof name == 'number'
           return styles.engine.Matrix.prototype.format(operation)
-        else if @styles.engine.signatures[name]?.Number?.resolved
+        else if (styles.engine.signatures[name] || styles.engine.input.signatures[name])?.Number?.resolved
           return @toExpressionString(key, operation[1], true) + name
         else
           string = name + '('
