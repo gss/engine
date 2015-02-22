@@ -31,7 +31,7 @@
     "grunt-saucelabs": "^8.4.1"
   },
   "browserify": {
-      "transform": ["coffeify"]
+      "transform": ["coffeeify"]
   },
   "keywords": [],
   "scripts": {
