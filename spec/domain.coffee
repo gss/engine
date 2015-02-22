@@ -234,47 +234,28 @@ describe 'Domain', ->
         result: 0
         a: -1
 
-    it 'should use intrinsic values as known values', ->
-      el = document.createElement('div')
-      el.innerHTML = """
-        <div id="box0" style="width: 50px"></div>
-        <div id="box1" style="width: 50px"></div>
-      """
-      document.body.appendChild(el)
-      engine =  new GSS(el)
-      engine.solve [
-        ['==',
-          ['get', 'a']
-          ['+',
-            ['get', ['#', 'box0'], 'z']
-            ['get', ['#', 'box1'], 'intrinsic-width']
-          ]
-        ]
-      ], (solution) ->
-        expect(solution).to.eql
-          "a": 0
-          "$box0[z]": -50
-          "$box1[intrinsic-width]": 50
-        document.body.removeChild(el)
 
 
   describe 'solvers in worker', ->
     @timeout 60000
 
 
-    it 'should receieve measurements from document to make substitutions', (done) ->
+    it 'should mock measurements from document to make substitutions', (done) ->
       root = document.createElement('div')
       root.innerHTML = """
         <div id="box0" style="width: 20px"></div>
       """
-      document.body.appendChild(root)
-      engine =  new GSS(root, true)
+      engine =  new GSS(true)
+
+      engine.solve({
+        "$box0[intrinsic-width]": 20,
+      }, 'my_funny_tracker_path')
       problem = [
         ['=='
           ['get', 'result']
           ['-',
             ['+'
-              ['get', ['#', 'box0'], 'intrinsic-width'],
+              ['get', '$box0[intrinsic-width]'],
               1]
             ['get', 'x']]
         ]
@@ -305,12 +286,12 @@ describe 'Domain', ->
               expect(solution).to.eql 
                 result: 0
                 x: 21
-              root.removeChild(engine.id('box0'))
+              engine.remove('my_funny_tracker_path')
               engine.then (solution) ->
                 expect(solution).to.eql 
-                  "$box0[intrinsic-width]": null
                   "x": null
                   "result": null
+                  "$box0[intrinsic-width]": null
 
 
 

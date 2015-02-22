@@ -10,19 +10,19 @@ pseudo-solvers like DOM measurements. ###
   
 class Engine
 
-  Command:   require('./engine/Command')
-  Domain:    require('./engine/Domain')
-  Update:    require('./engine/Update')
-  Query:     require('./engine/Query')
+  Command:   require('./Command')
+  Domain:    require('./Domain')
+  Update:    require('./Update')
+  Query:     require('./Query')
   
-  Solver:    require('./engine/domains/Linear')
-  Input:     require('./engine/domains/Input')
-  Data:      require('./engine/domains/Data')
-  Output:    require('./engine/domains/Output')
+  Solver:    require('./domains/Linear')
+  Input:     require('./domains/Input')
+  Data:      require('./domains/Data')
+  Output:    require('./domains/Output')
     
-  Console:   require('./engine/utilities/Console')
-  Inspector: require('./engine/utilities/Inspector')
-  Exporter:  require('./engine/utilities/Exporter')
+  Console:   require('./utilities/Console')
+  Inspector: require('./utilities/Inspector')
+  Exporter:  require('./utilities/Exporter')
 
   constructor: (data, url) -> #(scope, url, data)
     @engine = @

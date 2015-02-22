@@ -3,7 +3,15 @@ GSS engine [![Build Status](https://travis-ci.org/gss/engine.png?branch=master)]
 
 [![Cross-browser testing status](https://saucelabs.com/browser-matrix/gss-engine.svg)](https://saucelabs.com/u/gss-engine)
 
-Compiles and runs Grid Style Sheet (GSS) rules. GSS is an implementation of Badros & Borning's [Constraint Cascading Style Sheets](http://www.cs.washington.edu/research/constraints/web/ccss-uwtr.pdf), enabling far better layout control through building relational rules between different elements.
+GSS is an implementation of Badros & Borning's [Constraint Cascading Style Sheets](http://www.cs.washington.edu/research/constraints/web/ccss-uwtr.pdf).
+
+It consists of three projects:
+
+* **Engine** - orchestrates multiple Cassowary.js solvers. *Usable without browser*.
+* [Document](https://github.com/gss/document#readme) - Integrates Engine with DOM. *Use this on web pages*.
+* [Parser](https://github.com/gss/parser#readme) - Converts GSS stylesheets to expression tree. *Can be preprocessed*
+
+
 
 GSS supports the following syntaxes for defining layout rules:
 

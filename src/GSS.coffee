@@ -1,7 +1,7 @@
 ### Constructor: GSS
-  Dispatches arguments by type, returns engine
-  When scope is given, creates Document
-  Otherwise abstract Engine ###
+  Dispatches arguments by type
+  When element is given, creates Document
+  Otherwise creates abstract Engine ###
 GSS = -> #(data, url, scope)
   for argument, index in arguments
     continue unless argument
@@ -14,7 +14,7 @@ GSS = -> #(data, url, scope)
       when 'string', 'boolean'
         url = argument
           
-  # **GSS()** attempts to find parent engine
+  # **GSS(element)** attempts to find parent engine for given element
   
   if !(@ instanceof GSS) && scope
     parent = scope
