@@ -30,6 +30,9 @@
     "grunt-mocha-phantomjs": "~0.4.0",
     "grunt-saucelabs": "^8.4.1"
   },
+  "browserify": {
+      "transform": ["coffeify"]
+  },
   "keywords": [],
   "scripts": {
     "test": "grunt test"
