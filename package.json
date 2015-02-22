@@ -1,7 +1,7 @@
 {
   "name": "gss-engine",
   "description": "GSS styling engine",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "repository": {
     "type": "git",
     "url": "git://github.com/gss/engine.git"
@@ -35,9 +35,6 @@
     "test": "grunt test"
   },
   "main": "./dist/gss.engine.parser.js",
-  "paths": [
-    "./vendor"
-  ],
   "dependencies": {
     "gss-parser": "git://github.com/gss/parser.git#54ad63a40fa06d4e77235d851fa149007e01afc0",
     "vfl-compiler": "~1.1.3",
