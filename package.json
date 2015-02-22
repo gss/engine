@@ -34,7 +34,7 @@
   "scripts": {
     "test": "grunt test"
   },
-  "main": "./src/Engine",
+  "main": "./dist/gss.engine.parser.js",
   "paths": [
     "./vendor"
   ],
