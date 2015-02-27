@@ -481,6 +481,7 @@ class Command
     'string': 'String'
     'number': 'Number'
     'object': 'Object'
+    'boolean': 'Boolean'
 
   # Convert native object into lookup string
   @typeOfObject: (object) ->

@@ -1,5 +1,6 @@
 require("./domain")
 require("./assignments")
+require("./ranges")
 require("./cassowary")
 require("./thread")
 require("./conditions")

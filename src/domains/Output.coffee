@@ -2,6 +2,8 @@ Data       = require('./Data')
 Constraint = require('../commands/Constraint')
 
 class Output extends Data
+  Range: require('../commands/Range')
+  
   displayName: 'Output'
   immutable: true
   priority: -200

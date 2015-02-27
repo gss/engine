@@ -62,10 +62,17 @@ Variable.Expression.algebra =
   '/': (left, right) ->
     return left / right
 
+  '%': (left, right) ->
+    return left % right
+
   'min': (left, right) ->
     return Math.min(left, right)
 
   'max': (left, right) ->
     return Math.max(left, right)
+
+  'pow': (left, right) ->
+    return Math.pow(left, right)
+  
   
 module.exports = Variable
