@@ -4689,7 +4689,11 @@ Condition = (function(_super) {
         continuation = this.getPrefixPath(engine, continuation);
       }
       path = this.delimit(continuation, this.DESCEND) + this.key;
-      if (!(value = engine.queries[path]) && result) {
+      if ((result != null ? result.push : void 0) && result.valueOf !== Array.prototype.valueOf) {
+        result = result.valueOf() || false;
+      }
+      value = engine.queries[path];
+      if (result && !value) {
         value = -0;
       }
       ((_base = engine.updating).collections || (_base.collections = {}))[path] = value;
@@ -5194,10 +5198,6 @@ Range = (function(_super) {
     ]
   ];
 
-  Range.prototype.revert = function() {
-    return 1;
-  };
-
   Range.prototype.extras = 0;
 
   Range.define({
@@ -5214,10 +5214,27 @@ Range = (function(_super) {
       }
       if (progress != null) {
         range[2] = progress;
+        this.wrap(range);
       }
       return range;
     }
   });
+
+  Range.prototype.valueOf = function() {
+    var end, start, value;
+    if ((value = this[2]) != null) {
+      if ((start = this[0]) === false || value > 0) {
+        if ((end = this[1]) === false || value < 1) {
+          return value * ((end - start) || 1) + start;
+        }
+      }
+    }
+  };
+
+  Range.prototype.wrap = function(range) {
+    range.valueOf = this.valueOf;
+    return range;
+  };
 
   return Range;
 
@@ -5240,26 +5257,40 @@ Range.Modifier = (function(_super) {
   ];
 
   Modifier.prototype.before = function(args, domain, operation, continuation, scope, ascender, ascending) {
-    if (operation[0].indexOf('>') > -1) {
-      args.reverse();
-    }
-    if (typeof args[0] === 'number') {
-      return this.scale(args[1], args[0], null);
+    var inversed;
+    inversed = operation[0].indexOf('>') > -1;
+    if (typeof args[0] !== 'number' || typeof args[1] === 'number') {
+      if (inversed) {
+        if (typeof args[1] === 'number') {
+          return this.scale(args[0], args[1], null);
+        } else {
+          return this.scale(args[1], null, args[0]);
+        }
+      } else {
+        return this.scale(args[0], null, args[1]);
+      }
     } else {
-      return this.scale(args[0], null, args[1]);
+      if (inversed) {
+        return this.scale(args[1], null, args[0]);
+      } else {
+        return this.scale(args[1], args[0], null);
+      }
     }
   };
 
   Modifier.prototype.scale = function(range, start, finish) {
     var from, progress, reversed, to, value;
     if (!range.push) {
-      if (start < range) {
-        return [start, false, range / (start || 1)];
-      } else {
-        if (finish == null) {
-          finish = start;
+      if (start != null) {
+        if (start <= range) {
+          return this.wrap([start, false, range / (start || 1)]);
+        } else {
+          return this.wrap([start, false, range / (start || 1) - 1]);
         }
-        return [false, finish, range / finish];
+      } else if (finish != null) {
+        return this.wrap([false, finish, range / finish]);
+      } else {
+        return this.wrap([start, false, range / start]);
       }
     }
     reversed = +((range[0] > range[1]) && (range[1] != null));
@@ -5430,6 +5461,8 @@ Range.Mapper = (function(_super) {
         if ((start = (_ref = left[2]) != null ? _ref : left[0]) != null) {
           if (start !== false && right < start) {
             right = start;
+          } else if ((end = left.push ? left[1] : left) < right) {
+            right = end;
           }
         } else if ((end = left.push ? left[1] : left) < right) {
           right = end;
@@ -6306,34 +6339,22 @@ Output = (function(_super) {
 Output.prototype.Constraint = Constraint.extend({
   signature: [
     {
-      left: ['Variable', 'Number', 'Constraint'],
-      right: ['Variable', 'Number', 'Constraint']
+      left: ['Variable', 'Number', 'Constraint', 'Range'],
+      right: ['Variable', 'Number', 'Constraint', 'Range']
     }
   ]
 }, {
   "&&": function(a, b) {
-    return a && b;
+    return a.valueOf() && b.valueOf() || false;
   },
   "||": function(a, b) {
-    return a || b;
+    return a.valueOf() || b.valueOf() || false;
   },
   "!=": function(a, b) {
-    return a !== b;
+    return a.valueOf() !== b.valueOf() || false;
   },
   "==": function(a, b) {
     return a === b;
-  },
-  "<=": function(a, b) {
-    return a <= b;
-  },
-  ">=": function(a, b) {
-    return a >= b;
-  },
-  "<": function(a, b) {
-    return a < b;
-  },
-  ">": function(a, b) {
-    return a > b;
   }
 });
 

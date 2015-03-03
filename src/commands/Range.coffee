@@ -11,10 +11,6 @@ class Range extends Command
     ]
   ]
 
-  # Revert
-  revert: ->
-    1
-
   extras: 0
 
   # Create a range
@@ -31,7 +27,20 @@ class Range extends Command
       if progress?
         range[2] = progress
 
+        @wrap range
       return range
+
+  # Convert range to number
+  valueOf: ->
+    if (value = @[2])?
+      if ((start = @[0]) == false || value > 0)
+        if ((end = @[1]) == false || value < 1)
+          return value * ((end - start) || 1) + start
+
+
+  wrap: (range) ->
+    range.valueOf = @valueOf
+    return range
 
   # 1 modify
   # scale
@@ -43,22 +52,35 @@ class Range.Modifier extends Range
   ]]
 
   before: (args, domain, operation, continuation, scope, ascender, ascending) ->
-    if operation[0].indexOf('>') > -1
-      args.reverse()
-
-    if typeof args[0] == 'number'
-      return @scale(args[1], args[0], null)
+    
+    inversed = operation[0].indexOf('>') > -1
+    if typeof args[0] != 'number' || typeof args[1] == 'number'
+      if inversed
+        if typeof args[1] == 'number'
+          return @scale(args[0], args[1], null)
+        else
+          return @scale(args[1], null, args[0])
+      else
+        return @scale(args[0], null, args[1])
     else
-      return @scale(args[0], null, args[1])
+      if inversed
+        return @scale(args[1], null, args[0])
+      else
+        return @scale(args[1], args[0], null)
+
 
   # Scale range to given start/end, update progress, register overshooting
   scale: (range, start, finish) ->
     unless range.push
-      if start < range
-        return [start, false, range / (start || 1)]
+      if start?
+        if start <= range
+          return @wrap [start, false, range / (start || 1)]
+        else
+          return @wrap [start, false, range / (start || 1) - 1]
+      else if finish?
+        return @wrap [false, finish, range / finish]
       else
-        finish ?= start
-        return [false, finish, range / finish]
+        return @wrap [start, false,  range / start]
 
     reversed = +((range[0] > range[1]) && range[1]?)
     from = range[reversed]
@@ -213,6 +235,8 @@ class Range.Mapper extends Range
         if (start = left[2] ? left[0])?
           if start != false && right <  start
             right = start
+          else if (end = if left.push then left[1] else left) < right
+            right = end
         # Overshooting
         else if (end = if left.push then left[1] else left) < right
           right = end

@@ -11,32 +11,20 @@ class Output extends Data
   
 Output::Constraint = Constraint.extend {
   signature: [
-    left:     ['Variable', 'Number', 'Constraint'],
-    right:    ['Variable', 'Number', 'Constraint']
+    left:     ['Variable', 'Number', 'Constraint', 'Range'],
+    right:    ['Variable', 'Number', 'Constraint', 'Range']
   ]
 },
   "&&": (a, b) ->
-    return a && b
+    return a.valueOf() && b.valueOf() || false
 
   "||": (a, b) ->
-    return a || b
+    return a.valueOf() || b.valueOf() || false
     
   "!=": (a, b) ->
-    return a != b
+    return a.valueOf() != b.valueOf() || false
 
   "==": (a, b) ->
     return a == b
-
-  "<=": (a, b) ->
-    return a <= b
-
-  ">=": (a, b) ->
-    return a >= b
-
-  "<": (a, b) ->
-    return a < b
-
-  ">": (a, b) ->
-    return a > b
 
 module.exports = Output

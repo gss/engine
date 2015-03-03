@@ -183,7 +183,7 @@ describe 'Ranges', ->
           10,
           ['...', 0, 20, 0.75]
         ]
-      )).to.eql([10, 20, 0.5])
+      ).slice()).to.eql([10, 20, 0.5])
 
       # ... 5 > 10
       expect(engine.output.solve(
@@ -195,7 +195,7 @@ describe 'Ranges', ->
             0.5
           ]
         ]
-      )).to.eql([10, 5, 1.5]) #?
+      ).slice()).to.eql([10, 5, 1.5]) #?
 
       # ... 15 > 10
       expect(engine.output.solve(
@@ -241,7 +241,7 @@ describe 'Ranges', ->
           ['...', 0, 20, 0.5], 
           10
         ]
-      )).to.eql([0, 10, 1])
+      ).slice()).to.eql([0, 10, 1])
 
       # ... 5 < 10
       expect(engine.output.solve(
@@ -253,7 +253,7 @@ describe 'Ranges', ->
           ]
           10
         ]
-      )).to.eql([false, 5, 0.5])
+      ).slice()).to.eql([false, 5, 0.5])
 
       # ... 15 < 10
       expect(engine.output.solve(
@@ -265,7 +265,7 @@ describe 'Ranges', ->
           ]
           10
         ]
-      )).to.eql([false, 10, 0.75])
+      ).slice()).to.eql([false, 10, 0.75])
 
       #  5 ... < 10
       expect(engine.output.solve(
@@ -276,7 +276,7 @@ describe 'Ranges', ->
             0.5
           ],
           10]
-      )).to.eql([5, 10, -0.5])
+      ).slice()).to.eql([5, 10, -0.5])
 
 
       #  10 > 5 ...
@@ -288,7 +288,7 @@ describe 'Ranges', ->
             false,
             0.5
           ]]
-      )).to.eql([5, 10, -0.5])
+      ).slice()).to.eql([5, 10, -0.5])
       
       #  15 ... > 10
       expect(engine.output.solve(
@@ -308,14 +308,14 @@ describe 'Ranges', ->
           '>',
           30,
           20
-        ])).to.eql([20, false, 1.5])
+        ]).slice()).to.eql([20, false, 1.5])
 
  
         expect(engine.output.solve([
           '>',
           20,
           40
-        ])).to.eql([false, 40, .5])
+        ]).slice()).to.eql([40, false, -.5])
 
     xdescribe 'mapper', ->
       describe 'mapped explicitly', ->

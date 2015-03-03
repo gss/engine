@@ -46,7 +46,7 @@ class Condition extends Query
       unless engine.queries.hasOwnProperty(path)
         engine.queries[path] = 0
         evaluate = true
-        
+      
       @after([], engine.queries[path], engine, operation, continuation, scope)
       if evaluate
         branch = operation[@conditional]
@@ -112,8 +112,15 @@ class Condition extends Query
 
       path = @delimit(continuation, @DESCEND) + @key
 
-      if !(value = engine.queries[path]) && result
+
+      if result?.push && result.valueOf != Array::valueOf
+        result = result.valueOf() || false
+  
+      value = engine.queries[path]
+
+      if result && !value
         value = -0
+        
       (engine.updating.collections ||= {})[path] = value
 
       if old = engine.updating.collections?[path]
