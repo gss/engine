@@ -130,7 +130,8 @@ class Query extends Command
 
     node = @precontextualize engine, scope, args[0]
     path = @getLocalPath(engine, operation, continuation, node)
-    # Compute once, reference result subsequently
+
+    # Cache query result within one tick
     unless @relative# || @type == 'Condition'
       query = @getGlobalPath(engine, operation, continuation, node)
       aliases = updating.aliases ||= {}
@@ -138,9 +139,6 @@ class Query extends Command
         aliases[query] = path
 
     old = @get(engine, path)
-
-    # Normalize query to reuse results
-    command = operation.command
 
     (updating.queries ||= {})[path] = result
 
@@ -151,7 +149,7 @@ class Query extends Command
 
     isCollection = @isCollection(result)
 
-    # Clean refs of nodes that dont match anymore
+    # Clean nodes that dont match anymore
     if old
       if @isCollection(old)
         removed = undefined

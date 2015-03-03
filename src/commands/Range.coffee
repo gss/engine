@@ -3,11 +3,13 @@ Command = require('../Command')
 class Range extends Command
   type: 'Range'
 
-  signature: [[
+  signature: [
     from: ['Boolean', 'Number', 'Variable', 'Range']
-    to:   ['Boolean', 'Number', 'Variable', 'Range']
-    now:  ['Number']
-  ]]
+    [
+      to:   ['Boolean', 'Number', 'Variable', 'Range']
+      now:  ['Number']
+    ]
+  ]
 
   # Revert
   revert: ->
@@ -51,6 +53,12 @@ class Range.Modifier extends Range
 
   # Scale range to given start/end, update progress, register overshooting
   scale: (range, start, finish) ->
+    unless range.push
+      if start < range
+        return [start, false, range / (start || 1)]
+      else
+        finish ?= start
+        return [false, finish, range / finish]
 
     reversed = +((range[0] > range[1]) && range[1]?)
     from = range[reversed]
@@ -58,9 +66,8 @@ class Range.Modifier extends Range
 
 
     if start != null && !(from > start)
-      range = range.slice()
       if (value = range[2])?
-        to ?= 0
+        to ||= 0
         progress = value * (to - from)
         range[2] = (progress - (start - from)) / (to - start)
         if range[2] < 0
@@ -71,8 +78,8 @@ class Range.Modifier extends Range
     if finish != null && !(to < finish)
       range = range.slice()
       if (value = range[2])?
-        from ?= 0
-        to ?= 0
+        from ||= 0
+        to ||= 0
         progress = value * (to - from)
         range[2] = progress / (finish - from)
         if range[2] > 1
@@ -127,19 +134,14 @@ class Range.Modifier extends Range
       return
 
 class Range.Progress extends Range
-
-class Range.Transition extends Range.Progress
-
-  @condition: (engine, condition) ->
-    debugger
-
-class Range.Spring extends Range.Progress
-
-  @define
-
-    'friction': ->
-
-    'tension': ->
+  
+  after: (result, args, engine, operation, continuation, scope) ->
+    ranges = (engine.engine.ranges ||= {})[continuation] ||= []
+    if (index = ranges.indexOf(operation)) == -1
+      ranges.push(operation, scope, result)
+    else
+      ranges[index + 2] = result
+    return result
 
 
 class Range.Easing extends Range.Progress
@@ -199,19 +201,30 @@ class Range.Mapper extends Range
     to:   ['Number', 'Variable', 'Range']
   ]
 
+  extras: null
+
+
+  # [continuation] = [operation, left, right]
   @define
-    map: (left, right) ->
-      #right.
-
-  descend: (engine, operation, continuation, scope) ->
-
-    for index in [index || 0 ... operation.length] by 1
-      argument = operation[index]
-      argument.parent ||= operation
-      if command = argument.command || engine.Command(argument)
-        result = command.solve(engine, argument, continuation, scope, -1, result)
-        return if result == undefined
-      break
-
+    map: (left, right, engine, operation, continuation, scope, ascender, ascending) ->
+      # Static range starts animation
+      if ascender == 2
+        # Undershooting
+        if (start = left[2] ? left[0])?
+          if start != false && right <  start
+            right = start
+        # Overshooting
+        else if (end = if left.push then left[1] else left) < right
+          right = end
+        # Implicit out of range (e.g.. delayed transformation) 
+        else if right < 0
+          return
+        return right
+      else
+        engine.updating.ranges = true
+        if left[0]? && left[1]?
+          right[2] = left[0] || 0
+          right[3] = (left[2] ? left[1] ? left) || 0
+        return
 
 module.exports = Range

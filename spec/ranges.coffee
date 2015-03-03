@@ -292,20 +292,37 @@ describe 'Ranges', ->
       
       #  15 ... > 10
       expect(engine.output.solve(
-        ['...', 
-          15,
-          false,
-          0.5
+        ['>'
+          ['...', 
+            15,
+            false,
+            0.5
+          ]
+          10
         ]
       )[2]).to.eql(0.5)
 
+    describe 'values', ->
+      it 'should create a range from two numbers', ->
+        expect(engine.output.solve([
+          '>',
+          30,
+          20
+        ])).to.eql([20, false, 1.5])
+
+ 
+        expect(engine.output.solve([
+          '>',
+          20,
+          40
+        ])).to.eql([false, 40, .5])
 
     xdescribe 'mapper', ->
       describe 'mapped explicitly', ->
         it 'should map one range to another', ->
           # 1 ... 20 -> -20 ... -1 
-          engine.solve(['--',
-            ['...', 1, 20]
+          engine.output.solve(['map',
+            ['...', 1, 20],
             ['...', -20, -1]
           ])
 

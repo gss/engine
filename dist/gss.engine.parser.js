@@ -17838,6 +17838,7 @@ Engine = (function() {
         this.Query.prototype.commit(this);
         this.Query.prototype.repair(this);
         this.Query.prototype.branch(this);
+        this;
       }
     },
     remove: function(path) {
@@ -17846,17 +17847,42 @@ Engine = (function() {
       return (_ref = this.updating) != null ? _ref.remove(path) : void 0;
     },
     assign: function(update) {
-      var assignments, changes, constraints, index, operation, path;
-      while (assignments = update.assignments) {
-        this.console.start('Assignments', assignments);
-        index = 0;
-        while (path = assignments[index]) {
-          this.data.set(path, null, assignments[index + 1], assignments[index + 2], assignments[index + 3]);
-          index += 4;
+      var assignments, changes, constraints, continuation, index, operation, path, ranges, tickers, _ref;
+      while (!!(assignments = update.assignments) + !!(ranges = update.ranges)) {
+        if (assignments) {
+          this.console.start('Assignments', assignments);
+          index = 0;
+          while (path = assignments[index]) {
+            this.data.set(path, null, assignments[index + 1], assignments[index + 2], assignments[index + 3]);
+            index += 4;
+          }
+          update.assignments = void 0;
+          changes = this.propagate(this.data.commit());
+          this.console.end(changes);
         }
-        update.assignments = void 0;
-        changes = this.propagate(this.data.commit());
-        this.console.end(changes);
+        if (ranges) {
+          this.console.start('Ranges', this.ranges);
+          _ref = this.ranges;
+          for (continuation in _ref) {
+            tickers = _ref[continuation];
+            index = 0;
+            while (operation = tickers[index]) {
+              if (operation.command.update(tickers[index + 2], this, operation, continuation, ranges[index + 1])) {
+                tickers.splice(index, 3);
+                if (!tickers.length) {
+                  delete this.ranges[continuation];
+                  if (!Object.keys(this.ranges).length) {
+                    this.ranges = void 0;
+                  }
+                }
+              } else {
+                index += 3;
+              }
+            }
+          }
+          this.console.end();
+          this.updating.ranges = void 0;
+        }
       }
       this.propagate(this.data.commit());
       if (constraints = update.constraints) {
@@ -18533,7 +18559,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.after = function(args, result, engine, operation, continuation, scope) {
-    var added, alias, aliases, child, command, index, isCollection, node, old, path, query, removed, updating, _base, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+    var added, alias, aliases, child, index, isCollection, node, old, path, query, removed, updating, _base, _i, _j, _len, _len1, _ref, _ref1, _ref2;
     updating = engine.updating;
     node = this.precontextualize(engine, scope, args[0]);
     path = this.getLocalPath(engine, operation, continuation, node);
@@ -18545,7 +18571,6 @@ Query = (function(_super) {
       }
     }
     old = this.get(engine, path);
-    command = operation.command;
     (updating.queries || (updating.queries = {}))[path] = result;
     if ((_ref1 = updating.collections) != null ? _ref1.hasOwnProperty(path) : void 0) {
       old = updating.collections[path];
@@ -20280,7 +20305,7 @@ Update.prototype = {
     return !(this.mutations || this.deferred || this.pairs || this.stylesheets || this.branches);
   },
   isDataDone: function() {
-    return !this.constraints && !this.assignments;
+    return !(this.constraints || this.assignments || this.ranges);
   },
   isDirty: function() {
     return this.restyled || this.changes || this.reflown || this.engine.data.changes;
@@ -20941,9 +20966,10 @@ Range = (function(_super) {
   Range.prototype.type = 'Range';
 
   Range.prototype.signature = [
-    [
+    {
+      from: ['Boolean', 'Number', 'Variable', 'Range']
+    }, [
       {
-        from: ['Boolean', 'Number', 'Variable', 'Range'],
         to: ['Boolean', 'Number', 'Variable', 'Range'],
         now: ['Number']
       }
@@ -21008,15 +21034,22 @@ Range.Modifier = (function(_super) {
 
   Modifier.prototype.scale = function(range, start, finish) {
     var from, progress, reversed, to, value;
+    if (!range.push) {
+      if (start < range) {
+        return [start, false, range / (start || 1)];
+      } else {
+        if (finish == null) {
+          finish = start;
+        }
+        return [false, finish, range / finish];
+      }
+    }
     reversed = +((range[0] > range[1]) && (range[1] != null));
     from = range[reversed];
     to = range[1 - reversed];
     if (start !== null && !(from > start)) {
-      range = range.slice();
       if ((value = range[2]) != null) {
-        if (to == null) {
-          to = 0;
-        }
+        to || (to = 0);
         progress = value * (to - from);
         range[2] = (progress - (start - from)) / (to - start);
         if (range[2] < 0) {
@@ -21028,12 +21061,8 @@ Range.Modifier = (function(_super) {
     if (finish !== null && !(to < finish)) {
       range = range.slice();
       if ((value = range[2]) != null) {
-        if (from == null) {
-          from = 0;
-        }
-        if (to == null) {
-          to = 0;
-        }
+        from || (from = 0);
+        to || (to = 0);
         progress = value * (to - from);
         range[2] = progress / (finish - from);
         if (range[2] > 1) {
@@ -21088,40 +21117,20 @@ Range.Progress = (function(_super) {
     return Progress.__super__.constructor.apply(this, arguments);
   }
 
+  Progress.prototype.after = function(result, args, engine, operation, continuation, scope) {
+    var index, ranges, _base, _base1;
+    ranges = (_base = ((_base1 = engine.engine).ranges || (_base1.ranges = {})))[continuation] || (_base[continuation] = []);
+    if ((index = ranges.indexOf(operation)) === -1) {
+      ranges.push(operation, scope, result);
+    } else {
+      ranges[index + 2] = result;
+    }
+    return result;
+  };
+
   return Progress;
 
 })(Range);
-
-Range.Transition = (function(_super) {
-  __extends(Transition, _super);
-
-  function Transition() {
-    return Transition.__super__.constructor.apply(this, arguments);
-  }
-
-  Transition.condition = function(engine, condition) {
-    debugger;
-  };
-
-  return Transition;
-
-})(Range.Progress);
-
-Range.Spring = (function(_super) {
-  __extends(Spring, _super);
-
-  function Spring() {
-    return Spring.__super__.constructor.apply(this, arguments);
-  }
-
-  Spring.define({
-    'friction': function() {},
-    'tension': function() {}
-  });
-
-  return Spring;
-
-})(Range.Progress);
 
 Range.Easing = (function(_super) {
   __extends(Easing, _super);
@@ -21194,24 +21203,31 @@ Range.Mapper = (function(_super) {
     }
   ];
 
-  Mapper.define({
-    map: function(left, right) {}
-  });
+  Mapper.prototype.extras = null;
 
-  Mapper.prototype.descend = function(engine, operation, continuation, scope) {
-    var argument, command, index, result, _i, _ref, _ref1;
-    for (index = _i = _ref = index || 0, _ref1 = operation.length; _i < _ref1; index = _i += 1) {
-      argument = operation[index];
-      argument.parent || (argument.parent = operation);
-      if (command = argument.command || engine.Command(argument)) {
-        result = command.solve(engine, argument, continuation, scope, -1, result);
-        if (result === void 0) {
+  Mapper.define({
+    map: function(left, right, engine, operation, continuation, scope, ascender, ascending) {
+      var end, start, _ref, _ref1, _ref2;
+      if (ascender === 2) {
+        if ((start = (_ref = left[2]) != null ? _ref : left[0]) != null) {
+          if (start !== false && right < start) {
+            right = start;
+          }
+        } else if ((end = left.push ? left[1] : left) < right) {
+          right = end;
+        } else if (right < 0) {
           return;
         }
+        return right;
+      } else {
+        engine.updating.ranges = true;
+        if ((left[0] != null) && (left[1] != null)) {
+          right[2] = left[0] || 0;
+          right[3] = ((_ref1 = (_ref2 = left[2]) != null ? _ref2 : left[1]) != null ? _ref1 : left) || 0;
+        }
       }
-      break;
     }
-  };
+  });
 
   return Mapper;
 
@@ -21380,7 +21396,7 @@ Data.prototype.Assignment = Command.extend({
   signature: [
     {
       variable: ['String', 'Variable'],
-      value: ['Variable', 'Number', 'Matrix', 'Command', 'Object']
+      value: ['Variable', 'Number', 'Matrix', 'Command', 'Object', 'Range']
     }
   ]
 }, {
@@ -21726,7 +21742,7 @@ Input.prototype.Assignment = Command.extend({
   signature: [
     {
       variable: ['String', 'Variable'],
-      value: ['Variable', 'Number', 'Matrix', 'Command', 'Default']
+      value: ['Variable', 'Number', 'Matrix', 'Command', 'Range', 'Default']
     }
   ]
 });

@@ -33,7 +33,7 @@ Data::Assignment = Command.extend {
   
   signature: [
     variable: ['String', 'Variable']
-    value:    ['Variable', 'Number', 'Matrix', 'Command', 'Object']
+    value:    ['Variable', 'Number', 'Matrix', 'Command', 'Object', 'Range']
   ]
 },
   '=': (variable, value, engine, operation, continuation) ->

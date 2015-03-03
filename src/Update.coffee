@@ -484,13 +484,13 @@ Update.prototype =
     return !(@mutations || @deferred || @pairs || @stylesheets || @branches)
 
   isDataDone: ->
-    return !@constraints && !@assignments
+    return !(@constraints || @assignments || @ranges)
 
   isDirty: ->
     return @restyled || @changes || @reflown || @engine.data.changes
     
   hadSideEffects: (solution)->
-    return @solution || @domains.length > 0 || @hasOwnProperty('restyled')# || @solution
+    return @solution || @domains.length > 0 || @hasOwnProperty('restyled')
 
   block: ->
     @blocking++

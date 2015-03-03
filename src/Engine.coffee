@@ -325,7 +325,7 @@ class Engine
         @Query::commit(@)
         @Query::repair(@)
         @Query::branch(@)
-    
+        @
       return
 
     # Dispatch remove command
@@ -336,17 +336,34 @@ class Engine
     assign: (update) ->
       # Execute assignments
 
-      while assignments = update.assignments
-        @console.start('Assignments', assignments)
-        index = 0
-        while path = assignments[index]
-          @data.set(path, null, assignments[index + 1], assignments[index + 2], assignments[index + 3])
-          index += 4
-        update.assignments = undefined
-        changes = @propagate(@data.commit())
+      while !!(assignments = update.assignments) + !!(ranges = update.ranges)
+        if assignments
+          @console.start('Assignments', assignments)
+          index = 0
+          while path = assignments[index]
+            @data.set(path, null, assignments[index + 1], assignments[index + 2], assignments[index + 3])
+            index += 4
+          update.assignments = undefined
+          changes = @propagate(@data.commit())
 
-        @console.end(changes)
+          @console.end(changes)
         
+        if ranges
+          @console.start('Ranges', @ranges)
+          for continuation, tickers of @ranges
+            index = 0
+            while operation = tickers[index]
+              if operation.command.update(tickers[index + 2], this, operation, continuation, ranges[index + 1])
+                tickers.splice(index, 3)
+                unless tickers.length
+                  delete @ranges[continuation]
+                  if !Object.keys(@ranges).length
+                    @ranges = undefined
+              else
+                index += 3
+          @console.end()
+          @updating.ranges = undefined
+
       @propagate(@data.commit())
 
 
