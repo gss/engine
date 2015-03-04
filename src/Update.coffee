@@ -370,48 +370,23 @@ Update.prototype =
     return solution || @
 
   # Save results, check if solvers are caught in a re-solving loop
-  apply: (result, solution = @solution) ->
-    if result != @solution
-      #last = @last ||= {}
-      #changes = @changes ||= {}
+  apply: (result) ->
+    solution = @solution ||= {}
+    last = @last ||= {}
+    for property, value of result
+      now = solution[property]
 
-      ###
-      for property in Object.keys(result)
-        if property == '$name[intrinsic-width]'
-          debugger
-        value = result[property]
-        now = (solution ||= @solution ||= {})[property]
-        if value != now
-          if Math.abs(value - now) >= 2 || last[property] != value
-            if value == now
-              debugger
-            last[property] = now
-            changes[property] = solution[property] = value
-          else
-            last[property] = value
-            solution[property] = now
+      if last[property] == value
+        if Math.abs(now - value) < 2
+          (@changes ||= {})[property] = solution[property] = now
+        continue
 
+      if now != value
+        if solution == @solution && value?
+          last[property] = now
+        (@changes ||= {})[property] = value
+        solution[property] = value
 
-      ###
-      solution ||= @solution ||= {}
-      for property, value of result
-        if (redefined = @redefined?[property])
-          i = redefined.indexOf(value)
-          if i > -1
-            last = redefined[redefined.length - 1]
-            if Math.abs(last - value) < 2
-              solution[property] = redefined[redefined.length - 1]
-              (@changes ||= {})[property] = solution[property]
-            continue
-        if solution == @solution
-          redefined = (@redefined ||= {})[property] ||= []
-          if redefined[redefined.length - 1] != value && value?
-            redefined.push(value)
-
-        if solution[property] != value
-          (@changes ||= {})[property] = value
-          solution[property] = value
-      ####
     return solution
 
   # Remove queued commands that match given key

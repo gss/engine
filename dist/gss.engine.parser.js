@@ -17644,7 +17644,8 @@ Engine = (function() {
   };
 
   Engine.prototype.write = function(update) {
-    return this.propagate(update.changes);
+    this.output.merge(update.changes);
+    return update.changes = void 0;
   };
 
   Engine.prototype.commit = function(solution, update) {
@@ -20145,53 +20146,25 @@ Update.prototype = {
     this.index--;
     return solution || this;
   },
-  apply: function(result, solution) {
-    var i, last, property, redefined, value, _base, _ref;
-    if (solution == null) {
-      solution = this.solution;
-    }
-    if (result !== this.solution) {
-
-      /*
-      for property in Object.keys(result)
-        if property == '$name[intrinsic-width]'
-          debugger
-        value = result[property]
-        now = (solution ||= @solution ||= {})[property]
-        if value != now
-          if Math.abs(value - now) >= 2 || last[property] != value
-            if value == now
-              debugger
-            last[property] = now
-            changes[property] = solution[property] = value
-          else
-            last[property] = value
-            solution[property] = now
-       */
-      solution || (solution = this.solution || (this.solution = {}));
-      for (property in result) {
-        value = result[property];
-        if ((redefined = (_ref = this.redefined) != null ? _ref[property] : void 0)) {
-          i = redefined.indexOf(value);
-          if (i > -1) {
-            last = redefined[redefined.length - 1];
-            if (Math.abs(last - value) < 2) {
-              solution[property] = redefined[redefined.length - 1];
-              (this.changes || (this.changes = {}))[property] = solution[property];
-            }
-            continue;
-          }
+  apply: function(result) {
+    var last, now, property, solution, value;
+    solution = this.solution || (this.solution = {});
+    last = this.last || (this.last = {});
+    for (property in result) {
+      value = result[property];
+      now = solution[property];
+      if (last[property] === value) {
+        if (Math.abs(now - value) < 2) {
+          (this.changes || (this.changes = {}))[property] = solution[property] = now;
         }
-        if (solution === this.solution) {
-          redefined = (_base = (this.redefined || (this.redefined = {})))[property] || (_base[property] = []);
-          if (redefined[redefined.length - 1] !== value && (value != null)) {
-            redefined.push(value);
-          }
+        continue;
+      }
+      if (now !== value) {
+        if (solution === this.solution && (value != null)) {
+          last[property] = now;
         }
-        if (solution[property] !== value) {
-          (this.changes || (this.changes = {}))[property] = value;
-          solution[property] = value;
-        }
+        (this.changes || (this.changes = {}))[property] = value;
+        solution[property] = value;
       }
     }
     return solution;

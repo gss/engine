@@ -151,7 +151,8 @@ class Engine
     return args
 
   write: (update) ->
-    @propagate(update.changes)
+    @output.merge(update.changes)
+    update.changes = undefined
 
   # Perform computations to solve given
   commit: (solution, update = @updating) ->
