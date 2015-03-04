@@ -114,7 +114,7 @@ Outputting = (engine, operation, command) ->
       !engine.solver.signatures[operation[0]] && 
       (!engine.data.signatures[operation[0]] || operation[0] == '=') && 
       (engine.output.signatures[operation[0]])
-    Outputting.patch(engine.output, operation, parent, false)
+    Outputting.patch(engine.output, operation, parent, false, null)
 
 Outputting.patch = (engine, operation, parent, index, context) ->
   operation.domain = engine.output
@@ -129,8 +129,10 @@ Outputting.patch = (engine, operation, parent, index, context) ->
   else
     match = engine.Command.match(engine.output, operation, parent, parent?.indexOf(operation), context)
   #if operation[0] != true
-  Command.assign(engine, operation, match, context)
+  command = Command.assign(engine, operation, match, context)
   
+  if context == null
+    Command.descend(command, engine, operation)
   return match
 
 
@@ -197,38 +199,5 @@ Input::Assignment = Command.extend {
   ]
 }
 
-# Style assignment
-Input::Assignment.Style = Input::Assignment.extend {
-  signature: [
-    [object:   ['Query', 'Selector']]
-    property: ['String']
-    value:    ['Any']
-  ]
-
-  log: ->
-  unlog: ->
-
-  # Register assignment within parent rule 
-  # by its auto-incremented property local to operation list
-  advices: [
-    (engine, operation, command) ->
-      parent = operation
-      rule = undefined
-      while parent.parent
-        if !rule && parent[0] == 'rule'
-          rule = parent
-        parent = parent.parent
-
-      operation.index ||= parent.assignments = (parent.assignments || 0) + 1
-      if rule
-        (rule.properties ||= []).push(operation.index)
-      return
-  ]
-},
-  'set': (object, property, value, engine, operation, continuation, scope) ->
-
-    engine.setStyle? object || scope, property, value, continuation, operation
-    
-    return
 
 module.exports = Input

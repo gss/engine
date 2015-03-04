@@ -5691,15 +5691,15 @@ Data.prototype.Variable.Getter = Data.prototype.Variable.extend({
   ]
 }, {
   'get': function(object, property, engine, operation, continuation, scope) {
-    var prefix;
+    var domain, prefix;
     if (engine.queries) {
       prefix = engine.Query.prototype.getScope(engine, object, continuation);
     }
     if (!prefix && engine.data.check(engine.scope, property)) {
       prefix = engine.scope;
-      engine = engine.data;
+      domain = engine.data;
     }
-    return engine.watch(prefix, property, operation, continuation, scope);
+    return (domain || engine).watch(prefix, property, operation, continuation, scope);
   }
 });
 
@@ -5893,12 +5893,12 @@ Outputting = function(engine, operation, command) {
     index = parent.indexOf(operation);
     return Outputting.patch(engine.output, operation, parent, index, parent[index - 1]);
   } else if (operation.command.type === 'Default' && !engine.solver.signatures[operation[0]] && (!engine.data.signatures[operation[0]] || operation[0] === '=') && engine.output.signatures[operation[0]]) {
-    return Outputting.patch(engine.output, operation, parent, false);
+    return Outputting.patch(engine.output, operation, parent, false, null);
   }
 };
 
 Outputting.patch = function(engine, operation, parent, index, context) {
-  var argument, i, match, _i, _len;
+  var argument, command, i, match, _i, _len;
   operation.domain = engine.output;
   for (i = _i = 0, _len = operation.length; _i < _len; i = ++_i) {
     argument = operation[i];
@@ -5915,7 +5915,10 @@ Outputting.patch = function(engine, operation, parent, index, context) {
   } else {
     match = engine.Command.match(engine.output, operation, parent, parent != null ? parent.indexOf(operation) : void 0, context);
   }
-  Command.assign(engine, operation, match, context);
+  command = Command.assign(engine, operation, match, context);
+  if (context === null) {
+    Command.descend(command, engine, operation);
+  }
   return match;
 };
 
@@ -5990,44 +5993,6 @@ Input.prototype.Assignment = Command.extend({
       value: ['Variable', 'Number', 'Matrix', 'Command', 'Range', 'Default']
     }
   ]
-});
-
-Input.prototype.Assignment.Style = Input.prototype.Assignment.extend({
-  signature: [
-    [
-      {
-        object: ['Query', 'Selector']
-      }
-    ], {
-      property: ['String'],
-      value: ['Any']
-    }
-  ],
-  log: function() {},
-  unlog: function() {},
-  advices: [
-    function(engine, operation, command) {
-      var parent, rule;
-      parent = operation;
-      rule = void 0;
-      while (parent.parent) {
-        if (!rule && parent[0] === 'rule') {
-          rule = parent;
-        }
-        parent = parent.parent;
-      }
-      operation.index || (operation.index = parent.assignments = (parent.assignments || 0) + 1);
-      if (rule) {
-        (rule.properties || (rule.properties = [])).push(operation.index);
-      }
-    }
-  ]
-}, {
-  'set': function(object, property, value, engine, operation, continuation, scope) {
-    if (typeof engine.setStyle === "function") {
-      engine.setStyle(object || scope, property, value, continuation, operation);
-    }
-  }
 });
 
 module.exports = Input;

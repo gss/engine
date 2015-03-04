@@ -66,6 +66,7 @@ Data::Variable = Variable.extend {},
 
     return engine.watch(prefix, path, operation, continuation, scope)
 
+
 Data::Variable.Getter = Data::Variable.extend {
   signature: [
     object:   ['Query', 'Selector', 'String']
@@ -78,9 +79,9 @@ Data::Variable.Getter = Data::Variable.extend {
 
     if !prefix && engine.data.check(engine.scope, property)
       prefix = engine.scope
-      engine = engine.data
+      domain = engine.data
 
-    return engine.watch(prefix, property, operation, continuation, scope)
+    return (domain || engine).watch(prefix, property, operation, continuation, scope)
 
 Data::Variable.Expression = Variable.Expression.extend(
   before: (args, engine)->
