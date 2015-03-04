@@ -52,10 +52,8 @@ class Range.Modifier extends Range
   ]]
 
   before: (args, domain, operation, continuation, scope, ascender, ascending) ->
-    
-    inversed = operation[0].indexOf('>') > -1
     if typeof args[0] != 'number' || typeof args[1] == 'number'
-      if inversed
+      if operation[0].indexOf('>') > -1
         if typeof args[1] == 'number'
           return @scale(args[0], args[1], null)
         else
@@ -63,7 +61,7 @@ class Range.Modifier extends Range
       else
         return @scale(args[0], null, args[1])
     else
-      if inversed
+      if operation[0].indexOf('>') > -1
         return @scale(args[1], null, args[0])
       else
         return @scale(args[1], args[0], null)
@@ -229,7 +227,6 @@ class Range.Mapper extends Range
   # [continuation] = [operation, left, right]
   @define
     map: (left, right, engine, operation, continuation, scope, ascender, ascending) ->
-      # Static range starts animation
       if ascender == 2
         # Undershooting
         if (start = left[2] ? left[0])?
@@ -246,9 +243,16 @@ class Range.Mapper extends Range
         return right
       else
         engine.updating.ranges = true
-        if left[0]? && left[1]?
-          right[2] = left[0] || 0
-          right[3] = (left[2] ? left[1] ? left) || 0
+        # Static range start transitions
+        if left.push
+          if left[0]? && left[1]?
+            right[2] = left[0] || 0
+            right[3] = (left[2] ? left[1] ? left) || 0
+        # 
+        else
+          right[3] = right[2] = left || 0
+          return @valueOf.call right
+
         return
 
 module.exports = Range

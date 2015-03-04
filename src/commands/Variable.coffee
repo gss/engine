@@ -45,8 +45,8 @@ class Variable extends Command
 class Variable.Expression extends Variable
   
   signature: [
-    left:  ['Variable', 'Number']
-    right: ['Variable', 'Number']
+    left:  ['Variable', 'Number', 'Range']
+    right: ['Variable', 'Number', 'Range']
   ]
 
 Variable.Expression.algebra = 

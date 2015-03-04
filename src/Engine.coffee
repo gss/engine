@@ -85,12 +85,12 @@ class Engine
   # engine.solve({}) - solve with given data
   # engine.solve([]) - evaluate commands
   # engine.solve(function(){}) - buffer and solve changes of state within callback
-  solve: () ->
+  solve: (a,b,c,d,e,f,g) ->
 
     unless @transacting
       @transacting = transacting = true
 
-    args = @transact.apply(@, arguments)
+    args = @transact(a,b,c,d,e,f,g)
 
     if typeof args[0] == 'function'
       if result = args.shift().apply(@, args) 
@@ -132,6 +132,7 @@ class Engine
       @console.start(reason || (@updated && 'Update' || 'Initialize'), arg || args)
       @updating = new @update
       @updating.start()
+      @triggerEvent('transact', @updating)
 
     unless @running
       @compile()
@@ -291,8 +292,8 @@ class Engine
   # Trigger event on engine and its scope element
   fireEvent: (name, data, object) ->
     @triggerEvent(name, data, object)
-    if @scope
-      @dispatchEvent(@scope, name, data, object)
+    #if @scope
+    #  @dispatchEvent(@scope, name, data, object)
     return
       
   # Builtin event handlers
@@ -644,6 +645,7 @@ class Engine::Identity
   # Get id if given object has one
   find: (object) ->
     return @set(object, false)
+
 
 # Listen for message in worker to initialize engine on demand
 if self? && !self.window && self.onmessage != undefined

@@ -166,6 +166,9 @@ class Domain
   set: (object, property, value, continuation, operation) ->
     path = @getPath(object, property)
     old = @values[path]
+    if value?
+      value = value.valueOf()
+      
     if continuation
       for op, i in stack = (@stacks ||= {})[path] ||= [] by 3
         if op == operation && stack[i + 1] == continuation
