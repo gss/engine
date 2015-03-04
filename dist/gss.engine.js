@@ -1336,6 +1336,9 @@ Domain = (function() {
     var i, old, op, path, stack, updated, _base, _i, _len, _ref;
     path = this.getPath(object, property);
     old = this.values[path];
+    if (value != null) {
+      value = value.valueOf();
+    }
     if (continuation) {
       _ref = stack = (_base = (this.stacks || (this.stacks = {})))[path] || (_base[path] = []);
       for (i = _i = 0, _len = _ref.length; _i < _len; i = _i += 3) {
@@ -1786,12 +1789,12 @@ Engine = (function() {
     return this;
   }
 
-  Engine.prototype.solve = function() {
+  Engine.prototype.solve = function(a, b, c, d, e, f, g) {
     var args, result, strategy, transacting;
     if (!this.transacting) {
       this.transacting = transacting = true;
     }
-    args = this.transact.apply(this, arguments);
+    args = this.transact(a, b, c, d, e, f, g);
     if (typeof args[0] === 'function') {
       if (result = args.shift().apply(this, args)) {
         this.updating.apply(result);
@@ -1835,6 +1838,7 @@ Engine = (function() {
       this.console.start(reason || (this.updated && 'Update' || 'Initialize'), arg || args);
       this.updating = new this.update;
       this.updating.start();
+      this.triggerEvent('transact', this.updating);
     }
     if (!this.running) {
       this.compile();
@@ -2025,9 +2029,6 @@ Engine = (function() {
 
   Engine.prototype.fireEvent = function(name, data, object) {
     this.triggerEvent(name, data, object);
-    if (this.scope) {
-      this.dispatchEvent(this.scope, name, data, object);
-    }
   };
 
   Engine.prototype.$events = {
@@ -4368,6 +4369,23 @@ Update.prototype = {
       solution = this.solution;
     }
     if (result !== this.solution) {
+
+      /*
+      for property in Object.keys(result)
+        if property == '$name[intrinsic-width]'
+          debugger
+        value = result[property]
+        now = (solution ||= @solution ||= {})[property]
+        if value != now
+          if Math.abs(value - now) >= 2 || last[property] != value
+            if value == now
+              debugger
+            last[property] = now
+            changes[property] = solution[property] = value
+          else
+            last[property] = value
+            solution[property] = now
+       */
       solution || (solution = this.solution || (this.solution = {}));
       for (property in result) {
         value = result[property];
@@ -5257,10 +5275,8 @@ Range.Modifier = (function(_super) {
   ];
 
   Modifier.prototype.before = function(args, domain, operation, continuation, scope, ascender, ascending) {
-    var inversed;
-    inversed = operation[0].indexOf('>') > -1;
     if (typeof args[0] !== 'number' || typeof args[1] === 'number') {
-      if (inversed) {
+      if (operation[0].indexOf('>') > -1) {
         if (typeof args[1] === 'number') {
           return this.scale(args[0], args[1], null);
         } else {
@@ -5270,7 +5286,7 @@ Range.Modifier = (function(_super) {
         return this.scale(args[0], null, args[1]);
       }
     } else {
-      if (inversed) {
+      if (operation[0].indexOf('>') > -1) {
         return this.scale(args[1], null, args[0]);
       } else {
         return this.scale(args[1], args[0], null);
@@ -5472,9 +5488,14 @@ Range.Mapper = (function(_super) {
         return right;
       } else {
         engine.updating.ranges = true;
-        if ((left[0] != null) && (left[1] != null)) {
-          right[2] = left[0] || 0;
-          right[3] = ((_ref1 = (_ref2 = left[2]) != null ? _ref2 : left[1]) != null ? _ref1 : left) || 0;
+        if (left.push) {
+          if ((left[0] != null) && (left[1] != null)) {
+            right[2] = left[0] || 0;
+            right[3] = ((_ref1 = (_ref2 = left[2]) != null ? _ref2 : left[1]) != null ? _ref1 : left) || 0;
+          }
+        } else {
+          right[3] = right[2] = left || 0;
+          return this.valueOf.call(right);
         }
       }
     }
@@ -5557,8 +5578,8 @@ Variable.Expression = (function(_super) {
 
   Expression.prototype.signature = [
     {
-      left: ['Variable', 'Number'],
-      right: ['Variable', 'Number']
+      left: ['Variable', 'Number', 'Range'],
+      right: ['Variable', 'Number', 'Range']
     }
   ];
 

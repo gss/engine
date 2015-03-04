@@ -372,6 +372,27 @@ Update.prototype =
   # Save results, check if solvers are caught in a re-solving loop
   apply: (result, solution = @solution) ->
     if result != @solution
+      #last = @last ||= {}
+      #changes = @changes ||= {}
+
+      ###
+      for property in Object.keys(result)
+        if property == '$name[intrinsic-width]'
+          debugger
+        value = result[property]
+        now = (solution ||= @solution ||= {})[property]
+        if value != now
+          if Math.abs(value - now) >= 2 || last[property] != value
+            if value == now
+              debugger
+            last[property] = now
+            changes[property] = solution[property] = value
+          else
+            last[property] = value
+            solution[property] = now
+
+
+      ###
       solution ||= @solution ||= {}
       for property, value of result
         if (redefined = @redefined?[property])
@@ -390,6 +411,7 @@ Update.prototype =
         if solution[property] != value
           (@changes ||= {})[property] = value
           solution[property] = value
+      ####
     return solution
 
   # Remove queued commands that match given key
