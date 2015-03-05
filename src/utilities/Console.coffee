@@ -48,6 +48,8 @@ class Console
       object + Array(length - object.length).join(' ') 
 
   openGroup: (name, reason = '', time, result = '') ->
+    if @level < 1
+      return
 
     fmt = '%c%s'
 
@@ -145,11 +147,13 @@ class Console
       @log a, b, c
 
   start: (reason, name) ->
-    @push(reason, name, @getTime(), @openGroup)
+    if @level
+      @push(reason, name, @getTime(), @openGroup)
   
   end: (result) ->
-    @buffer.push(undefined, undefined, undefined, undefined, @closeGroup)
-    @pop(result, @openGroup, true)
+    if @level
+      @buffer.push(undefined, undefined, undefined, undefined, @closeGroup)
+      @pop(result, @openGroup, true)
 
   getTime: (other, time) ->
     time ||= performance?.now?() || Date.now?() || + (new Date)
