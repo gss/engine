@@ -335,6 +335,16 @@ class Engine
       @output.remove(path)
       @updating?.remove(path)
 
+      if @ranges
+        paths = @input.Query::getVariants(path)
+        for subpath in paths
+          if ranges = @ranges?[subpath]
+            delete @ranges[subpath]
+            if !Object.keys(@ranges).length
+              @ranges = undefined
+
+
+
     assign: (update) ->
       # Execute assignments
 
@@ -355,7 +365,7 @@ class Engine
           for continuation, tickers of @ranges
             index = 0
             while operation = tickers[index]
-              if operation.command.update(tickers[index + 2], this, operation, continuation, ranges[index + 1])
+              if operation.command.update(tickers[index + 2], this, operation, continuation, tickers[index + 1])
                 tickers.splice(index, 3)
                 unless tickers.length
                   delete @ranges[continuation]
