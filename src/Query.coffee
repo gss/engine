@@ -270,12 +270,17 @@ class Query extends Command
       scopes.splice(index, 0, scope)
       @chain engine, collection[index - 1], node, continuation
       @chain engine, node, collection[index + 1], continuation
-      if (parent = operation.parent).command.sequence
-        if parent[parent.length - 1] == operation
-          parent = parent.parent
 
-      if parent[0] == 'rule'
-        engine.Stylesheet?.match(engine, node, continuation, true)
+
+
+      parent = operation
+      while parent = parent.parent
+        unless (parent.command.sequence && parent[parent.length - 1] == operation)
+          break
+      
+      if parent[0] == 'rule' 
+        if continuation == @getCanonicalPath(continuation)
+          engine.Stylesheet?.match(engine, node, continuation, true)
 
       return true
     else unless scopes[index] == scope && paths[index] == contd
@@ -406,8 +411,15 @@ class Query extends Command
           scopes.splice(index, 1)
         @chain engine, collection[index - 1], node, continuation
         @chain engine, node, collection[index], continuation
-        if operation.parent[0] == 'rule'
+
+        parent = operation
+        while parent = parent.parent
+          unless (parent.command.sequence && parent[parent.length - 1] == operation)
+            break
+
+        if parent[0] == 'rule'
           engine.Stylesheet?.match(engine, node, continuation, false)
+
         return true
 
 

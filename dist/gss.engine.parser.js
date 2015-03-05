@@ -18884,14 +18884,17 @@ Query = (function(_super) {
       scopes.splice(index, 0, scope);
       this.chain(engine, collection[index - 1], node, continuation);
       this.chain(engine, node, collection[index + 1], continuation);
-      if ((parent = operation.parent).command.sequence) {
-        if (parent[parent.length - 1] === operation) {
-          parent = parent.parent;
+      parent = operation;
+      while (parent = parent.parent) {
+        if (!(parent.command.sequence && parent[parent.length - 1] === operation)) {
+          break;
         }
       }
       if (parent[0] === 'rule') {
-        if ((_ref = engine.Stylesheet) != null) {
-          _ref.match(engine, node, continuation, true);
+        if (continuation === this.getCanonicalPath(continuation)) {
+          if ((_ref = engine.Stylesheet) != null) {
+            _ref.match(engine, node, continuation, true);
+          }
         }
       }
       return true;
@@ -18991,7 +18994,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.removeFromCollection = function(engine, node, continuation, operation, scope, needle, contd) {
-    var collection, dup, duplicate, duplicates, index, keys, length, negative, paths, refs, scopes, _i, _len, _ref;
+    var collection, dup, duplicate, duplicates, index, keys, length, negative, parent, paths, refs, scopes, _i, _len, _ref;
     collection = this.get(engine, continuation);
     length = collection.length;
     keys = collection.continuations;
@@ -19048,7 +19051,14 @@ Query = (function(_super) {
         }
         this.chain(engine, collection[index - 1], node, continuation);
         this.chain(engine, node, collection[index], continuation);
-        if (operation.parent[0] === 'rule') {
+        parent = operation;
+        while (parent = parent.parent) {
+          if (!(parent.command.sequence && parent[parent.length - 1] === operation)) {
+            break;
+          }
+        }
+        if (parent[0] === 'rule') {
+          console.error(continuation);
           if ((_ref = engine.Stylesheet) != null) {
             _ref.match(engine, node, continuation, false);
           }
@@ -21197,22 +21207,17 @@ Range.Modifier = (function(_super) {
 
   Modifier.prototype.before = function(args, domain, operation, continuation, scope, ascender, ascending) {
     if (typeof args[0] !== 'number' || typeof args[1] === 'number') {
-      if (operation[0].indexOf('>') > -1) {
-        if (typeof args[1] === 'number') {
-          return this.scale(args[0], args[1], null);
-        } else {
-          return this.scale(args[1], null, args[0]);
-        }
-      } else {
+      if (operation[0].indexOf('>') === -1) {
         return this.scale(args[0], null, args[1]);
+      } else if (typeof args[1] === 'number') {
+        return this.scale(args[0], args[1], null);
       }
     } else {
-      if (operation[0].indexOf('>') > -1) {
-        return this.scale(args[1], null, args[0]);
-      } else {
+      if (operation[0].indexOf('>') === -1) {
         return this.scale(args[1], args[0], null);
       }
     }
+    return this.scale(args[1], null, args[0]);
   };
 
   Modifier.prototype.scale = function(range, start, finish) {
@@ -21234,6 +21239,7 @@ Range.Modifier = (function(_super) {
     from = range[reversed];
     to = range[1 - reversed];
     if (start !== null && !(from > start)) {
+      range = range.slice();
       if ((value = range[2]) != null) {
         to || (to = 0);
         progress = value * (to - from);
@@ -21303,7 +21309,7 @@ Range.Progress = (function(_super) {
     return Progress.__super__.constructor.apply(this, arguments);
   }
 
-  Progress.prototype.after = function(result, args, engine, operation, continuation, scope) {
+  Progress.prototype.after = function(args, result, engine, operation, continuation, scope) {
     var index, ranges, _base, _base1;
     ranges = (_base = ((_base1 = engine.engine).ranges || (_base1.ranges = {})))[continuation] || (_base[continuation] = []);
     if ((index = ranges.indexOf(operation)) === -1) {

@@ -53,19 +53,14 @@ class Range.Modifier extends Range
 
   before: (args, domain, operation, continuation, scope, ascender, ascending) ->
     if typeof args[0] != 'number' || typeof args[1] == 'number'
-      if operation[0].indexOf('>') > -1
-        if typeof args[1] == 'number'
-          return @scale(args[0], args[1], null)
-        else
-          return @scale(args[1], null, args[0])
-      else
+      if operation[0].indexOf('>') == -1
         return @scale(args[0], null, args[1])
+      else if typeof args[1] == 'number'
+        return @scale(args[0], args[1], null)
     else
-      if operation[0].indexOf('>') > -1
-        return @scale(args[1], null, args[0])
-      else
+      if operation[0].indexOf('>') == -1
         return @scale(args[1], args[0], null)
-
+    return @scale(args[1], null, args[0])
 
   # Scale range to given start/end, update progress, register overshooting
   scale: (range, start, finish) ->
@@ -86,6 +81,7 @@ class Range.Modifier extends Range
 
 
     if start != null && !(from > start)
+      range = range.slice()
       if (value = range[2])?
         to ||= 0
         progress = value * (to - from)
@@ -155,7 +151,7 @@ class Range.Modifier extends Range
 
 class Range.Progress extends Range
   
-  after: (result, args, engine, operation, continuation, scope) ->
+  after: (args, result, engine, operation, continuation, scope) ->
     ranges = (engine.engine.ranges ||= {})[continuation] ||= []
     if (index = ranges.indexOf(operation)) == -1
       ranges.push(operation, scope, result)
