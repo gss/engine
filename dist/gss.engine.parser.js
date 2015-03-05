@@ -18010,9 +18010,29 @@ Engine = (function() {
       }
     },
     remove: function(path) {
-      var _ref;
+      var paths, ranges, subpath, _i, _len, _ref, _ref1, _results;
       this.output.remove(path);
-      return (_ref = this.updating) != null ? _ref.remove(path) : void 0;
+      if ((_ref = this.updating) != null) {
+        _ref.remove(path);
+      }
+      if (this.ranges) {
+        paths = this.input.Query.prototype.getVariants(path);
+        _results = [];
+        for (_i = 0, _len = paths.length; _i < _len; _i++) {
+          subpath = paths[_i];
+          if (ranges = (_ref1 = this.ranges) != null ? _ref1[subpath] : void 0) {
+            delete this.ranges[subpath];
+            if (!Object.keys(this.ranges).length) {
+              _results.push(this.ranges = void 0);
+            } else {
+              _results.push(void 0);
+            }
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      }
     },
     assign: function(update) {
       var assignments, changes, constraints, continuation, index, operation, path, ranges, tickers, _ref;
@@ -18035,7 +18055,7 @@ Engine = (function() {
             tickers = _ref[continuation];
             index = 0;
             while (operation = tickers[index]) {
-              if (operation.command.update(tickers[index + 2], this, operation, continuation, ranges[index + 1])) {
+              if (operation.command.update(tickers[index + 2], this, operation, continuation, tickers[index + 1])) {
                 tickers.splice(index, 3);
                 if (!tickers.length) {
                   delete this.ranges[continuation];
@@ -19058,7 +19078,6 @@ Query = (function(_super) {
           }
         }
         if (parent[0] === 'rule') {
-          console.error(continuation);
           if ((_ref = engine.Stylesheet) != null) {
             _ref.match(engine, node, continuation, false);
           }
@@ -21151,7 +21170,7 @@ Range = (function(_super) {
 
   Range.define({
     '...': function(from, to, progress) {
-      var range;
+      var range, size;
       if (to != null) {
         if (to === false) {
           range = [from];
@@ -21160,6 +21179,9 @@ Range = (function(_super) {
         }
       } else {
         range = [false, from];
+      }
+      if (size = this.size) {
+        range.length = size;
       }
       if (progress != null) {
         range[2] = progress;
@@ -21417,11 +21439,15 @@ Range.Mapper = (function(_super) {
         engine.updating.ranges = true;
         if (left.push) {
           if ((left[0] != null) && (left[1] != null)) {
-            right[2] = left[0] || 0;
+            right[2] = left[0] || null;
             right[3] = ((_ref1 = (_ref2 = left[2]) != null ? _ref2 : left[1]) != null ? _ref1 : left) || 0;
           }
         } else {
-          right[3] = right[2] = left || 0;
+          if (right.length < 4) {
+            right[2] = left;
+          } else {
+            right[3] = left || 0;
+          }
           return this.valueOf.call(right);
         }
       }
@@ -22378,6 +22404,9 @@ Console = (function() {
     if (result == null) {
       result = '';
     }
+    if (this.level < 1) {
+      return;
+    }
     fmt = '%c%s';
     switch (typeof reason) {
       case 'string':
@@ -22496,12 +22525,16 @@ Console = (function() {
   };
 
   Console.prototype.start = function(reason, name) {
-    return this.push(reason, name, this.getTime(), this.openGroup);
+    if (this.level) {
+      return this.push(reason, name, this.getTime(), this.openGroup);
+    }
   };
 
   Console.prototype.end = function(result) {
-    this.buffer.push(void 0, void 0, void 0, void 0, this.closeGroup);
-    return this.pop(result, this.openGroup, true);
+    if (this.level) {
+      this.buffer.push(void 0, void 0, void 0, void 0, this.closeGroup);
+      return this.pop(result, this.openGroup, true);
+    }
   };
 
   Console.prototype.getTime = function(other, time) {

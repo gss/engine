@@ -24,10 +24,14 @@ class Range extends Command
       else
         range = [false, from]
 
+      if size = @size
+        range.length = size
+
       if progress?
         range[2] = progress
 
         @wrap range
+        
       return range
 
   # Convert range to number
@@ -242,11 +246,14 @@ class Range.Mapper extends Range
         # Static range start transitions
         if left.push
           if left[0]? && left[1]?
-            right[2] = left[0] || 0
+            right[2] = left[0] || null
             right[3] = (left[2] ? left[1] ? left) || 0
         # 
-        else
-          right[3] = right[2] = left || 0
+        else 
+          if right.length < 4
+            right[2] = left
+          else
+            right[3] = left || 0
           return @valueOf.call right
 
         return
