@@ -142,8 +142,8 @@ class Query extends Command
 
     (updating.queries ||= {})[path] = result
 
-    if updating.collections?.hasOwnProperty(path)
-      old = updating.collections[path]
+    if updating.snapshots?.hasOwnProperty(path)
+      old = updating.snapshots[path]
     else if !old? && (result && result.length == 0) && continuation
       old = @getCanonicalCollection(engine, path)
 
@@ -227,7 +227,7 @@ class Query extends Command
         collection = @get(engine, contd)
         op = deferred[index]
         unless op.command.singular
-          if old = engine.updating.collections?[contd]
+          if old = engine.updating.snapshots?[contd]
             collection = collection.slice()
             collection.isCollection = true
             for item, i in collection by -1
@@ -332,7 +332,7 @@ class Query extends Command
           delete engine.observers[id]
 
   snapshot: (engine, key, collection) ->
-    return if (collections = engine.updating.collections ||= {}).hasOwnProperty key
+    return if (snapshots = engine.updating.snapshots ||= {}).hasOwnProperty key
 
     if collection?.push
       c = collection.slice()
@@ -347,7 +347,7 @@ class Query extends Command
 
       collection = c
       
-    collections[key] = collection
+    snapshots[key] = collection
 
   defer: (engine, operation, continuation, scope) ->
     engine.updating.deferred ||= []
@@ -667,8 +667,8 @@ class Query extends Command
       return value || []
 
   restore: (engine, path) ->
-    if engine.updating.collections.hasOwnProperty(path)
-      return engine.updating.collections[path]
+    if engine.updating.snapshots.hasOwnProperty(path)
+      return engine.updating.snapshots[path]
     else
       return @get(engine, path)
 
@@ -1028,7 +1028,7 @@ class Query extends Command
       
       engine.triggerEvent('branch')
       queries = engine.updating.queries ||= {}
-      collections = engine.updating.collections ||= {}
+      snapshots = engine.updating.snapshots ||= {}
 
       @repair(engine, true)
       engine.updating.branching = undefined
@@ -1036,8 +1036,8 @@ class Query extends Command
       for path in removed
         if conditions.indexOf(path) > -1
           continue
-        if collections
-          delete collections[path]
+        if snapshots
+          delete snapshots[path]
         if queries
           delete queries[path]
         delete engine.queries[path]

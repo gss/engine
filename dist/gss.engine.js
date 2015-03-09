@@ -2825,8 +2825,8 @@ Query = (function(_super) {
     }
     old = this.get(engine, path);
     (updating.queries || (updating.queries = {}))[path] = result;
-    if ((_ref1 = updating.collections) != null ? _ref1.hasOwnProperty(path) : void 0) {
-      old = updating.collections[path];
+    if ((_ref1 = updating.snapshots) != null ? _ref1.hasOwnProperty(path) : void 0) {
+      old = updating.snapshots[path];
     } else if ((old == null) && (result && result.length === 0) && continuation) {
       old = this.getCanonicalCollection(engine, path);
     }
@@ -2919,7 +2919,7 @@ Query = (function(_super) {
         collection = this.get(engine, contd);
         op = deferred[index];
         if (!op.command.singular) {
-          if (old = (_ref = engine.updating.collections) != null ? _ref[contd] : void 0) {
+          if (old = (_ref = engine.updating.snapshots) != null ? _ref[contd] : void 0) {
             collection = collection.slice();
             collection.isCollection = true;
             for (i = _i = collection.length - 1; _i >= 0; i = _i += -1) {
@@ -3047,8 +3047,8 @@ Query = (function(_super) {
   };
 
   Query.prototype.snapshot = function(engine, key, collection) {
-    var c, collections, _base;
-    if ((collections = (_base = engine.updating).collections || (_base.collections = {})).hasOwnProperty(key)) {
+    var c, snapshots, _base;
+    if ((snapshots = (_base = engine.updating).snapshots || (_base.snapshots = {})).hasOwnProperty(key)) {
       return;
     }
     if (collection != null ? collection.push : void 0) {
@@ -3067,7 +3067,7 @@ Query = (function(_super) {
       }
       collection = c;
     }
-    return collections[key] = collection;
+    return snapshots[key] = collection;
   };
 
   Query.prototype.defer = function(engine, operation, continuation, scope) {
@@ -3458,8 +3458,8 @@ Query = (function(_super) {
   };
 
   Query.prototype.restore = function(engine, path) {
-    if (engine.updating.collections.hasOwnProperty(path)) {
-      return engine.updating.collections[path];
+    if (engine.updating.snapshots.hasOwnProperty(path)) {
+      return engine.updating.snapshots[path];
     } else {
       return this.get(engine, path);
     }
@@ -3899,7 +3899,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.branch = function(engine) {
-    var collections, condition, conditions, index, path, queries, removed, _base, _base1, _i, _j, _k, _len, _len1, _len2;
+    var condition, conditions, index, path, queries, removed, snapshots, _base, _base1, _i, _j, _k, _len, _len1, _len2;
     if (conditions = engine.updating.branches) {
       engine.console.start('Branches', conditions.slice());
       engine.updating.branches = void 0;
@@ -3910,7 +3910,7 @@ Query = (function(_super) {
       }
       engine.triggerEvent('branch');
       queries = (_base = engine.updating).queries || (_base.queries = {});
-      collections = (_base1 = engine.updating).collections || (_base1.collections = {});
+      snapshots = (_base1 = engine.updating).snapshots || (_base1.snapshots = {});
       this.repair(engine, true);
       engine.updating.branching = void 0;
       for (_j = 0, _len1 = removed.length; _j < _len1; _j++) {
@@ -3918,8 +3918,8 @@ Query = (function(_super) {
         if (conditions.indexOf(path) > -1) {
           continue;
         }
-        if (collections) {
-          delete collections[path];
+        if (snapshots) {
+          delete snapshots[path];
         }
         if (queries) {
           delete queries[path];
@@ -4523,7 +4523,7 @@ Update.prototype = {
   },
   reset: function(continuation) {
     this.cleanup('queries', continuation);
-    this.cleanup('collections', continuation);
+    this.cleanup('snapshots', continuation);
     return this.cleanup('mutations');
   },
   commit: function() {
@@ -4662,7 +4662,7 @@ Condition = (function(_super) {
 
   Condition.prototype.getOldValue = function(engine, continuation) {
     var old, _ref, _ref1;
-    old = (_ref = (_ref1 = engine.updating.collections) != null ? _ref1[continuation] : void 0) != null ? _ref : 0;
+    old = (_ref = (_ref1 = engine.updating.snapshots) != null ? _ref1[continuation] : void 0) != null ? _ref : 0;
     return old > 0 || (old === 0 && 1 / old !== -Infinity);
   };
 
@@ -4700,7 +4700,7 @@ Condition = (function(_super) {
 
   Condition.prototype.unbranch = function(engine, operation, continuation, scope) {
     var increment, old, _ref;
-    if (old = (_ref = engine.updating.collections) != null ? _ref[continuation] : void 0) {
+    if (old = (_ref = engine.updating.snapshots) != null ? _ref[continuation] : void 0) {
       increment = this.getOldValue(engine, continuation) ? -1 : 1;
       if ((engine.queries[continuation] += increment) === 0) {
         this.clean(engine, continuation, continuation, operation, scope);
@@ -4729,8 +4729,8 @@ Condition = (function(_super) {
       if (result && !value) {
         value = -0;
       }
-      ((_base = engine.updating).collections || (_base.collections = {}))[path] = value;
-      if (old = (_ref = engine.updating.collections) != null ? _ref[path] : void 0) {
+      ((_base = engine.updating).snapshots || (_base.snapshots = {}))[path] = value;
+      if (old = (_ref = engine.updating.snapshots) != null ? _ref[path] : void 0) {
         if (this.getOldValue(engine, path) === !!result) {
           return true;
         }

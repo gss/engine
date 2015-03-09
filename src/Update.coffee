@@ -455,7 +455,7 @@ Update.prototype =
 
   reset: (continuation) ->
     @cleanup 'queries', continuation
-    @cleanup 'collections', continuation
+    @cleanup 'snapshots', continuation
     @cleanup 'mutations'
     
   commit: ->

@@ -62,7 +62,7 @@ class Condition extends Query
     return '@' + @toExpression(operation[1])
 
   getOldValue: (engine, continuation) ->
-    old = engine.updating.collections?[continuation] ? 0
+    old = engine.updating.snapshots?[continuation] ? 0
     return old > 0 || (old == 0 && 1 / old != -Infinity)
 
   ascend: (engine, operation, continuation, scope, result) ->
@@ -92,7 +92,7 @@ class Condition extends Query
       engine.console.end(result)
 
   unbranch: (engine, operation, continuation, scope) ->
-    if old = engine.updating.collections?[continuation]
+    if old = engine.updating.snapshots?[continuation]
       increment = if @getOldValue(engine, continuation) then -1 else 1
       if (engine.queries[continuation] += increment) == 0
         @clean(engine, continuation, continuation, operation, scope)
@@ -120,10 +120,10 @@ class Condition extends Query
 
       if result && !value
         value = -0
-        
-      (engine.updating.collections ||= {})[path] = value
 
-      if old = engine.updating.collections?[path]
+      (engine.updating.snapshots ||= {})[path] = value
+
+      if old = engine.updating.snapshots?[path]
         if @getOldValue(engine, path) == !!result
           return true
 
