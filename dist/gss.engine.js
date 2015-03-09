@@ -2875,7 +2875,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.write = function(engine, operation, continuation, scope, node, path, result, old, added, removed) {
-    if (result != null ? result.continuations : void 0) {
+    if (result != null ? result.operations : void 0) {
       this.reduce(engine, operation, path, scope, void 0, void 0, void 0, continuation);
     } else {
       this.reduce(engine, operation, path, scope, added, removed, void 0, continuation);
@@ -2943,13 +2943,13 @@ Query = (function(_super) {
   };
 
   Query.prototype.add = function(engine, node, continuation, operation, scope, key, contd) {
-    var collection, dup, duplicates, el, index, keys, parent, paths, scopes, _base, _base1, _i, _j, _len, _len1, _ref;
+    var collection, dup, duplicates, el, index, operations, parent, paths, scopes, _base, _base1, _i, _j, _len, _len1, _ref;
     collection = (_base = engine.queries)[continuation] || (_base[continuation] = []);
     if (!collection.push) {
       return;
     }
     collection.isCollection = true;
-    keys = collection.continuations || (collection.continuations = []);
+    operations = collection.operations || (collection.operations = []);
     paths = collection.paths || (collection.paths = []);
     scopes = collection.scopes || (collection.scopes = []);
     if (engine.pairs[continuation]) {
@@ -2959,12 +2959,12 @@ Query = (function(_super) {
     if ((index = collection.indexOf(node)) === -1) {
       for (index = _i = 0, _len = collection.length; _i < _len; index = ++_i) {
         el = collection[index];
-        if (!this.comparePosition(el, node, keys[index], key)) {
+        if (!this.comparePosition(el, node, operations[index], key)) {
           break;
         }
       }
       collection.splice(index, 0, node);
-      keys.splice(index, 0, key);
+      operations.splice(index, 0, key);
       paths.splice(index, 0, contd);
       scopes.splice(index, 0, scope);
       this.chain(engine, collection[index - 1], node, continuation);
@@ -2994,7 +2994,7 @@ Query = (function(_super) {
         }
       }
       duplicates.push(node);
-      keys.push(key);
+      operations.push(key);
       paths.push(contd);
       scopes.push(scope);
       return;
@@ -3062,8 +3062,8 @@ Query = (function(_super) {
       if (collection.scopes) {
         c.scopes = collection.scopes.slice();
       }
-      if (collection.continuations) {
-        c.continuations = collection.continuations.slice();
+      if (collection.operations) {
+        c.operations = collection.operations.slice();
       }
       collection = c;
     }
@@ -3079,10 +3079,10 @@ Query = (function(_super) {
   };
 
   Query.prototype.removeFromCollection = function(engine, node, continuation, operation, scope, needle, contd) {
-    var collection, dup, duplicate, duplicates, index, keys, length, negative, parent, paths, refs, scopes, _i, _len, _ref;
+    var collection, dup, duplicate, duplicates, index, length, negative, operations, parent, paths, refs, scopes, _i, _len, _ref;
     collection = this.get(engine, continuation);
     length = collection.length;
-    keys = collection.continuations;
+    operations = collection.operations;
     paths = collection.paths;
     scopes = collection.scopes;
     duplicate = null;
@@ -3094,7 +3094,7 @@ Query = (function(_super) {
           if (refs.indexOf(paths[length + index]) > -1 && scopes[length + index] === scope) {
             this.snapshot(engine, continuation, collection);
             duplicates.splice(index, 1);
-            keys.splice(length + index, 1);
+            operations.splice(length + index, 1);
             paths.splice(length + index, 1);
             scopes.splice(length + index, 1);
             return false;
@@ -3109,7 +3109,7 @@ Query = (function(_super) {
     if (operation && length && (needle != null)) {
       this.snapshot(engine, continuation, collection);
       if ((index = collection.indexOf(node)) > -1) {
-        if (keys) {
+        if (operations) {
           negative = false;
           if (scopes[index] !== scope) {
             return null;
@@ -3121,16 +3121,16 @@ Query = (function(_super) {
             duplicates.splice(duplicate, 1);
             paths[index] = paths[duplicate + length];
             paths.splice(duplicate + length, 1);
-            keys[index] = keys[duplicate + length];
-            keys.splice(duplicate + length, 1);
+            operations[index] = operations[duplicate + length];
+            operations.splice(duplicate + length, 1);
             scopes[index] = scopes[duplicate + length];
             scopes.splice(duplicate + length, 1);
             return false;
           }
         }
         collection.splice(index, 1);
-        if (keys) {
-          keys.splice(index, 1);
+        if (operations) {
+          operations.splice(index, 1);
           paths.splice(index, 1);
           scopes.splice(index, 1);
         }
@@ -3260,13 +3260,13 @@ Query = (function(_super) {
     if (added) {
       this.each(this.add, engine, added, path, operation, scope, operation, contd);
     }
-    if ((_ref = (collection = this.get(engine, path))) != null ? _ref.continuations : void 0) {
+    if ((_ref = (collection = this.get(engine, path))) != null ? _ref.operations : void 0) {
       self = this;
       sorted = collection.slice().sort(function(a, b) {
         var i, j;
         i = collection.indexOf(a);
         j = collection.indexOf(b);
-        return self.comparePosition(a, b, collection.continuations[i], collection.continuations[j]) && -1 || 1;
+        return self.comparePosition(a, b, collection.operations[i], collection.operations[j]) && -1 || 1;
       });
       updated = void 0;
       _results = [];
@@ -3276,7 +3276,7 @@ Query = (function(_super) {
           if (!updated) {
             updated = collection.slice();
             this.set(engine, path, updated);
-            updated.continuations = collection.continuations.slice();
+            updated.operations = collection.operations.slice();
             updated.paths = collection.paths.slice();
             updated.scopes = collection.scopes.slice();
             updated.duplicates = collection.duplicates;
@@ -3285,7 +3285,7 @@ Query = (function(_super) {
           }
           i = collection.indexOf(node);
           updated[index] = node;
-          updated.continuations[index] = collection.continuations[i];
+          updated.operations[index] = collection.operations[i];
           updated.paths[index] = collection.paths[i];
           updated.scopes[index] = collection.scopes[i];
           this.chain(engine, sorted[index - 1], node, path);

@@ -186,7 +186,7 @@ class Query extends Command
 
   # Write result, update collections, subscribe to query
   write: (engine, operation, continuation, scope, node, path, result, old, added, removed) ->
-    if result?.continuations
+    if result?.operations
       @reduce(engine, operation, path, scope, undefined, undefined, undefined, continuation)
     else
       @reduce(engine, operation, path, scope, added, removed, undefined, continuation)
@@ -252,7 +252,7 @@ class Query extends Command
       return
     collection.isCollection = true
 
-    keys = collection.continuations ||= []
+    operations = collection.operations ||= []
     paths = collection.paths ||= []
     scopes = collection.scopes ||= []
 
@@ -263,9 +263,9 @@ class Query extends Command
 
     if (index = collection.indexOf(node)) == -1
       for el, index in collection
-        break unless @comparePosition(el, node, keys[index], key)
+        break unless @comparePosition(el, node, operations[index], key)
       collection.splice(index, 0, node)
-      keys.splice(index, 0, key)
+      operations.splice(index, 0, key)
       paths.splice(index, 0, contd)
       scopes.splice(index, 0, scope)
       @chain engine, collection[index - 1], node, continuation
@@ -287,10 +287,10 @@ class Query extends Command
       duplicates = (collection.duplicates ||= [])
       for dup, index in duplicates
         if dup == node
-          if scopes[index] == scope && paths[index] == contd # && keys[index] == key
+          if scopes[index] == scope && paths[index] == contd # && operations[index] == key
             return
       duplicates.push(node)
-      keys.push(key)
+      operations.push(key)
       paths.push(contd)
       scopes.push(scope)
       return
@@ -342,8 +342,8 @@ class Query extends Command
         c.duplicates = collection.duplicates.slice()
       if collection.scopes
         c.scopes = collection.scopes.slice()
-      if collection.continuations
-        c.continuations = collection.continuations.slice()
+      if collection.operations
+        c.operations = collection.operations.slice()
 
       collection = c
       
@@ -358,7 +358,7 @@ class Query extends Command
   removeFromCollection: (engine, node, continuation, operation, scope, needle, contd) ->
     collection = @get(engine, continuation)
     length = collection.length
-    keys = collection.continuations
+    operations = collection.operations
     paths = collection.paths
     scopes = collection.scopes
     duplicate = null
@@ -377,7 +377,7 @@ class Query extends Command
 
             @snapshot engine, continuation, collection
             duplicates.splice(index, 1)
-            keys.splice(length + index, 1)
+            operations.splice(length + index, 1)
             paths.splice(length + index, 1)
             scopes.splice(length + index, 1)
             return false
@@ -389,7 +389,7 @@ class Query extends Command
 
       if (index = collection.indexOf(node)) > -1
         # Fall back to duplicate with a different key
-        if keys
+        if operations
           negative = false#if refs then null else false
           return null if scopes[index] != scope
           return null if refs.indexOf(paths[index]) == -1
@@ -398,15 +398,15 @@ class Query extends Command
             duplicates.splice(duplicate, 1)
             paths[index] = paths[duplicate + length]
             paths.splice(duplicate + length, 1)
-            keys[index] = keys[duplicate + length]
-            keys.splice(duplicate + length, 1)
+            operations[index] = operations[duplicate + length]
+            operations.splice(duplicate + length, 1)
             scopes[index] = scopes[duplicate + length]
             scopes.splice(duplicate + length, 1)
             return false
 
         collection.splice(index, 1)
-        if keys
-          keys.splice(index, 1)
+        if operations
+          operations.splice(index, 1)
           paths.splice(index, 1)
           scopes.splice(index, 1)
         @chain engine, collection[index - 1], node, continuation
@@ -517,12 +517,12 @@ class Query extends Command
       @each @add, engine, added, path, operation, scope, operation, contd
 
     # Check if collection was resorted
-    if (collection = @get(engine, path))?.continuations
+    if (collection = @get(engine, path))?.operations
       self = @
       sorted = collection.slice().sort (a, b) ->
         i = collection.indexOf(a)
         j = collection.indexOf(b)
-        return self.comparePosition(a, b, collection.continuations[i], collection.continuations[j]) && -1 || 1
+        return self.comparePosition(a, b, collection.operations[i], collection.operations[j]) && -1 || 1
       
 
       updated = undefined
@@ -531,7 +531,7 @@ class Query extends Command
           if !updated
             updated = collection.slice()
             @set(engine, path, updated)
-            updated.continuations = collection.continuations.slice()
+            updated.operations = collection.operations.slice()
             updated.paths = collection.paths.slice()
             updated.scopes = collection.scopes.slice()
             updated.duplicates = collection.duplicates
@@ -539,7 +539,7 @@ class Query extends Command
             updated[index] = node
           i = collection.indexOf(node)
           updated[index] = node
-          updated.continuations[index] = collection.continuations[i]
+          updated.operations[index] = collection.operations[i]
           updated.paths[index] = collection.paths[i]
           updated.scopes[index] = collection.scopes[i]
 
