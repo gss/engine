@@ -253,7 +253,7 @@ class Query extends Command
     collection.isCollection = true
 
     operations = collection.operations ||= []
-    paths = collection.paths ||= []
+    continuations = collection.continuations ||= []
     scopes = collection.scopes ||= []
 
     if engine.pairs[continuation]
@@ -266,7 +266,7 @@ class Query extends Command
         break unless @comparePosition(el, node, operations[index], key)
       collection.splice(index, 0, node)
       operations.splice(index, 0, key)
-      paths.splice(index, 0, contd)
+      continuations.splice(index, 0, contd)
       scopes.splice(index, 0, scope)
       @chain engine, collection[index - 1], node, continuation
       @chain engine, node, collection[index + 1], continuation
@@ -283,15 +283,15 @@ class Query extends Command
           engine.Stylesheet?.match(engine, node, continuation, true)
 
       return true
-    else unless scopes[index] == scope && paths[index] == contd
+    else unless scopes[index] == scope && continuations[index] == contd
       duplicates = (collection.duplicates ||= [])
       for dup, index in duplicates
         if dup == node
-          if scopes[index] == scope && paths[index] == contd # && operations[index] == key
+          if scopes[index] == scope && continuations[index] == contd # && operations[index] == key
             return
       duplicates.push(node)
       operations.push(key)
-      paths.push(contd)
+      continuations.push(contd)
       scopes.push(scope)
       return
 
@@ -359,7 +359,7 @@ class Query extends Command
     collection = @get(engine, continuation)
     length = collection.length
     operations = collection.operations
-    paths = collection.paths
+    continuations = collection.continuations
     scopes = collection.scopes
     duplicate = null
 
@@ -371,14 +371,14 @@ class Query extends Command
     if (duplicates = collection.duplicates)
       for dup, index in duplicates
         if dup == node
-          if refs.indexOf(paths[length + index]) > -1 &&
+          if refs.indexOf(continuations[length + index]) > -1 &&
               #(keys[length + index] == needle) &&
               scopes[length + index] == scope
 
             @snapshot engine, continuation, collection
             duplicates.splice(index, 1)
             operations.splice(length + index, 1)
-            paths.splice(length + index, 1)
+            continuations.splice(length + index, 1)
             scopes.splice(length + index, 1)
             return false
           else
@@ -392,12 +392,12 @@ class Query extends Command
         if operations
           negative = false#if refs then null else false
           return null if scopes[index] != scope
-          return null if refs.indexOf(paths[index]) == -1
+          return null if refs.indexOf(continuations[index]) == -1
           #return null if keys[index] != needle
           if duplicate?
             duplicates.splice(duplicate, 1)
-            paths[index] = paths[duplicate + length]
-            paths.splice(duplicate + length, 1)
+            continuations[index] = continuations[duplicate + length]
+            continuations.splice(duplicate + length, 1)
             operations[index] = operations[duplicate + length]
             operations.splice(duplicate + length, 1)
             scopes[index] = scopes[duplicate + length]
@@ -407,7 +407,7 @@ class Query extends Command
         collection.splice(index, 1)
         if operations
           operations.splice(index, 1)
-          paths.splice(index, 1)
+          continuations.splice(index, 1)
           scopes.splice(index, 1)
         @chain engine, collection[index - 1], node, continuation
         @chain engine, node, collection[index], continuation
@@ -532,7 +532,7 @@ class Query extends Command
             updated = collection.slice()
             @set(engine, path, updated)
             updated.operations = collection.operations.slice()
-            updated.paths = collection.paths.slice()
+            updated.continuations = collection.continuations.slice()
             updated.scopes = collection.scopes.slice()
             updated.duplicates = collection.duplicates
             updated.isCollection = collection.isCollection
@@ -540,7 +540,7 @@ class Query extends Command
           i = collection.indexOf(node)
           updated[index] = node
           updated.operations[index] = collection.operations[i]
-          updated.paths[index] = collection.paths[i]
+          updated.continuations[index] = collection.continuations[i]
           updated.scopes[index] = collection.scopes[i]
 
           @chain engine, sorted[index - 1], node, path

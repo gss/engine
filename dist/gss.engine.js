@@ -2943,14 +2943,14 @@ Query = (function(_super) {
   };
 
   Query.prototype.add = function(engine, node, continuation, operation, scope, key, contd) {
-    var collection, dup, duplicates, el, index, operations, parent, paths, scopes, _base, _base1, _i, _j, _len, _len1, _ref;
+    var collection, continuations, dup, duplicates, el, index, operations, parent, scopes, _base, _base1, _i, _j, _len, _len1, _ref;
     collection = (_base = engine.queries)[continuation] || (_base[continuation] = []);
     if (!collection.push) {
       return;
     }
     collection.isCollection = true;
     operations = collection.operations || (collection.operations = []);
-    paths = collection.paths || (collection.paths = []);
+    continuations = collection.continuations || (collection.continuations = []);
     scopes = collection.scopes || (collection.scopes = []);
     if (engine.pairs[continuation]) {
       ((_base1 = engine.updating).pairs || (_base1.pairs = {}))[continuation] = true;
@@ -2965,7 +2965,7 @@ Query = (function(_super) {
       }
       collection.splice(index, 0, node);
       operations.splice(index, 0, key);
-      paths.splice(index, 0, contd);
+      continuations.splice(index, 0, contd);
       scopes.splice(index, 0, scope);
       this.chain(engine, collection[index - 1], node, continuation);
       this.chain(engine, node, collection[index + 1], continuation);
@@ -2983,19 +2983,19 @@ Query = (function(_super) {
         }
       }
       return true;
-    } else if (!(scopes[index] === scope && paths[index] === contd)) {
+    } else if (!(scopes[index] === scope && continuations[index] === contd)) {
       duplicates = (collection.duplicates || (collection.duplicates = []));
       for (index = _j = 0, _len1 = duplicates.length; _j < _len1; index = ++_j) {
         dup = duplicates[index];
         if (dup === node) {
-          if (scopes[index] === scope && paths[index] === contd) {
+          if (scopes[index] === scope && continuations[index] === contd) {
             return;
           }
         }
       }
       duplicates.push(node);
       operations.push(key);
-      paths.push(contd);
+      continuations.push(contd);
       scopes.push(scope);
       return;
     }
@@ -3079,11 +3079,11 @@ Query = (function(_super) {
   };
 
   Query.prototype.removeFromCollection = function(engine, node, continuation, operation, scope, needle, contd) {
-    var collection, dup, duplicate, duplicates, index, length, negative, operations, parent, paths, refs, scopes, _i, _len, _ref;
+    var collection, continuations, dup, duplicate, duplicates, index, length, negative, operations, parent, refs, scopes, _i, _len, _ref;
     collection = this.get(engine, continuation);
     length = collection.length;
     operations = collection.operations;
-    paths = collection.paths;
+    continuations = collection.continuations;
     scopes = collection.scopes;
     duplicate = null;
     refs = this.getVariants(contd);
@@ -3091,11 +3091,11 @@ Query = (function(_super) {
       for (index = _i = 0, _len = duplicates.length; _i < _len; index = ++_i) {
         dup = duplicates[index];
         if (dup === node) {
-          if (refs.indexOf(paths[length + index]) > -1 && scopes[length + index] === scope) {
+          if (refs.indexOf(continuations[length + index]) > -1 && scopes[length + index] === scope) {
             this.snapshot(engine, continuation, collection);
             duplicates.splice(index, 1);
             operations.splice(length + index, 1);
-            paths.splice(length + index, 1);
+            continuations.splice(length + index, 1);
             scopes.splice(length + index, 1);
             return false;
           } else {
@@ -3114,13 +3114,13 @@ Query = (function(_super) {
           if (scopes[index] !== scope) {
             return null;
           }
-          if (refs.indexOf(paths[index]) === -1) {
+          if (refs.indexOf(continuations[index]) === -1) {
             return null;
           }
           if (duplicate != null) {
             duplicates.splice(duplicate, 1);
-            paths[index] = paths[duplicate + length];
-            paths.splice(duplicate + length, 1);
+            continuations[index] = continuations[duplicate + length];
+            continuations.splice(duplicate + length, 1);
             operations[index] = operations[duplicate + length];
             operations.splice(duplicate + length, 1);
             scopes[index] = scopes[duplicate + length];
@@ -3131,7 +3131,7 @@ Query = (function(_super) {
         collection.splice(index, 1);
         if (operations) {
           operations.splice(index, 1);
-          paths.splice(index, 1);
+          continuations.splice(index, 1);
           scopes.splice(index, 1);
         }
         this.chain(engine, collection[index - 1], node, continuation);
@@ -3277,7 +3277,7 @@ Query = (function(_super) {
             updated = collection.slice();
             this.set(engine, path, updated);
             updated.operations = collection.operations.slice();
-            updated.paths = collection.paths.slice();
+            updated.continuations = collection.continuations.slice();
             updated.scopes = collection.scopes.slice();
             updated.duplicates = collection.duplicates;
             updated.isCollection = collection.isCollection;
@@ -3286,7 +3286,7 @@ Query = (function(_super) {
           i = collection.indexOf(node);
           updated[index] = node;
           updated.operations[index] = collection.operations[i];
-          updated.paths[index] = collection.paths[i];
+          updated.continuations[index] = collection.continuations[i];
           updated.scopes[index] = collection.scopes[i];
           this.chain(engine, sorted[index - 1], node, path);
           _results.push(this.chain(engine, node, sorted[index + 1], path));
