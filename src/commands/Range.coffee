@@ -30,20 +30,55 @@ class Range extends Command
       if progress?
         range[2] = progress
 
-        @wrap range
+      @wrap range
         
       return range
 
   # Convert range to number
   valueOf: ->
-    if (value = @[2])?
-      if ((start = @[0]) == false || value > 0)
-        if ((end = @[1]) == false || value < 1)
-          return value * ((end - start) || 1) + start
+    start = @[0]
+    end = @[1]
+    console.log(@[0], @[1], @[2], @[2] * ((end - start) || 1) + start)
+    return @[2] * ((end - start) || 1) + start
 
 
   wrap: (range) ->
     range.valueOf = @valueOf
+    return range
+
+  # Store range meta data
+  pause: (range, engine, operation, continuation, scope) ->
+    range.operation = operation
+    range.continuation = continuation
+    range.scope = scope
+    return range
+
+  resume: (range, engine) ->
+    @start(range, engine, range.operation, range.continuation, range.scope)
+
+    range.operation.command.update(range, engine, range.operation, range.continuation, range.scope)
+
+  copy: (range) ->
+    copy = range.slice()
+    copy.valueOf = range.valueOf
+    if range.operation
+      copy.operation = range.operation
+      copy.continuation = range.continuation
+      copy.scope = range.scope
+    return copy
+
+  # Schedule range for update
+  start: (range, engine, operation, continuation, scope) ->
+    ranges = (engine.engine.ranges ||= {})[continuation] ||= []
+    if (index = ranges.indexOf(operation)) == -1
+      i = 0
+      # Solve transitions before springs
+      while (other = ranges[i]) && other.length < range.length
+        i += 3
+      ranges.splice(i, 0, operation, scope, range)
+    else
+      #console.log('update range', ranges[index + 2], range)
+      ranges[index + 2] = range
     return range
 
   # 1 modify
@@ -66,6 +101,13 @@ class Range.Modifier extends Range
         return @scale(args[1], args[0], null)
     return @scale(args[1], null, args[0])
 
+  # Convert range to number
+  valueOf: ->
+    if (value = @[2])?
+      if ((start = @[0]) == false || value > 0)
+        if ((end = @[1]) == false || value < 1)
+          return value * ((end - start) || 1) + start
+
   # Scale range to given start/end, update progress, register overshooting
   scale: (range, start, finish) ->
     unless range.push
@@ -85,26 +127,28 @@ class Range.Modifier extends Range
 
 
     if start != null && !(from > start)
-      range = range.slice()
+      range = @copy(range)
       if (value = range[2])?
         to ||= 0
         progress = value * (to - from)
         range[2] = (progress - (start - from)) / (to - start)
-        if range[2] < 0
-          range.valueOf = @execute
       range[+reversed] = from = start
 
 
     if finish != null && !(to < finish)
-      range = range.slice()
+      range = @copy(range)
       if (value = range[2])?
         from ||= 0
         to ||= 0
         progress = value * (to - from)
         range[2] = progress / (finish - from)
-        if range[2] > 1
-          range.valueOf = @execute
       range[1 - reversed] = finish
+
+    console.log(range[2])
+
+    if range[2] < 0 || range[2] > 1
+      #range[2] = Math.round(range[2])
+      range.valueOf = @execute
 
     return range
 
@@ -153,15 +197,26 @@ class Range.Modifier extends Range
     '>': (from, to, progress) ->
       return
 
+# Range updating over time
 class Range.Progress extends Range
   
   after: (args, result, engine, operation, continuation, scope) ->
-    ranges = (engine.engine.ranges ||= {})[continuation] ||= []
-    if (index = ranges.indexOf(operation)) == -1
-      ranges.push(operation, scope, result)
+    if operation.anonymous
+      @start(result, engine, operation, continuation, scope)
     else
-      ranges[index + 2] = result
+      @pause(result, engine, operation, continuation, scope)
+
     return result
+
+  advices: [
+    (engine, operation, command) ->
+      op = operation
+      while parent = op.parent
+        if parent[0] == 'map'
+          operation.anonymous = true
+        op = parent
+      return
+  ]
 
 
 class Range.Easing extends Range.Progress
@@ -178,8 +233,12 @@ class Range.Easing extends Range.Progress
     'ease-out':    ['cubic-bezier', 0,   0, .58, 1]
     'ease-in-out': ['cubic-bezier', .42, 0, .58, 1]
     'linear':      ['cubic-bezier', 0,   0, 1,   1]
-    'step-start':  'step-start'
-    'step-end':    'step-end'
+
+    'step-start': (value) ->
+      return Math.floor(value)
+    
+    'step-end': (value) ->
+      return Math.ceil(value)
 
     out: (value) ->
       return 1 - value 
@@ -243,19 +302,28 @@ class Range.Mapper extends Range
         return right
       else
         engine.updating.ranges = true
+        
         # Static range start transitions
-        if left.push
+        if left.length < 4
           if left[0]? && left[1]?
             right[2] = left[0] || null
             right[3] = (left[2] ? left[1] ? left) || 0
+
         # 
         else 
           if right.length < 4
-            right[2] = left
+            right[2] = +left
           else
-            right[3] = left || 0
-          return @valueOf.call right
+            right[3] = +left || 0
 
-        return
+        if right.operation
+          @resume(right, engine)
+          #right.operation = right.continuation = right.scope = undefined
+
+        unless left.push
+          return @valueOf.call right
+        else
+          return right
+
 
 module.exports = Range

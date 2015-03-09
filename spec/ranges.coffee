@@ -8,10 +8,10 @@ describe 'Ranges', ->
 
   describe 'constructor', ->
     it 'should create range', ->
-      expect(engine.output.solve(['...', 10])).to.eql([false, 10])
-      expect(engine.output.solve(['...', false, 10])).to.eql([false, 10])
-      expect(engine.output.solve(['...', 10, 20])).to.eql([10, 20])
-      expect(engine.output.solve(['...', 20, false])).to.eql([20])
+      expect(engine.output.solve(['...', 10]).slice()).to.eql([false, 10])
+      expect(engine.output.solve(['...', false, 10]).slice()).to.eql([false, 10])
+      expect(engine.output.solve(['...', 10, 20]).slice()).to.eql([10, 20])
+      expect(engine.output.solve(['...', 20, false]).slice()).to.eql([20])
 
   describe 'boundaries', ->
     it 'should clip by starting point', ->
@@ -21,7 +21,7 @@ describe 'Ranges', ->
           10,
           ['...', 1, 20]
         ]
-      )).to.eql([10, 20])
+      ).slice()).to.eql([10, 20])
 
       # ... 5 > 10
       expect(engine.output.solve(
@@ -32,7 +32,7 @@ describe 'Ranges', ->
             5
           ]
         ]
-      )).to.eql([10, 5])
+      ).slice()).to.eql([10, 5])
 
       # ... 15 > 10
       expect(engine.output.solve(
@@ -43,7 +43,7 @@ describe 'Ranges', ->
             15
           ]
         ]
-      )).to.eql([10, 15])
+      ).slice()).to.eql([10, 15])
 
       #  5 ... > 10
       expect(engine.output.solve(
@@ -55,7 +55,7 @@ describe 'Ranges', ->
           ]
           
         ]
-      )).to.eql([10])
+      ).slice()).to.eql([10])
       
       #  15 ... > 10
       expect(engine.output.solve(
@@ -66,7 +66,7 @@ describe 'Ranges', ->
             false
           ]
         ]
-      )).to.eql([15])
+      ).slice()).to.eql([15])
 
       # 15 ... 5 > 10
       expect(engine.output.solve(
@@ -77,7 +77,7 @@ describe 'Ranges', ->
             5
           ]
         ]
-      )).to.eql([15, 10])
+      ).slice()).to.eql([15, 10])
 
       # 15 ... 5 < 10
       expect(engine.output.solve(
@@ -88,7 +88,7 @@ describe 'Ranges', ->
           ]
           10
         ]
-      )).to.eql([10, 5])
+      ).slice()).to.eql([10, 5])
 
       # 15 ... 5 > 0
       expect(engine.output.solve(
@@ -99,7 +99,7 @@ describe 'Ranges', ->
             5
           ]
         ]
-      )).to.eql([15, 10])
+      ).slice()).to.eql([15, 10])
 
       # 15 ... 5 < 0
       expect(engine.output.solve(
@@ -110,7 +110,7 @@ describe 'Ranges', ->
           ]
           0
         ]
-      )).to.eql([0, 5]) # FIXME?
+      ).slice()).to.eql([0, 5]) # FIXME?
 
 
     it 'should clip by ending point', ->
@@ -120,7 +120,7 @@ describe 'Ranges', ->
           ['...', 1, 20], 
           10
         ]
-      )).to.eql([1, 10])
+      ).slice()).to.eql([1, 10])
 
       # ... 5 < 10
       expect(engine.output.solve(
@@ -131,7 +131,7 @@ describe 'Ranges', ->
           ]
           10
         ]
-      )).to.eql([false, 5])
+      ).slice()).to.eql([false, 5])
 
       # ... 15 < 10
       expect(engine.output.solve(
@@ -142,7 +142,7 @@ describe 'Ranges', ->
           ]
           10
         ]
-      )).to.eql([false, 10])
+      ).slice()).to.eql([false, 10])
 
       #  5 ... < 10
       expect(engine.output.solve(
@@ -152,7 +152,7 @@ describe 'Ranges', ->
             false
           ],
           10]
-      )).to.eql([5, 10])
+      ).slice()).to.eql([5, 10])
 
 
       #  5 ... < 10
@@ -163,7 +163,7 @@ describe 'Ranges', ->
             5,
             false
           ]]
-      )).to.eql([5, 10])
+      ).slice()).to.eql([5, 10])
       
       #  15 ... > 10
       expect(engine.output.solve(
@@ -174,7 +174,7 @@ describe 'Ranges', ->
           ],
           10
         ]
-      )).to.eql([15])
+      ).slice()).to.eql([15])
 
     it 'should scale by starting point', ->
       # 1 ... 20 > 10
@@ -186,6 +186,7 @@ describe 'Ranges', ->
       ).slice()).to.eql([10, 20, 0.5])
 
       # ... 5 > 10
+      debugger
       expect(engine.output.solve(
         ['<',
           10
@@ -198,6 +199,7 @@ describe 'Ranges', ->
       ).slice()).to.eql([10, 5, 1.5]) #?
 
       # ... 15 > 10
+
       expect(engine.output.solve(
         ['<',
           10

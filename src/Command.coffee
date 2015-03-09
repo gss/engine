@@ -126,21 +126,24 @@ class Command
   contextualize: (args, engine, operation, continuation, scope, ascender, ascending) ->
     # Stateless commands recieve context as ascending value
     if ascender == -1 && ascending?
-      args[0] = @precontextualize engine, scope, ascending
+      node = ascending
     # Stateful commands have link to previous op so they can fetch value
     else if context = operation.context || 
            ((parent = operation.parent) && parent.command?.sequence && parent.context)
+           
       # Quickly restore stateful value
-      args[0] = @precontextualize(engine, scope, 
-        if (command = context.command).key?
-          if context[0] == '&'
-            scope
-          else
-            @getByPath(engine, @delimit(continuation))
+      if (command = context.command).key?
+        if context[0] == '&'
+          node = scope
         else
-          command.solve(context.domain || engine, context, continuation, scope, -2)
-      )
-    
+          node = @getByPath(engine, @delimit(continuation))
+      else
+        node = command.solve(context.domain || engine, context, continuation, scope, -2)
+        
+    if node
+      args.length++
+      args[0] = @precontextualize(engine, scope, node)
+  
     return operation.context && 1 || 0
 
   precontextualize: (engine, scope, element) ->

@@ -365,14 +365,17 @@ class Engine
           for continuation, tickers of @ranges
             index = 0
             while operation = tickers[index]
-              if operation.command.update(tickers[index + 2], this, operation, continuation, tickers[index + 1])
-                tickers.splice(index, 3)
-                unless tickers.length
-                  delete @ranges[continuation]
-                  if !Object.keys(@ranges).length
-                    @ranges = undefined
-              else
-                index += 3
+              range = tickers[index + 2]
+              if range.update != update
+                range.update = update
+                if operation.command.update(range, this, operation, continuation, tickers[index + 1])
+                  tickers.splice(index, 3)
+                  unless tickers.length
+                    delete @ranges[continuation]
+                    if !Object.keys(@ranges).length
+                      @ranges = undefined
+                  continue
+              index += 3
           @console.end()
           @updating.ranges = undefined
 

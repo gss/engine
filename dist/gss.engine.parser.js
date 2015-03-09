@@ -16106,11 +16106,23 @@ Command = (function() {
   };
 
   Command.prototype.contextualize = function(args, engine, operation, continuation, scope, ascender, ascending) {
-    var command, context, parent, _ref;
+    var command, context, node, parent, _ref;
     if (ascender === -1 && (ascending != null)) {
-      args[0] = this.precontextualize(engine, scope, ascending);
+      node = ascending;
     } else if (context = operation.context || ((parent = operation.parent) && ((_ref = parent.command) != null ? _ref.sequence : void 0) && parent.context)) {
-      args[0] = this.precontextualize(engine, scope, (command = context.command).key != null ? context[0] === '&' ? scope : this.getByPath(engine, this.delimit(continuation)) : command.solve(context.domain || engine, context, continuation, scope, -2));
+      if ((command = context.command).key != null) {
+        if (context[0] === '&') {
+          node = scope;
+        } else {
+          node = this.getByPath(engine, this.delimit(continuation));
+        }
+      } else {
+        node = command.solve(context.domain || engine, context, continuation, scope, -2);
+      }
+    }
+    if (node) {
+      args.length++;
+      args[0] = this.precontextualize(engine, scope, node);
     }
     return operation.context && 1 || 0;
   };
@@ -17284,9 +17296,6 @@ Domain = (function() {
     var i, old, op, path, stack, updated, _base, _i, _len, _ref;
     path = this.getPath(object, property);
     old = this.values[path];
-    if (value != null) {
-      value = value.valueOf();
-    }
     if (continuation) {
       _ref = stack = (_base = (this.stacks || (this.stacks = {})))[path] || (_base[path] = []);
       for (i = _i = 0, _len = _ref.length; _i < _len; i = _i += 3) {
@@ -18035,7 +18044,7 @@ Engine = (function() {
       }
     },
     assign: function(update) {
-      var assignments, changes, constraints, continuation, index, operation, path, ranges, tickers, _ref;
+      var assignments, changes, constraints, continuation, index, operation, path, range, ranges, tickers, _ref;
       while (!!(assignments = update.assignments) + !!(ranges = update.ranges)) {
         if (assignments) {
           this.console.start('Assignments', assignments);
@@ -18055,17 +18064,21 @@ Engine = (function() {
             tickers = _ref[continuation];
             index = 0;
             while (operation = tickers[index]) {
-              if (operation.command.update(tickers[index + 2], this, operation, continuation, tickers[index + 1])) {
-                tickers.splice(index, 3);
-                if (!tickers.length) {
-                  delete this.ranges[continuation];
-                  if (!Object.keys(this.ranges).length) {
-                    this.ranges = void 0;
+              range = tickers[index + 2];
+              if (range.update !== update) {
+                range.update = update;
+                if (operation.command.update(range, this, operation, continuation, tickers[index + 1])) {
+                  tickers.splice(index, 3);
+                  if (!tickers.length) {
+                    delete this.ranges[continuation];
+                    if (!Object.keys(this.ranges).length) {
+                      this.ranges = void 0;
+                    }
                   }
+                  continue;
                 }
-              } else {
-                index += 3;
               }
+              index += 3;
             }
           }
           this.console.end();
@@ -21185,25 +21198,61 @@ Range = (function(_super) {
       }
       if (progress != null) {
         range[2] = progress;
-        this.wrap(range);
       }
+      this.wrap(range);
       return range;
     }
   });
 
   Range.prototype.valueOf = function() {
-    var end, start, value;
-    if ((value = this[2]) != null) {
-      if ((start = this[0]) === false || value > 0) {
-        if ((end = this[1]) === false || value < 1) {
-          return value * ((end - start) || 1) + start;
-        }
-      }
-    }
+    var end, start;
+    start = this[0];
+    end = this[1];
+    console.log(this[0], this[1], this[2], this[2] * ((end - start) || 1) + start);
+    return this[2] * ((end - start) || 1) + start;
   };
 
   Range.prototype.wrap = function(range) {
     range.valueOf = this.valueOf;
+    return range;
+  };
+
+  Range.prototype.pause = function(range, engine, operation, continuation, scope) {
+    range.operation = operation;
+    range.continuation = continuation;
+    range.scope = scope;
+    return range;
+  };
+
+  Range.prototype.resume = function(range, engine) {
+    this.start(range, engine, range.operation, range.continuation, range.scope);
+    return range.operation.command.update(range, engine, range.operation, range.continuation, range.scope);
+  };
+
+  Range.prototype.copy = function(range) {
+    var copy;
+    copy = range.slice();
+    copy.valueOf = range.valueOf;
+    if (range.operation) {
+      copy.operation = range.operation;
+      copy.continuation = range.continuation;
+      copy.scope = range.scope;
+    }
+    return copy;
+  };
+
+  Range.prototype.start = function(range, engine, operation, continuation, scope) {
+    var i, index, other, ranges, _base, _base1;
+    ranges = (_base = ((_base1 = engine.engine).ranges || (_base1.ranges = {})))[continuation] || (_base[continuation] = []);
+    if ((index = ranges.indexOf(operation)) === -1) {
+      i = 0;
+      while ((other = ranges[i]) && other.length < range.length) {
+        i += 3;
+      }
+      ranges.splice(i, 0, operation, scope, range);
+    } else {
+      ranges[index + 2] = range;
+    }
     return range;
   };
 
@@ -21242,6 +21291,17 @@ Range.Modifier = (function(_super) {
     return this.scale(args[1], null, args[0]);
   };
 
+  Modifier.prototype.valueOf = function() {
+    var end, start, value;
+    if ((value = this[2]) != null) {
+      if ((start = this[0]) === false || value > 0) {
+        if ((end = this[1]) === false || value < 1) {
+          return value * ((end - start) || 1) + start;
+        }
+      }
+    }
+  };
+
   Modifier.prototype.scale = function(range, start, finish) {
     var from, progress, reversed, to, value;
     if (!range.push) {
@@ -21261,29 +21321,27 @@ Range.Modifier = (function(_super) {
     from = range[reversed];
     to = range[1 - reversed];
     if (start !== null && !(from > start)) {
-      range = range.slice();
+      range = this.copy(range);
       if ((value = range[2]) != null) {
         to || (to = 0);
         progress = value * (to - from);
         range[2] = (progress - (start - from)) / (to - start);
-        if (range[2] < 0) {
-          range.valueOf = this.execute;
-        }
       }
       range[+reversed] = from = start;
     }
     if (finish !== null && !(to < finish)) {
-      range = range.slice();
+      range = this.copy(range);
       if ((value = range[2]) != null) {
         from || (from = 0);
         to || (to = 0);
         progress = value * (to - from);
         range[2] = progress / (finish - from);
-        if (range[2] > 1) {
-          range.valueOf = this.execute;
-        }
       }
       range[1 - reversed] = finish;
+    }
+    console.log(range[2]);
+    if (range[2] < 0 || range[2] > 1) {
+      range.valueOf = this.execute;
     }
     return range;
   };
@@ -21332,15 +21390,26 @@ Range.Progress = (function(_super) {
   }
 
   Progress.prototype.after = function(args, result, engine, operation, continuation, scope) {
-    var index, ranges, _base, _base1;
-    ranges = (_base = ((_base1 = engine.engine).ranges || (_base1.ranges = {})))[continuation] || (_base[continuation] = []);
-    if ((index = ranges.indexOf(operation)) === -1) {
-      ranges.push(operation, scope, result);
+    if (operation.anonymous) {
+      this.start(result, engine, operation, continuation, scope);
     } else {
-      ranges[index + 2] = result;
+      this.pause(result, engine, operation, continuation, scope);
     }
     return result;
   };
+
+  Progress.prototype.advices = [
+    function(engine, operation, command) {
+      var op, parent;
+      op = operation;
+      while (parent = op.parent) {
+        if (parent[0] === 'map') {
+          operation.anonymous = true;
+        }
+        op = parent;
+      }
+    }
+  ];
 
   return Progress;
 
@@ -21365,8 +21434,12 @@ Range.Easing = (function(_super) {
     'ease-out': ['cubic-bezier', 0, 0, .58, 1],
     'ease-in-out': ['cubic-bezier', .42, 0, .58, 1],
     'linear': ['cubic-bezier', 0, 0, 1, 1],
-    'step-start': 'step-start',
-    'step-end': 'step-end',
+    'step-start': function(value) {
+      return Math.floor(value);
+    },
+    'step-end': function(value) {
+      return Math.ceil(value);
+    },
     out: function(value) {
       return 1 - value;
     },
@@ -21437,18 +21510,25 @@ Range.Mapper = (function(_super) {
         return right;
       } else {
         engine.updating.ranges = true;
-        if (left.push) {
+        if (left.length < 4) {
           if ((left[0] != null) && (left[1] != null)) {
             right[2] = left[0] || null;
             right[3] = ((_ref1 = (_ref2 = left[2]) != null ? _ref2 : left[1]) != null ? _ref1 : left) || 0;
           }
         } else {
           if (right.length < 4) {
-            right[2] = left;
+            right[2] = +left;
           } else {
-            right[3] = left || 0;
+            right[3] = +left || 0;
           }
+        }
+        if (right.operation) {
+          this.resume(right, engine);
+        }
+        if (!left.push) {
           return this.valueOf.call(right);
+        } else {
+          return right;
         }
       }
     }
