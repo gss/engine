@@ -294,7 +294,7 @@ class Domain
         result[path] = value
 
     result = @transform(result)
-    @merge(result, true)
+    @merge(result)
 
     return result
 
