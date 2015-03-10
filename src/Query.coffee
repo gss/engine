@@ -773,31 +773,7 @@ class Query extends Command
 
   unpair: (engine, left, scope, operation) ->  
     if pairs = engine.pairs?[left]
-      rights = []
-
-      top = @getRoot(operation)
-      for op, index in pairs by 3
-        if pairs[index + 2] == scope && @getRoot(pairs[index + 1]) == top
-          rights.push(index)
-
-      cleaning = rights.slice()
-
-      # clean right part if nobody else is subscribed
-      for prefix, others of engine.pairs
-        for other, i in others by 3
-          for index, j in cleaning by -1
-            if other == pairs[index] && (others != pairs || scope != others[i + 2])
-              cleaning.splice(j, 1)
-
-
-      #for index in cleaning
-      #  delete engine.queries[right]
-      for index in rights by -1
-        right = pairs[index]
-        @unlisten(engine, scope._gss_id, @PAIR, null, right.substring(1), undefined, scope, top)
-        pairs.splice(index, 3)
-      if !pairs.length
-        delete engine.pairs[left]
+      delete engine.pairs[left]
     index = 0
     while contd = engine.lefts[index + 1]
       if contd == left && engine.lefts[index + 2] == scope
