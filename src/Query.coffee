@@ -446,7 +446,8 @@ class Query extends Command
       @snapshot engine, continuation, collection
     
       removed = @removeFromCollection(engine, node, continuation, operation, scope, needle, contd)
-
+      if removed != false && !collection.length
+        delete engine.queries[continuation]
     if removed != false
       if @isCollection(collection)
         ref = continuation + id
