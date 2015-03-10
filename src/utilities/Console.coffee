@@ -16,7 +16,7 @@ class Console
     true while @pop(e)
 
   push: (a, b, c, type) ->
-    if @level > 0.5 || type
+    if @level >= 0.5 || type
       unless @buffer.length
         if @level > 1
           console?.profile()
@@ -24,7 +24,7 @@ class Console
       @stack.push(index - 5)
 
   pop: (d, type = @row, update) ->
-    if (@level > 0.5 || type != @row) && @stack.length
+    if (@level >= 0.5 || type != @row) && @stack.length
       index = @stack.pop()
       @buffer[index + 3] = d
       if type != @row
@@ -48,7 +48,7 @@ class Console
       object + Array(length - object.length).join(' ') 
 
   openGroup: (name, reason = '', time, result = '') ->
-    if @level < 1
+    if @level < 0.5
       return
 
     fmt = '%c%s'
@@ -80,7 +80,8 @@ class Console
     @[method || 'group'](fmt, 'font-weight: normal', name, reason, result, 'color: #999; font-weight: normal; font-style: italic;', time)
 
   closeGroup: ->
-    @groupEnd()
+    if @level >= 0.5
+      @groupEnd()
 
   stringify: (obj) ->
     return '' unless obj
@@ -171,6 +172,7 @@ for method in Console::methods
         Console::groups--
 
       if @level || method == 'error'
-        console?[method]?(arguments...)
+        if @level > 0.5 || method == 'warn'
+          console?[method]?(arguments...)
 
 module.exports = Console

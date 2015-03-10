@@ -19684,7 +19684,7 @@ Query = (function(_super) {
 
   Query.prototype.getCanonicalPath = function(continuation, compact) {
     var PopDirectives, RemoveForkMarks, bits, last;
-    PopDirectives = new RegExp("(?:" + "@[^@" + this.DESCEND + "]+" + this.DESCEND + ")+$", "g");
+    PopDirectives = Query.PopDirectives || (Query.PopDirectives = new RegExp("(?:" + "@[^@" + this.DESCEND + "]+" + this.DESCEND + ")+$", "g"));
     bits = this.delimit(continuation.replace(PopDirectives, '')).split(this.DESCEND);
     last = bits[bits.length - 1];
     RemoveForkMarks = Query.RemoveForkMarks || (Query.RemoveForkMarks = new RegExp("" + "([^" + this.PAIR + ",@])" + "\\$[^\[" + this.ASCEND + "]+" + "(?:" + this.ASCEND + "|$)", "g"));
@@ -22418,7 +22418,7 @@ Console = (function() {
 
   Console.prototype.push = function(a, b, c, type) {
     var index;
-    if (this.level > 0.5 || type) {
+    if (this.level >= 0.5 || type) {
       if (!this.buffer.length) {
         if (this.level > 1) {
           if (typeof console !== "undefined" && console !== null) {
@@ -22436,7 +22436,7 @@ Console = (function() {
     if (type == null) {
       type = this.row;
     }
-    if ((this.level > 0.5 || type !== this.row) && this.stack.length) {
+    if ((this.level >= 0.5 || type !== this.row) && this.stack.length) {
       index = this.stack.pop();
       this.buffer[index + 3] = d;
       if (type !== this.row) {
@@ -22484,7 +22484,7 @@ Console = (function() {
     if (result == null) {
       result = '';
     }
-    if (this.level < 1) {
+    if (this.level < 0.5) {
       return;
     }
     fmt = '%c%s';
@@ -22519,7 +22519,9 @@ Console = (function() {
   };
 
   Console.prototype.closeGroup = function() {
-    return this.groupEnd();
+    if (this.level >= 0.5) {
+      return this.groupEnd();
+    }
   };
 
   Console.prototype.stringify = function(obj) {
@@ -22643,7 +22645,9 @@ for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         Console.prototype.groups--;
       }
       if (this.level || method === 'error') {
-        return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
+        if (this.level > 0.5 || method === 'warn') {
+          return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
+        }
       }
     };
   })(method);
