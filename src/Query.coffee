@@ -421,6 +421,7 @@ class Query extends Command
           engine.Stylesheet?.match(engine, node, continuation, false)
 
         return true
+    return false
 
 
 
