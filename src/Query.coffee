@@ -10,7 +10,7 @@ class Query extends Command
   # For each node in collection, fork continuation with element id
   ascend: (engine, operation, continuation, scope, result, ascender, ascending) ->
     if parent = operation.parent
-      if @isCollection(result)
+      if @isCollection(result) && !parent.command.collective
         for node in result
           contd = @fork(engine, continuation, node)
           if yielded = parent.command.yield?(node, engine, operation, contd, scope, ascender, ascending)
@@ -96,6 +96,8 @@ class Query extends Command
     return true
 
   continue: (engine, operation, continuation = '') ->
+    if @collective
+      continuation = @getCanonicalParentPath(continuation)
     return continuation + @getKey(engine, operation, continuation)
 
   # Evaluate compound native selector by jumping to either its head or tail
@@ -199,6 +201,8 @@ class Query extends Command
 
   # Subscribe node to the query
   subscribe: (engine, operation, continuation, scope, node) ->
+    if node.push
+      node = scope
     id = engine.identify(node)
     observers = engine.engine.observers[id] ||= []
     if (engine.indexOfTriplet(observers, operation, continuation, scope) == -1)
@@ -330,6 +334,7 @@ class Query extends Command
 
         unless observers.length
           delete engine.observers[id]
+    return
 
   snapshot: (engine, key, collection) ->
     return if (snapshots = engine.updating.snapshots ||= {}).hasOwnProperty key
@@ -474,7 +479,10 @@ class Query extends Command
   clean: (engine, path, continuation, operation, scope, contd = continuation) ->
     if command = path.command
       if key = command.getKey(engine, operation, continuation)
-        path = continuation + key
+        if command.collective
+          path = @getCanonicalParentPath(continuation) + key
+        else
+          path = continuation + key
       else
         path = @delimit(continuation)
 
@@ -489,7 +497,7 @@ class Query extends Command
 
     @unobserve(engine, engine.identify(scope || engine.scope), path)
 
-    if !result || !@isCollection(result)
+    if !result || !@isCollection(result)# || (!result.length && operation)
       engine.triggerEvent('remove', path)
     return true
 
@@ -879,6 +887,12 @@ class Query extends Command
 
   getVariants: (path) ->
     [path, path + @ASCEND, path + @PAIR, path + @DESCEND, path + @DESCEND + '&']
+  getCanonicalParentPath: (continuation) ->
+    path = @getCanonicalPath(continuation)
+    if continuation.charAt(continuation.length - 1) == @DESCEND
+      path += @DESCEND
+    return path
+
 
   # Return collection shared for all codepaths
   getCanonicalCollection: (engine, path) ->

@@ -1,6 +1,7 @@
 # Find, produce and observe variables
 Domain      = require('../Domain')
 Command     = require('../Command')
+Query       = require('../Query')
    
 Variable    = require('../commands/Variable')
 Constraint  = require('../commands/Constraint')
@@ -200,4 +201,31 @@ Input::Assignment = Command.extend {
 }
 
 
+Input::Function = Query.extend {
+  signature: [
+    arguments: ['Any']
+  ]
+}
+
+Input::Function.Collection = Input::Function.extend {
+  #collective: true,
+  deferred: true
+  singular: true
+  key: null
+
+  serialize: ->
+    return Command::ASCEND + Query::serialize.apply(@, arguments)
+
+  release: (node, engine, operation, continuation, scope) ->
+    operation.command.defer(engine, operation.parent, operation.command.getCanonicalPath(continuation), scope)
+    return true
+
+  yield: (node, engine, operation, continuation, scope) ->
+    operation.command.defer(engine, operation.parent, operation.command.getCanonicalPath(continuation), scope)
+    return true
+
+}, {
+  count: (a) ->
+    return a.length
+}
 module.exports = Input
