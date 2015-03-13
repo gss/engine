@@ -505,7 +505,7 @@ Command = (function() {
   };
 
   Command.prototype.getRoot = function(operation) {
-    while (operation.command.type !== 'Default') {
+    while (operation.parent && operation.command.type !== 'Default') {
       operation = operation.parent;
     }
     return operation;
@@ -1516,7 +1516,7 @@ Domain = (function() {
       }
     }
     result = this.transform(result);
-    this.merge(result, true);
+    this.merge(result);
     return result;
   };
 
@@ -3150,6 +3150,7 @@ Query = (function(_super) {
         return true;
       }
     }
+    return false;
   };
 
   Query.prototype.remove = function(engine, id, continuation, operation, scope, needle, recursion, contd) {
@@ -3458,7 +3459,8 @@ Query = (function(_super) {
   };
 
   Query.prototype.restore = function(engine, path) {
-    if (engine.updating.snapshots.hasOwnProperty(path)) {
+    var _ref;
+    if ((_ref = engine.updating.snapshots) != null ? _ref.hasOwnProperty(path) : void 0) {
       return engine.updating.snapshots[path];
     } else {
       return this.get(engine, path);
@@ -3574,39 +3576,9 @@ Query = (function(_super) {
   };
 
   Query.prototype.unpair = function(engine, left, scope, operation) {
-    var cleaning, contd, i, index, j, op, other, others, pairs, prefix, right, rights, top, _i, _j, _k, _l, _len, _len1, _ref, _ref1;
+    var contd, index, pairs, _ref;
     if (pairs = (_ref = engine.pairs) != null ? _ref[left] : void 0) {
-      rights = [];
-      top = this.getRoot(operation);
-      for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
-        op = pairs[index];
-        if (pairs[index + 2] === scope && this.getRoot(pairs[index + 1]) === top) {
-          rights.push(index);
-        }
-      }
-      cleaning = rights.slice();
-      _ref1 = engine.pairs;
-      for (prefix in _ref1) {
-        others = _ref1[prefix];
-        for (i = _j = 0, _len1 = others.length; _j < _len1; i = _j += 3) {
-          other = others[i];
-          for (j = _k = cleaning.length - 1; _k >= 0; j = _k += -1) {
-            index = cleaning[j];
-            if (other === pairs[index] && (others !== pairs || scope !== others[i + 2])) {
-              cleaning.splice(j, 1);
-            }
-          }
-        }
-      }
-      for (_l = rights.length - 1; _l >= 0; _l += -1) {
-        index = rights[_l];
-        right = pairs[index];
-        this.unlisten(engine, scope._gss_id, this.PAIR, null, right.substring(1), void 0, scope, top);
-        pairs.splice(index, 3);
-      }
-      if (!pairs.length) {
-        delete engine.pairs[left];
-      }
+      delete engine.pairs[left];
     }
     index = 0;
     while (contd = engine.lefts[index + 1]) {
@@ -5780,7 +5752,7 @@ Data.prototype.Variable = Variable.extend({}, {
     var meta, prefix;
     if (meta = this.getMeta(operation)) {
       continuation = meta.key;
-      scope || (scope = meta.scope && engine.identity[meta.scope] || engine.scope);
+      scope = meta.scope && engine.identity[meta.scope] || scope || engine.scope;
     } else {
       if (engine.queries) {
         prefix = engine.Query.prototype.getScope(engine, void 0, continuation);
@@ -6000,36 +5972,48 @@ Solving = Input.prototype.Default.extend({
 });
 
 Outputting = function(engine, operation, command) {
-  var index, parent;
-  if ((parent = operation.parent) && parent.command.sequence && parent.command.type !== 'List') {
-    index = parent.indexOf(operation);
-    return Outputting.patch(engine.output, operation, parent, index, parent[index - 1]);
-  } else if (operation.command.type === 'Default' && !engine.solver.signatures[operation[0]] && (!engine.data.signatures[operation[0]] || operation[0] === '=') && engine.output.signatures[operation[0]]) {
-    return Outputting.patch(engine.output, operation, parent, false, null);
+  if (operation[0] === '=') {
+    if (operation[2].push) {
+      Outputting.patch(engine.output, operation[2], true);
+    }
+    return Outputting.patch(engine.output, operation, false);
+  } else if (operation.command.type === 'Default' && !engine.solver.signatures[operation[0]] && (!engine.data.signatures[operation[0]]) && engine.output.signatures[operation[0]]) {
+    return Outputting.patch(engine.output, operation);
   }
 };
 
-Outputting.patch = function(engine, operation, parent, index, context) {
-  var argument, command, i, match, _i, _len;
+Outputting.patch = function(engine, operation, rematch) {
+  var argument, context, i, match, parent, _i, _len, _ref, _ref1;
   operation.domain = engine.output;
-  for (i = _i = 0, _len = operation.length; _i < _len; i = ++_i) {
-    argument = operation[i];
-    if (argument.push) {
-      if (index !== false || argument.command.type === 'Default' || argument.command.type === 'Variable') {
-        if (engine.output.signatures[argument[0]] && (argument.command.type !== 'Variable' || operation[0] !== '=' || operation.indexOf(argument) !== 1)) {
-          Outputting.patch(engine, argument, operation, index === false ? false : i);
+  parent = operation.parent;
+  if ((parent != null ? parent.command.sequence : void 0) && parent.command.type !== 'List') {
+    context = parent[parent.indexOf(operation) - 1];
+  }
+  if ((parent != null ? (_ref = parent.command.domains) != null ? _ref[parent.indexOf(operation)] : void 0 : void 0) === 'output') {
+    rematch = true;
+  }
+  if (rematch !== false) {
+    for (i = _i = 0, _len = operation.length; _i < _len; i = ++_i) {
+      argument = operation[i];
+      if (argument.push) {
+        if (rematch || argument.command.type === 'Default' || argument.command.type === 'Variable') {
+          if (engine.output.signatures[argument[0]]) {
+            Outputting.patch(engine, argument, rematch);
+          }
         }
       }
     }
   }
-  if (operation[0] === true) {
-    match = Command.List;
-  } else {
-    match = engine.Command.match(engine.output, operation, parent, parent != null ? parent.indexOf(operation) : void 0, context);
-  }
-  command = Command.assign(engine, operation, match, context);
-  if (context === null) {
-    Command.descend(command, engine, operation);
+  if (rematch || !engine.solver.signatures[operation[0]]) {
+    if (operation[0] === true) {
+      match = Command.List;
+    } else {
+      match = engine.Command.match(engine.output, operation, operation.parent, (_ref1 = operation.parent) != null ? _ref1.indexOf(operation) : void 0, context);
+    }
+    Command.assign(engine, operation, match, context);
+    if (context == null) {
+      Command.descend(operation.command, engine, operation);
+    }
   }
   return match;
 };
@@ -6046,14 +6030,18 @@ Input.prototype.Variable = Variable.extend({
   ]
 }, {
   'get': function(property, engine, operation, continuation, scope) {
-    var object;
+    var object, variable;
     if (engine.queries) {
       if (scope === engine.scope) {
         scope = void 0;
       }
       object = engine.Query.prototype.getScope(engine, scope, continuation);
     }
-    return ['get', engine.getPath(object, property)];
+    variable = ['get', engine.getPath(object, property)];
+    if (operation.domain !== engine.input) {
+      variable.domain = operation.domain;
+    }
+    return variable;
   }
 });
 
@@ -6066,7 +6054,7 @@ Input.prototype.Variable.Getter = Input.prototype.Variable.extend({
   ]
 }, {
   'get': function(object, property, engine, operation, continuation, scope) {
-    var prefix, prop;
+    var prefix, prop, variable;
     if (engine.queries) {
       prefix = engine.Query.prototype.getScope(engine, object, continuation);
     }
@@ -6078,7 +6066,11 @@ Input.prototype.Variable.Getter = Input.prototype.Variable.extend({
     if (!prefix && engine.data.check(engine.scope, property)) {
       prefix = engine.scope;
     }
-    return ['get', engine.getPath(prefix, property)];
+    variable = ['get', engine.getPath(prefix, property)];
+    if (operation.domain !== engine.input) {
+      variable.domain = operation.domain;
+    }
+    return variable;
   }
 });
 

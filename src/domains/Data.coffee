@@ -55,7 +55,7 @@ Data::Variable = Variable.extend {},
   get: (path, engine, operation, continuation, scope) ->
     if meta = @getMeta(operation)
       continuation = meta.key
-      scope ||= meta.scope && engine.identity[meta.scope] || engine.scope
+      scope = meta.scope && engine.identity[meta.scope] || scope || engine.scope
     else
       if engine.queries
         prefix = engine.Query::getScope(engine, undefined, continuation)

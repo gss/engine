@@ -92,13 +92,13 @@ class Domain
     @setup()
     path = @getPath(object, property)
     value =  @get(path)
+
     if @indexOfTriplet(@watchers[path], operation, continuation, scope) == -1
       observers = @watched[continuation] ||= []
       observers.push(operation, path, scope)
 
       watchers = @watchers[path] ||= []
       watchers.push(operation, continuation, scope)
-
       
       # Register props by id for quick lookup
       if @subscribe && watchers.length == 3

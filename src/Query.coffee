@@ -446,8 +446,8 @@ class Query extends Command
       @snapshot engine, continuation, collection
     
       removed = @removeFromCollection(engine, node, continuation, operation, scope, needle, contd)
-      if removed != false && !collection.length
-        delete engine.queries[continuation]
+      #if removed != false && !collection.length
+      #  delete engine.queries[continuation]
     if removed != false
       if @isCollection(collection)
         ref = continuation + id
@@ -669,7 +669,7 @@ class Query extends Command
       return value || []
 
   restore: (engine, path) ->
-    if engine.updating.snapshots.hasOwnProperty(path)
+    if engine.updating.snapshots?.hasOwnProperty(path)
       return engine.updating.snapshots[path]
     else
       return @get(engine, path)

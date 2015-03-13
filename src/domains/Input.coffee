@@ -104,35 +104,49 @@ Solving = Input::Default.extend
       if domain = parent.command.domains?[parent.indexOf(operation)]
         return engine[domain]
 
-# Claim unrecognized commands to be executed by Output domain
+# Dispatch commands to Output domain
 Outputting = (engine, operation, command) ->
+  if operation[0] == '='
+    if operation[2].push
+      Outputting.patch(engine.output, operation[2], true)
+    return Outputting.patch(engine.output, operation, false)
 
-  if (parent = operation.parent) && parent.command.sequence && parent.command.type != 'List'
-    index = parent.indexOf(operation)
-    Outputting.patch(engine.output, operation, parent, index, parent[index - 1])
+  # Everything that's not for solver
   else if operation.command.type == 'Default' && 
       !engine.solver.signatures[operation[0]] && 
-      (!engine.data.signatures[operation[0]] || operation[0] == '=') && 
+      (!engine.data.signatures[operation[0]]) && 
       (engine.output.signatures[operation[0]])
-    Outputting.patch(engine.output, operation, parent, false, null)
 
-Outputting.patch = (engine, operation, parent, index, context) ->
+    return Outputting.patch(engine.output, operation)
+
+Outputting.patch = (engine, operation, rematch) ->
   operation.domain = engine.output
-  for argument, i in operation
-    if argument.push
-      if index != false || argument.command.type == 'Default' || argument.command.type == 'Variable'
-        if engine.output.signatures[argument[0]] && (argument.command.type != 'Variable' || operation[0] != '=' || operation.indexOf(argument) != 1)
-          Outputting.patch(engine, argument, operation, if index == false then false else i)
 
-  if operation[0] == true
-    match = Command.List
-  else
-    match = engine.Command.match(engine.output, operation, parent, parent?.indexOf(operation), context)
-  #if operation[0] != true
-  command = Command.assign(engine, operation, match, context)
+  parent = operation.parent
+  if parent?.command.sequence && parent.command.type != 'List'
+    context = parent[parent.indexOf(operation) - 1]
+
+  if parent?.command.domains?[parent.indexOf(operation)] == 'output'
+    rematch = true
+
+  if rematch != false 
+    for argument, i in operation
+      if argument.push
+        if rematch || argument.command.type == 'Default' || argument.command.type == 'Variable'
+          if engine.output.signatures[argument[0]]
+            Outputting.patch(engine, argument, rematch)
+
+  if (rematch || !engine.solver.signatures[operation[0]])
+    if operation[0] == true
+      match = Command.List
+    else
+      match = engine.Command.match(engine.output, operation, operation.parent, operation.parent?.indexOf(operation), context)
+    
+    Command.assign(engine, operation, match, context)
   
-  if context == null
-    Command.descend(command, engine, operation)
+    unless context?
+      Command.descend(operation.command, engine, operation)
+
   return match
 
 
@@ -153,7 +167,12 @@ Input::Variable = Variable.extend {
       if scope == engine.scope
         scope = undefined
       object = engine.Query::getScope(engine, scope, continuation)
-    return ['get', engine.getPath(object, property)]
+
+
+    variable = ['get', engine.getPath(object, property)]
+    if operation.domain != engine.input
+      variable.domain = operation.domain
+    return variable
     
 # Scoped variable
 Input::Variable.Getter = Input::Variable.extend {
@@ -172,7 +191,12 @@ Input::Variable.Getter = Input::Variable.extend {
     
     if !prefix && engine.data.check(engine.scope, property)
       prefix = engine.scope
-    return ['get', engine.getPath(prefix, property)]
+
+    variable = ['get', engine.getPath(prefix, property)]
+    if operation.domain != engine.input
+      variable.domain = operation.domain
+
+    return variable
   
 # Proxy math that passes basic expressions along
 Input::Variable.Expression = Variable.Expression.extend {},

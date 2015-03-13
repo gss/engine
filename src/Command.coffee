@@ -439,7 +439,7 @@ class Command
 
   # Return topmost known command
   getRoot: (operation) ->
-    while operation.command.type != 'Default'
+    while operation.parent && operation.command.type != 'Default'
       operation = operation.parent
     return operation
 
