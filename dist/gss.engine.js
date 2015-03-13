@@ -5972,25 +5972,27 @@ Solving = Input.prototype.Default.extend({
 });
 
 Outputting = function(engine, operation, command) {
+  var _ref;
   if (operation[0] === '=') {
     if (operation[2].push) {
       Outputting.patch(engine.output, operation[2], true);
     }
     return Outputting.patch(engine.output, operation, false);
   } else if (operation.command.type === 'Default' && !engine.solver.signatures[operation[0]] && (!engine.data.signatures[operation[0]]) && engine.output.signatures[operation[0]]) {
-    return Outputting.patch(engine.output, operation);
+    if (((_ref = operation.parent) != null ? _ref.command.type : void 0) === 'Default') {
+      return Outputting.patch(engine.output, operation);
+    } else {
+      return Outputting.patch(engine.output, operation, true);
+    }
   }
 };
 
 Outputting.patch = function(engine, operation, rematch) {
-  var argument, context, i, match, parent, _i, _len, _ref, _ref1;
+  var argument, context, i, match, parent, _i, _len, _ref;
   operation.domain = engine.output;
   parent = operation.parent;
   if ((parent != null ? parent.command.sequence : void 0) && parent.command.type !== 'List') {
     context = parent[parent.indexOf(operation) - 1];
-  }
-  if ((parent != null ? (_ref = parent.command.domains) != null ? _ref[parent.indexOf(operation)] : void 0 : void 0) === 'output') {
-    rematch = true;
   }
   if (rematch !== false) {
     for (i = _i = 0, _len = operation.length; _i < _len; i = ++_i) {
@@ -6008,7 +6010,7 @@ Outputting.patch = function(engine, operation, rematch) {
     if (operation[0] === true) {
       match = Command.List;
     } else {
-      match = engine.Command.match(engine.output, operation, operation.parent, (_ref1 = operation.parent) != null ? _ref1.indexOf(operation) : void 0, context);
+      match = engine.Command.match(engine.output, operation, operation.parent, (_ref = operation.parent) != null ? _ref.indexOf(operation) : void 0, context);
     }
     Command.assign(engine, operation, match, context);
     if (context == null) {

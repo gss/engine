@@ -117,7 +117,10 @@ Outputting = (engine, operation, command) ->
       (!engine.data.signatures[operation[0]]) && 
       (engine.output.signatures[operation[0]])
 
-    return Outputting.patch(engine.output, operation)
+    if operation.parent?.command.type == 'Default'
+      return Outputting.patch(engine.output, operation)
+    else
+      return Outputting.patch(engine.output, operation, true)
 
 Outputting.patch = (engine, operation, rematch) ->
   operation.domain = engine.output
@@ -125,9 +128,6 @@ Outputting.patch = (engine, operation, rematch) ->
   parent = operation.parent
   if parent?.command.sequence && parent.command.type != 'List'
     context = parent[parent.indexOf(operation) - 1]
-
-  if parent?.command.domains?[parent.indexOf(operation)] == 'output'
-    rematch = true
 
   if rematch != false 
     for argument, i in operation
