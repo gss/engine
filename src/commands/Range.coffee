@@ -77,7 +77,6 @@ class Range extends Command
         i += 3
       ranges.splice(i, 0, operation, scope, range)
     else
-      #console.log('update range', ranges[index + 2], range)
       ranges[index + 2] = range
     return range
 

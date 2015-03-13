@@ -100,12 +100,12 @@ class Query extends Command
 
   # Evaluate compound native selector by jumping to either its head or tail
   jump: (engine, operation, continuation, scope, ascender, ascending) ->
-    tail = @tail
+    if tail = @tail
 
-    # Let it descend quickly
-    if tail[1]?.command?.key? && !ascender? && 
-          (continuation.lastIndexOf(@PAIR) == continuation.indexOf(@PAIR))
-      return tail[1].command.solve(engine, tail[1], continuation, scope)
+      # Let it descend quickly
+      if tail[1]?.command?.key? && !ascender? && 
+            (continuation.lastIndexOf(@PAIR) == continuation.indexOf(@PAIR))
+        return tail[1].command.solve(engine, tail[1], continuation, scope)
 
 
     return @head.command.perform(engine, @head, continuation, scope, ascender, ascending)

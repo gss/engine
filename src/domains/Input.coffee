@@ -219,7 +219,7 @@ Input::Assignment = Command.extend {
   
   signature: [
     variable: ['String', 'Variable']
-    value:    ['Variable', 'Number', 'Matrix', 'Command', 'Range', 'Default']
+    value:    ['Variable', 'Number', 'Matrix', 'Command', 'Range', 'Default', 'String']
   ]
 }
 

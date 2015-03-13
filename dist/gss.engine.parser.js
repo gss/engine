@@ -18735,9 +18735,10 @@ Query = (function(_super) {
 
   Query.prototype.jump = function(engine, operation, continuation, scope, ascender, ascending) {
     var tail, _ref, _ref1;
-    tail = this.tail;
-    if ((((_ref = tail[1]) != null ? (_ref1 = _ref.command) != null ? _ref1.key : void 0 : void 0) != null) && (ascender == null) && (continuation.lastIndexOf(this.PAIR) === continuation.indexOf(this.PAIR))) {
-      return tail[1].command.solve(engine, tail[1], continuation, scope);
+    if (tail = this.tail) {
+      if ((((_ref = tail[1]) != null ? (_ref1 = _ref.command) != null ? _ref1.key : void 0 : void 0) != null) && (ascender == null) && (continuation.lastIndexOf(this.PAIR) === continuation.indexOf(this.PAIR))) {
+        return tail[1].command.solve(engine, tail[1], continuation, scope);
+      }
     }
     return this.head.command.perform(engine, this.head, continuation, scope, ascender, ascending);
   };
@@ -22044,7 +22045,7 @@ Input.prototype.Assignment = Command.extend({
   signature: [
     {
       variable: ['String', 'Variable'],
-      value: ['Variable', 'Number', 'Matrix', 'Command', 'Range', 'Default']
+      value: ['Variable', 'Number', 'Matrix', 'Command', 'Range', 'Default', 'String']
     }
   ]
 });
