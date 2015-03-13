@@ -535,7 +535,7 @@ class Engine
     switch node.tagName
       when 'HTML', 'BODY', 'HEAD'
         return document
-      when 'STYLE'
+      when 'STYLE', 'LINK'
         if node.scoped
           return @getScopeElement(node.parentNode)
     return node

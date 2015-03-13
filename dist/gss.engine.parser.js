@@ -18254,6 +18254,7 @@ Engine = (function() {
       case 'HEAD':
         return document;
       case 'STYLE':
+      case 'LINK':
         if (node.scoped) {
           return this.getScopeElement(node.parentNode);
         }
