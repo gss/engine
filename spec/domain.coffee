@@ -261,7 +261,7 @@ describe 'Domain', ->
         ]
       ]
       engine.solve problem, 'my_funny_tracker_path', (solution) ->
-        expect(solution).to.eql 
+        expect(engine.values).to.eql 
           "$box0[intrinsic-width]": 20
           result: 0
           x: 21
