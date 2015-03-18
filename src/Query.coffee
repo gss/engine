@@ -323,13 +323,13 @@ class Query extends Command
 
       subscope = observers[index + 2]
       observers.splice(index, 3)
-      if id?
+      if id? && engine.identity[id]?
         watcher.command.onClean?(engine, watcher, query, watcher, subscope)
-
         @clean(engine, watcher, query, watcher, subscope, continuation)
 
         unless observers.length
           delete engine.observers[id]
+    return
 
   snapshot: (engine, key, collection) ->
     return if (snapshots = engine.updating.snapshots ||= {}).hasOwnProperty key
@@ -804,6 +804,7 @@ class Query extends Command
             if scope.scoped
               if (parent = engine.getScopeElement(scope.parentNode)) == engine.scope
                 return
+              return parent
             return scope._gss_id
         if scope = engine.scope
           return scope.gss_id

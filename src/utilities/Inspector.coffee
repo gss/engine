@@ -48,7 +48,9 @@ class Inspector
       }
       panel {
         padding: 10px;
-        left: 0
+        left: 0;
+        max-height: 800px;
+        overflow: auto;
       }
       panel strong, panel b{
         font-weight: normal;

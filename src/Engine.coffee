@@ -170,6 +170,7 @@ class Engine
 
       # Wait for asynchronous stylesheets
       if update.blocking
+        update.reset()
         return update
 
       # Process assignments, queue constraints

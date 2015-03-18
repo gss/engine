@@ -231,8 +231,8 @@ describe 'Domain', ->
       expect(engine.solve
         a: null
       ).to.eql
-        result: 0
-        a: -1
+        result: 1
+        a: 0
 
 
 
@@ -284,8 +284,8 @@ describe 'Domain', ->
               "x": null
             , (solution) ->
               expect(solution).to.eql 
-                result: 0
-                x: 21
+                result: 21
+                x: 0
               engine.remove('my_funny_tracker_path')
               engine.then (solution) ->
                 expect(solution).to.eql 

@@ -41,6 +41,6 @@
   "dependencies": {
     "gss-parser": "git://github.com/gss/parser.git#61c4b2849e78d76b0e67b20a5abc08ce52b6c9cb",
     "vfl-compiler": "~1.1.3",
-    "cassowary": "git://github.com/slightlyoff/cassowary.js.git#829729cb602d4a17341b4d1a5dba6767bf1cfd5c"
+    "cassowary": "git://github.com/slightlyoff/cassowary.js.git#6f83a5eda4a5ae2d0507a443e1efcf0a64e0009c"
   }
 }
