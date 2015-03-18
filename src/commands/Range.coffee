@@ -38,7 +38,6 @@ class Range extends Command
   valueOf: ->
     start = @[0]
     end = @[1]
-    console.log(@[0], @[1], @[2], @[2] * ((end - start) || 1) + start)
     return @[2] * ((end - start) || 1) + start
 
 
@@ -142,8 +141,6 @@ class Range.Modifier extends Range
         progress = value * (to - from)
         range[2] = progress / (finish - from)
       range[1 - reversed] = finish
-
-    console.log(range[2])
 
     if range[2] < 0 || range[2] > 1
       #range[2] = Math.round(range[2])

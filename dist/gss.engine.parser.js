@@ -21179,7 +21179,6 @@ Range = (function(_super) {
     var end, start;
     start = this[0];
     end = this[1];
-    console.log(this[0], this[1], this[2], this[2] * ((end - start) || 1) + start);
     return this[2] * ((end - start) || 1) + start;
   };
 
@@ -21310,7 +21309,6 @@ Range.Modifier = (function(_super) {
       }
       range[1 - reversed] = finish;
     }
-    console.log(range[2]);
     if (range[2] < 0 || range[2] > 1) {
       range.valueOf = this.execute;
     }
