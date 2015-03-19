@@ -185,7 +185,7 @@ class Domain
       if !updated && value != null
         stack.push(operation, continuation, value)
 
-    return if old == value
+    return if old == value || (!value? && !old?) 
 
     @transact()
     @changes[path] = value ? null

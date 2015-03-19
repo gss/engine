@@ -1002,9 +1002,32 @@ class Query extends Command
       engine.console.start('Branches', conditions.slice())
       engine.updating.branches = undefined
       removed = engine.updating.branching = []
+      rebranches = []
+      unbranches = []
+
       for condition, index in conditions by 3
-        condition.command.unbranch(engine, condition, conditions[index + 1], conditions[index + 2])
-      
+        if condition.command.unbranch(engine, condition, conditions[index + 1], conditions[index + 2])
+          op = condition
+          while next = op.command.next
+            if prefix = @getPrefixPath(engine, conditions[index + 1])
+              prefix += @DESCEND
+
+            path = prefix + next.command.key
+            if engine.indexOfTriplet(conditions, next, path, conditions[index + 2]) == -1
+              if next.command.getOldValue(engine, path)
+                if next.command.getOldValue(engine, conditions[index + 1])
+                  rebranches.push(next, path, conditions[index + 2])
+                else
+                  unbranches.push(next, path, conditions[index + 2])
+                break
+            op = next
+          engine.queries[conditions[index + 1]] = 0
+
+
+      for condition, index in unbranches by 3
+        number = engine.queries[unbranches[index + 1]]
+        @clean(engine, unbranches[index + 1], unbranches[index + 1], unbranches[index], unbranches[index + 2])
+        engine.queries[unbranches[index + 1]] = 0
       engine.triggerEvent('branch')
       queries = engine.updating.queries ||= {}
       snapshots = engine.updating.snapshots ||= {}
@@ -1019,10 +1042,11 @@ class Query extends Command
           delete snapshots[path]
         if queries
           delete queries[path]
-        delete engine.queries[path]
-
+        #delete engine.queries[path]
       for condition, index in conditions by 3
         condition.command.rebranch(engine, condition, conditions[index + 1], conditions[index + 2])
+      for condition, index in rebranches by 3
+        condition.command.branch(engine, condition, rebranches[index + 1], rebranches[index + 2])
       engine.console.end()
   # Hook: Should interpreter iterate returned object?
   # (yes, if it's a collection of objects or empty array)

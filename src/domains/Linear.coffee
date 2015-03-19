@@ -18,7 +18,7 @@ class Linear extends Domain
     @instance = new c.SimplexSolver()
     @instance.autoSolve = false
     #@instance._store = []
-    if @console.level > 2
+    if @console.level > 2 #|| true
       c.debug = true
       c.trace = true
 
@@ -35,7 +35,7 @@ class Linear extends Domain
 
   unedit: (variable) ->
     if constraint = @editing?['%' + (variable.name || variable)]
-      #@instance.removeConstraint(constraint)
+      # @instance.removeConstraint(constraint)
       cei = @instance._editVarMap.get(constraint.variable)
       @instance.removeColumn(cei.editMinus)
       @instance._editVarMap.delete(constraint.variable)

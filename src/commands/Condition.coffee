@@ -36,6 +36,7 @@ class Condition extends Query
           if command.type == 'Condition'
             command.next = operation
             @previous = command
+            @key = @path = @delimit(@previous.key, @ASCEND) + @key
 
   # Condition was not evaluated yet
   descend: (engine, operation, continuation, scope) ->
@@ -65,7 +66,7 @@ class Condition extends Query
     old = engine.updating.snapshots?[continuation] ? 0
     return old > 0 || (old == 0 && 1 / old != -Infinity)
 
-  ascend: (engine, operation, continuation, scope, result) ->
+  ascend: (engine, operation, continuation, scope, result, recursive) ->
     if conditions = (engine.updating.branches ||= [])
       if engine.indexOfTriplet(conditions, operation, continuation, scope) == -1
         length = continuation.length
@@ -74,22 +75,35 @@ class Condition extends Query
           if contd.length >= length
             break
           # Top branch is switching
-          else if continuation.substring(0, contd.length) == contd
+          else if continuation.charAt(contd.length) == @DESCEND && 
+                  continuation.substring(0, contd.length) == contd
             return
-
         conditions.splice(index || 0, 0, operation, continuation, scope)
 
   rebranch: (engine, operation, continuation, scope) ->
     increment = if @getOldValue(engine, continuation) then -1 else 1
     engine.queries[continuation] = (engine.queries[continuation] || 0) + increment
 
-    inverted = operation[0] == 'unless'
-    index = @conditional + 1 + ((increment == -1) ^ inverted)
+    if branch = @previous
+      if prefix = @getPrefixPath(engine, continuation)
+        prefix += @DESCEND
+      while branch
+        path = prefix + branch.key
 
+        if engine.queries[path] > 0
+          return
+        branch = branch.previous 
+    @branch(engine, operation, continuation, scope, increment == -1)
+
+  branch: (engine, operation, continuation, scope, choice) ->
+    inverted = operation[0] == 'unless'
+    index = @conditional + 1 + (choice ^ inverted)
     if branch = operation[index]
       engine.console.start(index == 2 && 'if' || 'else', operation[index], continuation)
       result = engine.input.Command(branch).solve(engine.input, branch, @delimit(continuation, @DESCEND), scope)
       engine.console.end(result)
+    return result
+
 
   unbranch: (engine, operation, continuation, scope) ->
     if old = engine.updating.snapshots?[continuation]
@@ -180,9 +194,8 @@ Condition.define 'else', {
   ]
 
   linked: true
-
   conditional: null
-  domains: null
+  domains: {}
 }
 Condition.define 'elseif', {
   linked: true
