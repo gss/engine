@@ -2065,9 +2065,9 @@ Engine = (function() {
     },
     commit: function(update) {
       while (!update.isDocumentDone()) {
-        this.Query.prototype.commit(this);
-        this.Query.prototype.repair(this);
-        this.Query.prototype.branch(this);
+        this.Query.prototype.commit(this.input);
+        this.Query.prototype.repair(this.input);
+        this.Query.prototype.branch(this.input);
         this;
       }
     },

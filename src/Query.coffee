@@ -277,7 +277,6 @@ class Query extends Command
       while parent = parent.parent
         unless (parent.command.sequence && parent[parent.length - 1] == operation)
           break
-      
       if parent[0] == 'rule' 
         if continuation == @getCanonicalPath(continuation)
           engine.Stylesheet?.match(engine, node, continuation, true)
@@ -413,6 +412,7 @@ class Query extends Command
         @chain engine, node, collection[index], continuation
 
         parent = operation
+
         while parent = parent.parent
           unless (parent.command.sequence && parent[parent.length - 1] == operation)
             break

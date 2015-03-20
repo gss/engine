@@ -325,9 +325,9 @@ class Engine
     # Perform pending query operations
     commit: (update) ->
       until update.isDocumentDone()
-        @Query::commit(@)
-        @Query::repair(@)
-        @Query::branch(@)
+        @Query::commit(@input)
+        @Query::repair(@input)
+        @Query::branch(@input)
         @
       return
 
