@@ -87,7 +87,6 @@ Constraint = Command.extend
     if engine.constrained
       for constraint in engine.constrained
         engine.Constraint::declare engine, constraint
-
     if engine.unconstrained
       for constraint in engine.unconstrained
         engine.Constraint::undeclare engine, constraint
@@ -96,6 +95,7 @@ Constraint = Command.extend
     # Throw old solver away and make another when replacing constraints
     # To recompute things from a clean state
     
+
     if false #engine.instance._changed && engine.constrained && engine.unconstrained
       engine.instance = undefined
       engine.construct()
@@ -123,18 +123,19 @@ Constraint = Command.extend
   set: (engine, constraint) ->
     if (engine.constraints ||= []).indexOf(constraint) == -1
       engine.constraints.push(constraint)
-      (engine.constrained ||= []).push(constraint)
-    if (index = engine.unconstrained?.indexOf(constraint)) > -1
-      engine.unconstrained.splice(index, 1)
+      if (index = engine.unconstrained?.indexOf(constraint)) > -1
+        engine.unconstrained.splice(index, 1)
+      else unless engine.constrained?.indexOf(constraint) > -1
+        (engine.constrained ||= []).push(constraint)
 
   # Unregister constraint in the domain
   unset: (engine, constraint) ->
     if (index = engine.constraints.indexOf(constraint)) > -1
       engine.constraints.splice(index, 1)
-    if (index = engine.constrained?.indexOf(constraint)) > -1
-      engine.constrained.splice(index, 1)
-    else
-      if (engine.unconstrained ||= []).indexOf(constraint) == -1
+
+      if (index = engine.constrained?.indexOf(constraint)) > -1
+        engine.constrained.splice(index, 1)
+      else if (engine.unconstrained ||= []).indexOf(constraint) == -1
         engine.unconstrained.push(constraint)
     for operation in constraint.operations
       if (path = operation.parent[0].key)?

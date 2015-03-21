@@ -35,10 +35,10 @@ class Linear extends Domain
 
   unedit: (variable) ->
     if constraint = @editing?['%' + (variable.name || variable)]
-      # @instance.removeConstraint(constraint)
-      cei = @instance._editVarMap.get(constraint.variable)
-      @instance.removeColumn(cei.editMinus)
-      @instance._editVarMap.delete(constraint.variable)
+      @instance.removeConstraint(constraint)
+      #cei = @instance._editVarMap.get(constraint.variable)
+      #@instance.removeColumn(cei.editMinus)
+      #@instance._editVarMap.delete(constraint.variable)
       delete @editing[(variable.name || variable)]
 
       #@removeConstraint(constraint)

@@ -4994,24 +4994,23 @@ Constraint = Command.extend({
     return engine.unconstrained = void 0;
   },
   set: function(engine, constraint) {
-    var index, _ref;
+    var index, _ref, _ref1;
     if ((engine.constraints || (engine.constraints = [])).indexOf(constraint) === -1) {
       engine.constraints.push(constraint);
-      (engine.constrained || (engine.constrained = [])).push(constraint);
-    }
-    if ((index = (_ref = engine.unconstrained) != null ? _ref.indexOf(constraint) : void 0) > -1) {
-      return engine.unconstrained.splice(index, 1);
+      if ((index = (_ref = engine.unconstrained) != null ? _ref.indexOf(constraint) : void 0) > -1) {
+        return engine.unconstrained.splice(index, 1);
+      } else if (!(((_ref1 = engine.constrained) != null ? _ref1.indexOf(constraint) : void 0) > -1)) {
+        return (engine.constrained || (engine.constrained = [])).push(constraint);
+      }
     }
   },
   unset: function(engine, constraint) {
     var index, operation, path, _i, _len, _ref, _ref1;
     if ((index = engine.constraints.indexOf(constraint)) > -1) {
       engine.constraints.splice(index, 1);
-    }
-    if ((index = (_ref = engine.constrained) != null ? _ref.indexOf(constraint) : void 0) > -1) {
-      engine.constrained.splice(index, 1);
-    } else {
-      if ((engine.unconstrained || (engine.unconstrained = [])).indexOf(constraint) === -1) {
+      if ((index = (_ref = engine.constrained) != null ? _ref.indexOf(constraint) : void 0) > -1) {
+        engine.constrained.splice(index, 1);
+      } else if ((engine.unconstrained || (engine.unconstrained = [])).indexOf(constraint) === -1) {
         engine.unconstrained.push(constraint);
       }
     }
@@ -6210,11 +6209,9 @@ Linear = (function(_super) {
   };
 
   Linear.prototype.unedit = function(variable) {
-    var cei, constraint, _ref;
+    var constraint, _ref;
     if (constraint = (_ref = this.editing) != null ? _ref['%' + (variable.name || variable)] : void 0) {
-      cei = this.instance._editVarMap.get(constraint.variable);
-      this.instance.removeColumn(cei.editMinus);
-      this.instance._editVarMap["delete"](constraint.variable);
+      this.instance.removeConstraint(constraint);
       return delete this.editing[variable.name || variable];
     }
   };
