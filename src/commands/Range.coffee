@@ -179,18 +179,30 @@ class Range.Modifier extends Range
       if progress < from
         return from
 
+    '<': (from, to, progress) ->
+      return
+
+
+    '>': (from, to, progress) ->
+      return
+
+class Range.Modifier.Including extends Range.Modifier
+
+  # Convert range to number, including boundaries
+  valueOf: ->
+    if (value = @[2])?
+      if ((start = @[0]) == false || value >= 0)
+        if ((end = @[1]) == false || value <= 1)
+          return value * ((end - start) || 1) + start
+
+  @define
+
     # Clip
     '<=': (from, to, progress) ->
       return
 
-    '<': (from, to, progress) ->
-      return
-
     # Clip inverted
     '>=': (from, to, progress) ->
-      return
-
-    '>': (from, to, progress) ->
       return
 
 # Range updating over time
