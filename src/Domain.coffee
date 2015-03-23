@@ -359,10 +359,7 @@ class Domain
       @register()
 
     if @nullified
-      solution = {}
-      for prop of @nullified
-        (solution ||= {})[prop] = null
-      @updating.apply solution 
+      @updating.apply @transform() 
 
   # Return a lazy that may later be promoted to a domain 
   maybe: () ->

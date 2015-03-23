@@ -5062,8 +5062,8 @@ Constraint = Command.extend({
       }
     }
   },
-  group: function(constraints, engine) {
-    var constraint, group, groupped, groups, other, others, path, variable, vars, _i, _j, _k, _len, _len1;
+  group: function(constraints) {
+    var constraint, group, groupped, groups, other, others, path, vars, _i, _j, _k, _len, _len1;
     groups = [];
     for (_i = 0, _len = constraints.length; _i < _len; _i++) {
       constraint = constraints[_i];
@@ -5075,7 +5075,6 @@ Constraint = Command.extend({
           other = group[_k];
           others = other.variables;
           for (path in vars) {
-            variable = vars[path];
             if (others[path]) {
               if (groupped && groupped !== group) {
                 groupped.push.apply(groupped, group);
@@ -5100,7 +5099,7 @@ Constraint = Command.extend({
   },
   split: function(engine) {
     var arg, args, commands, constraint, equal, group, groups, i, index, operation, separated, shift, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref;
-    groups = this.group(engine.constraints, engine).sort(function(a, b) {
+    groups = this.group(engine.constraints).sort(function(a, b) {
       var al, bl;
       al = a.length;
       bl = b.length;
