@@ -129,7 +129,7 @@ Constraint = Command.extend
         (engine.constrained ||= []).push(constraint)
 
   # Unregister constraint in the domain
-  unset: (engine, constraint) ->
+  unset: (engine, constraint, quick) ->
     if (index = engine.constraints.indexOf(constraint)) > -1
       engine.constraints.splice(index, 1)
 
@@ -137,9 +137,11 @@ Constraint = Command.extend
         engine.constrained.splice(index, 1)
       else if (engine.unconstrained ||= []).indexOf(constraint) == -1
         engine.unconstrained.push(constraint)
-    for operation in constraint.operations
+    for operation, index in constraint.operations by -1
       if (path = operation.parent[0].key)?
         @unwatch(engine, operation, path)
+        unless quick
+          constraint.operations.splice(index, 1)
     return
 
   unwatch: (engine, operation, continuation) ->
@@ -151,6 +153,15 @@ Constraint = Command.extend
 
   watch: (engine, operation, continuation) ->
     engine.add continuation, operation
+
+  cleanup: (engine) ->
+    for hash, operations of engine.operations
+      for signature, constraint of operations
+        unless constraint.operations.length
+          delete operations[signature]
+          unless Object.keys(operations).length
+            delete engine.operations[hash]
+    return
 
   # Remove constraint from domain by tracker string
   remove: (engine, operation, continuation) ->
@@ -207,7 +218,7 @@ Constraint = Command.extend
       shift = 0
       for group, index in separated
         for constraint, index in group
-          @unset engine, constraint
+          @unset engine, constraint, true
           for operation in constraint.operations
             commands.push operation.parent
 

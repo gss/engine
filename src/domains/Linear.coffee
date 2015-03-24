@@ -13,6 +13,11 @@ class Linear extends Domain
 
   Engine:  c
 
+  constructor: ->
+    @operations = {}
+    super
+
+
   construct: () ->
     @paths    ?= {}
     @instance = new c.SimplexSolver()
