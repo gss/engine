@@ -15,6 +15,7 @@ class Linear extends Domain
 
   constructor: ->
     @operations = {}
+    
     super
 
 

@@ -77,7 +77,7 @@ Constraint = Command.extend
     @watch engine, operation, continuation
     if other != constraint
       if other
-        @unset engine, other
+        @unset engine, other, true
       @set engine, constraint
 
 
