@@ -55,7 +55,7 @@ class Linear extends Domain
 
   edit: (variable, strength, weight, continuation) ->
     unless @editing?[variable.name]
-      constraint = new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))
+      constraint = variable.editor ||= new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))
       constraint.variable = variable
       @Constraint::inject @, constraint
       (@editing ||= {})[variable.name] = constraint

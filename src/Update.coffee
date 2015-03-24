@@ -178,7 +178,6 @@ Update.prototype =
                 positions.splice(j, 1)
 
     if other
-
       operation.domain = other
       for argument in operation
         if argument.push
@@ -352,6 +351,8 @@ Update.prototype =
       # Use domain to solve groupped problems
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
+
+      @problems[@index].variables = undefined
 
       # Send queued commands to worker
       if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1

@@ -123,6 +123,7 @@ Outputting = (engine, operation, command) ->
       return Outputting.patch(engine.output, operation, true)
 
 Outputting.patch = (engine, operation, rematch) ->
+          
   operation.domain = engine.output
 
   parent = operation.parent
