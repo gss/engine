@@ -41,6 +41,12 @@ class Variable extends Command
     engine.nullify(variable)
     engine.unedit(variable)
 
+  cleanup: (engine) ->
+    for name, variable of engine.variables
+      if constraints = variable.constraints
+        unless constraints.length
+          delete engine.variables[name]
+
 # Algebraic expression
 class Variable.Expression extends Variable
   

@@ -301,6 +301,9 @@ class Engine
   # Builtin event handlers
   $events:
 
+    cleanup: ->
+      @updated = undefined
+
     # Evaluate queue of generated constraints
     # Perform & apply computations
     perform: (update) ->
@@ -317,6 +320,11 @@ class Engine
     finish: (update) ->
       @console.end(update?.solution)
       @updating = undefined
+
+      clearTimeout(@gc)
+      @gc = setTimeout =>
+        @triggerEvent('cleanup')
+      , 3000
 
       if update
         @inspector.update()
@@ -550,6 +558,8 @@ class Engine
     return -1
     
   destroy: ->
+    clearTimeout(@gc)
+    @triggerEvent('cleanup')
     @triggerEvent('destroy')
     @removeListeners(@events) if @events
 

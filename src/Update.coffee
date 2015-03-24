@@ -178,6 +178,7 @@ Update.prototype =
                 positions.splice(j, 1)
 
     if other
+
       operation.domain = other
       for argument in operation
         if argument.push
@@ -433,7 +434,8 @@ Update.prototype =
   # Replace domain references in given expression tree
   reify: (operation, domain, from) ->
     if operation.domain == from
-      operation.domain = domain
+      unless operation[0]?.push
+        operation.domain = domain
     for arg in operation
       if arg && arg.push
         @reify arg, domain, from

@@ -15,7 +15,11 @@ class Linear extends Domain
 
   constructor: ->
     @operations = {}
-    
+    @addEventListener 'cleanup', =>
+      @Constraint::cleanup(@)
+      @Variable::cleanup(@)
+      for domain in @domains
+        domain.cleanup(@)
     super
 
 
@@ -87,6 +91,26 @@ class Linear extends Domain
     #if index = operation?.parent[0].index
     #  return index / 1000
     return weight
+
+  cleanup: ->
+    instance = @instance
+    for property, value of instance
+      if value?._keyStrMap
+        @cleanupHashSet(value)
+    return
+
+  # Remove unused entries from cassowary instance
+  cleanupHashSet: (object) ->
+    for property, value of object._keyStrMap
+      if stored = object._store[property]
+        if stored.terms
+          @cleanupHashSet(stored.terms)
+        if value.expression
+          @cleanupHashSet(value.expression.terms)
+      else
+        delete object._keyStrMap[property]
+
+    return
 
 # Capture values coming from other domains
 Linear.Mixin =
