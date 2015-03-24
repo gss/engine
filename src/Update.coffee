@@ -19,7 +19,8 @@ Updater = (engine) ->
     for arg, index in problem
       continue unless arg?.push
       unless arg[0] instanceof Array
-        arg.parent ||= problem
+        unless problem[0]?.push
+          arg.parent ||= problem
         # Variable
         if arg[0] == 'get'
           vardomain = arg.domain ||= @getVariableDomain(arg, Domain)
