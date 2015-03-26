@@ -4,6 +4,9 @@ Variable   = require('../commands/Variable')
 Constraint = require('../commands/Constraint')
 c          = require('cassowary')
 
+# HashTable that uses Map for memory efficiency
+c.HashTable = require('../../vendor/HashTable')
+
 c.Strength.require = c.Strength.required
 
 class Linear extends Domain
@@ -217,24 +220,4 @@ Linear::Remove = Command.extend {
   remove: (args ..., engine) ->
     engine.remove.apply(engine, args)
 
-
-
-
-# Phantom js doesnt enforce order of numerical keys in plain objects.
-# The hack enforces arrays as base structure.
-do ->
-  unless c.isUnordered?
-    obj = {'10': 1, '9': 1}
-    for property of obj
-      break
-    if c.isUnordered = (property > 9)
-      set = c.HashTable.prototype.set
-      c.HashTable.prototype.set = ->
-        if !@_store.push
-          store = @_store
-          @_store = []
-          for property of store
-            @_store[property] = store[property]
-
-        return set.apply(@, arguments)
 module.exports = Linear
