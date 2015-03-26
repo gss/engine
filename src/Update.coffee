@@ -19,7 +19,7 @@ Updater = (engine) ->
     for arg, index in problem
       continue unless arg?.push
       unless arg[0] instanceof Array
-        unless problem[0]?.push
+        if typeof problem[0] == 'string'
           arg.parent ||= problem
         # Variable
         if arg[0] == 'get'

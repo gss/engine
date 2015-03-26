@@ -160,7 +160,8 @@ class Command
       typed = typeof argument
       if typed == 'object'
         if argument.push
-          argument.parent ?= operation
+          if !engine.Engine || typeof operation[0] == 'string'
+            argument.parent ?= operation
           command = (argument.domain || engine).Command(argument, operation, i, implicit)
           type = command.type
 
@@ -896,7 +897,7 @@ class Command.List extends Command.Sequence
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
     for argument, index in operation
       if argument?.push
-        argument.parent ||= operation
+        #argument.parent ||= operation
         if command = argument.command || engine.Command(argument)
           command.solve(engine, argument, continuation, scope)
     return
