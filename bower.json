@@ -7,8 +7,7 @@
   ],
   "description": "Grid Style Sheets Runtime",
   "main": [
-    "dist/gss.js",
-    "dist/gss.min.js"
+    "dist/gss.js"
   ],
   "keywords": [
     "gss"
