@@ -18,9 +18,21 @@ describe 'Domain', ->
             1
           ]
         ]
-      ]).to.eql 
+      ], 'tracking').to.eql 
         result: 0
         a: -1
+
+      expect(engine.domains.length).to.eql 1
+
+      engine.remove('tracking')
+
+      expect(engine.values).to.eql {}
+      expect(engine.variables.a).to.not.eql undefined
+      expect(engine.domains.length).to.eql 0
+
+      engine.cleanup()
+
+      expect(engine.variables.a).to.eql undefined
 
     it 'should find solutions when using nested simple expressions', ->
       engine = new GSS.Engine()
@@ -222,18 +234,30 @@ describe 'Domain', ->
         result: 0
         a: -1
       
+      expect(engine.domains[0].instance._editVarList.length).to.eql(0)
+      expect(engine.domains[0].instance._editVarMap.size).to.eql(0)
+      expect(engine.domains[0].instance._errorVars.size).to.eql(1)
+      expect(engine.domains[0].instance._externalParametricVars.size).to.eql(1)
+      expect(engine.domains[0].instance._externalRows.size).to.eql(1)
+
+
       expect(engine.solve
         a: 666
       ).to.eql
         a: 666
         result: 667
 
+      expect(engine.domains[0].instance._editVarList.length).to.eql(1)
+      expect(engine.domains[0].instance._editVarMap.size).to.eql(1)
+      expect(engine.domains[0].instance._errorVars.size).to.eql(2)
+      expect(engine.domains[0].instance._externalParametricVars.size).to.eql(0)
+      expect(engine.domains[0].instance._externalRows.size).to.eql(2)
+
       expect(engine.solve
         a: null
       ).to.eql
         result: 1
         a: 0
-
 
 
   describe 'solvers in worker', ->

@@ -6,10 +6,50 @@ describe 'Cassowary', ->
     expect(c).to.be.a 'function'
   it 'var >= num', ->
     solver = new c.SimplexSolver()
-    x = new c.Variable({ value: 10 })
+    x = new c.Variable()
     ieq = new c.Inequality(x, c.GEQ, 100)
     solver.addConstraint(ieq)
     expect(x.value).to.equal 100
+
+  it 'edit var', ->
+    solver = new c.SimplexSolver()
+    solver.autoSolve = false
+    x = new c.Variable({name: 'x'})
+    y = new c.Variable({name: 'y'})
+    eq = new c.Equation(x, y)
+    solver.addConstraint(eq)
+    #expect(solver._changed).to.equal x: 0, y: 0
+    edit = new c.EditConstraint(x, c.Strength.required)
+    solver.addConstraint(edit)
+    solver.suggestValue(x, 100)
+    solver.resolve()
+    expect(solver._changed).to.eql x: 100, y: 100
+    solver.removeConstraint(edit)
+    solver.resolve()
+    expect(solver._changed).to.eql x: 0, y: 0
+
+  it 'edit var before equality', ->
+    solver = new c.SimplexSolver()
+    solver.autoSolve = false
+    x = new c.Variable({name: 'x'})
+    y = new c.Variable({name: 'y'})
+    #expect(solver._changed).to.equal x: 0, y: 0
+    edit = new c.EditConstraint(x, c.Strength.required)
+    solver.addConstraint(edit)
+    solver.suggestValue(x, 100)
+    solver.resolve()
+    expect(solver._changed).to.eql x: 100
+
+    eq = new c.Equation(x, y)
+    solver.addConstraint(eq)
+    solver.solve()
+
+    expect(solver._changed).to.eql y: 100
+
+    solver.removeConstraint(edit)
+    solver.resolve()
+    expect(solver._changed).to.eql x: 0, y: 0
+
   it '[x]==7; [y]==5; [x] - [y] == [z] // z is 2', ->
     solver = new c.SimplexSolver()
     x = new c.Variable()

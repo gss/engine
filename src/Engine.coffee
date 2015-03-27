@@ -323,7 +323,7 @@ class Engine
 
       clearTimeout(@gc)
       @gc = setTimeout =>
-        @triggerEvent('cleanup')
+        @cleanup()
       , 3000
 
       if update
@@ -556,10 +556,14 @@ class Engine
         if op == a && array[index + 1] == b && array[index + 2] == c
           return index
     return -1
+
+  cleanup: ->
+    @triggerEvent('cleanup')
+
     
   destroy: ->
     clearTimeout(@gc)
-    @triggerEvent('cleanup')
+    @cleanup()
     @triggerEvent('destroy')
     @removeListeners(@events) if @events
 

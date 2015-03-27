@@ -47,19 +47,21 @@ class Linear extends Domain
       return @instance._changed
 
   unedit: (variable) ->
-    if constraint = @editing?['%' + (variable.name || variable)]
+    if constraint = @editing?['%' + variable.name]
       @instance.removeConstraint(constraint)
+      unless --variable.editing
+        delete @variables['%' + variable.name]
+      delete @editing[variable.name]
       #cei = @instance._editVarMap.get(constraint.variable)
       #@instance.removeColumn(cei.editMinus)
       #@instance._editVarMap.delete(constraint.variable)
-      delete @editing[(variable.name || variable)]
-
       #@removeConstraint(constraint)
 
   edit: (variable, strength, weight, continuation) ->
     unless @editing?[variable.name]
       constraint = variable.editor ||= new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))
       constraint.variable = variable
+      variable.editing = (variable.editing || 0) + 1
       @Constraint::inject @, constraint
       (@editing ||= {})[variable.name] = constraint
 
