@@ -1,66 +1,124 @@
 class Exporter
   constructor: (@engine) ->
-    return unless @command = location?.search.match(/export=([a-z0-9]+)/)?[1]
-
-    @preexport()
-
-  preexport: =>
-    # Let every element get an ID
-    if (scope = @engine.scope).nodeType == 9
-      scope = @engine.scope.body
-    @engine.identify(scope)
-    for element in scope.getElementsByTagName('*')
-      if element.tagName != 'SCRIPT' &&
-          (element.tagName != 'STYLE' || element.getAttribute('type')?.indexOf('gss') > -1)
-        @engine.identify(element)
-    if window.Sizes
-      @sizes = []
-      for pairs in window.Sizes
-        for width in pairs[0]
-          for height in pairs[1]
-            @sizes.push(width + 'x' + height)
+    return unless @command = location?.search.match(/export=([a-z0-9,]+)/)?[1]
 
     if @command.indexOf('x') > -1
-      [width, height] = @command.split('x')
-      baseline = 72
-      width = parseInt(width) * baseline
-      height = parseInt(height) * baseline
-      window.addEventListener 'load', =>
-        localStorage[@command] = JSON.stringify(@export())
-        @postexport()
+      @sizes = @command.split(',')
 
-      document.body.style.width = width + 'px'
-      @engine.data.properties['::window[height]'] = ->
-        return height
-      @engine.data.properties['::window[width]'] = ->
-        return width
 
-    else 
-      if @command == 'true'
-        localStorage.clear()
-        @postexport()
+    @engine.once 'compile', =>
+      @next()
+      #document.write(cssText)
 
-  postexport: =>
-    for size in @sizes
-      unless localStorage[size]
-        location.search = location.search.replace(/[&?]export=([a-z0-9])+/, '') + '?export=' + size
-        return
-    result = {}
-    for property, value of localStorage
-      if property.match(/^\d+x\d+$/)
-        result[property] = JSON.parse(value)
-    document.write(JSON.stringify(result))
+  text: ''
 
-  export: ->
-    values = {}
-    for path, value of @engine.values
-      if (index = path.indexOf('[')) > -1 && path.indexOf('"') == -1
-        property = @engine.data.camelize(path.substring(index + 1, path.length - 1))
-        id = path.substring(0, index)
-        if property == 'x' || property == 'y' || document.body.style[property] != undefined
-          unless @engine.values[id + '[intrinsic-' + property + ']']?
-            values[path] = Math.ceil(value)
-    values.stylesheets = @engine.document.Stylesheet.export() 
-    return values
+  getSelector = (_context) ->
+    index = undefined
+    localName = undefined
+    pathSelector = undefined
+    that = _context
+    node = undefined
+    if that == 'null'
+      throw 'not an  dom reference'
+    index = getIndex(that)
+    while that.tagName
+      if that.id
+        pathSelector = '#' + that.id + (if pathSelector then '>' + pathSelector else '')
+        break
+      else
+        pathSelector = that.localName + ':nth-of-type(' + getIndex(that) + ')' + (if pathSelector then '>' + pathSelector else '')
+        that = that.parentNode
+    pathSelector
+
+  getIndex = (node) ->
+    i = 1
+    tagName = node.tagName
+    while node.previousSibling
+      node = node.previousSibling
+      if node.nodeType == 1 and tagName.toLowerCase() == node.tagName.toLowerCase()
+        i++
+    i
+
+  export: (element = document.body.parentNode, parent, fontSize = 100, unit = 'em') ->
+    text = ""
+
+
+    for child in element.children
+      if child.tagName == 'STYLE'
+        if child.type.indexOf('gss') == -1
+          if child.getAttribute('scoped') != null && !element.id
+            selector = getSelector(element) + ' '
+          else
+            selector = ''
+
+          text += Array.prototype.map.call child.sheet.cssRules, (rule) ->
+            return selector + rule.cssText + '\n'
+          .join('\n')
+      else 
+
+        styles = window.getComputedStyle(child, null)
+        childFontSize = parseFloat(styles['font-size'])
+
+        if style = child.getAttribute('style')
+          style = style.replace /\d+(?:.?\d*?)px/g, (m) -> 
+            if m == '1px'
+              return m
+            else if unit == 'em'
+              return parseFloat(m) / childFontSize  + 'em';
+            else
+              return parseFloat(m) / 16  + 'rem';
+        else
+          style = ''
+
+        if fontSize != childFontSize
+          if unit == 'em'
+            style += 'font-size: ' + (childFontSize / fontSize) + 'em;'
+          else
+            style += 'font-size: ' + childFontSize / 16 + 'rem;'
+
+
+        if style
+          if child.id
+            selector = '#' + child.id
+          else
+            selector = getSelector(child)
+          text += selector + '{' + style + '}\n'
+        text += @export(child, element, childFontSize, unit)
+
+    return text
+
+  next: ->
+    if size = @sizes.pop()
+      [width, height] = size.split('x')
+
+      @engine.then =>
+        debugger
+        if @previous
+          if @sizes.length
+            @text += '@media (max-width: ' + width + 'px) and (min-width: ' + (@previous + 1) + 'px) {'
+          else
+            @text += '@media (min-width: ' + (@previous + 1) + 'px) {'
+        else 
+          @text += '@media (max-width: ' + width + 'px) {'
+
+        @text += @export()
+        @text += '}'
+        @previous = parseInt(width)
+        @next()
+
+      @resize(parseInt(width), parseInt(height))
+    else
+      document.write(@text.split(/\n/g).join('<br>'))
+
+
+  resize: (width, height) ->
+
+    console.log('resize', height, width)
+    @engine.data.properties['::window[height]'] = ->
+      return height
+    @engine.data.properties['::window[width]'] = ->
+      return width
+    @engine.triggerEvent('resize')
+
 
 module.exports = Exporter
