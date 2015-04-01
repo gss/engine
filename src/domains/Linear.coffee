@@ -21,8 +21,6 @@ class Linear extends Domain
     @addEventListener 'cleanup', =>
       @Constraint::cleanup(@)
       @Variable::cleanup(@)
-      for domain in @domains
-        domain.cleanup(@)
     super
 
 
@@ -47,7 +45,7 @@ class Linear extends Domain
       return @instance._changed
 
   unedit: (variable) ->
-    if constraint = @editing?['%' + variable.name]
+    if constraint = @editing?[variable.name]
       @instance.removeConstraint(constraint)
       unless --variable.editing
         delete @variables['%' + variable.name]
@@ -96,26 +94,6 @@ class Linear extends Domain
     #if index = operation?.parent[0].index
     #  return index / 1000
     return weight
-
-  cleanup: ->
-    instance = @instance
-    for property, value of instance
-      if value?._keyStrMap
-        @cleanupHashSet(value)
-    return
-
-  # Remove unused entries from cassowary instance
-  cleanupHashSet: (object) ->
-    for property, value of object._keyStrMap
-      if stored = object._store[property]
-        if stored.terms
-          @cleanupHashSet(stored.terms)
-        if value.expression
-          @cleanupHashSet(value.expression.terms)
-      else
-        delete object._keyStrMap[property]
-
-    return
 
 # Capture values coming from other domains
 Linear.Mixin =
@@ -166,7 +144,7 @@ Linear::Constraint = Constraint.extend {
 Linear::Variable = Variable.extend Linear.Mixin,
   get: (path, engine, operation) ->
     variable = @declare(engine, path)
-    engine.unedit(variable)
+    # engine.unedit(variable)
     return variable
 
 Linear::Variable.Expression = Variable.Expression.extend Linear.Mixin,
