@@ -446,8 +446,10 @@ class Query extends Command
       @snapshot engine, continuation, collection
     
       removed = @removeFromCollection(engine, node, continuation, operation, scope, needle, contd)
-      #if removed != false && !collection.length
+      
+        #if removed != false && !collection.length
       #  delete engine.queries[continuation]
+
     if removed != false
       if @isCollection(collection)
         ref = continuation + id
@@ -456,7 +458,15 @@ class Query extends Command
 
       if parent = operation?.parent
         parent.command.release?(node, engine, operation, ref, scope)
-        
+      
+        while parent
+          unless (parent.command.sequence && parent[parent.length - 1] == operation)
+            break
+          parent = parent.parent
+
+        if parent[0] == 'rule'
+          engine.Stylesheet?.match(engine, node, continuation, false)
+
       @unobserve(engine, id, ref, ref)
 
       if recursion != continuation

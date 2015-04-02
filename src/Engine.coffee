@@ -595,11 +595,11 @@ class Engine
       index = 0
       j = group.length
       while index < j
-        fn = group[index]
-        if fn.once
-          group.splice(index--, 1)
-          j--
-        fn.call(@, a, b, c)
+        if fn = group[index]
+          if fn.once
+            group.splice(index--, 1)
+            j--
+          fn.call(@, a, b, c)
         index++
     if @[method = 'on' + type]
       return @[method](a, b, c)
