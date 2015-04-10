@@ -814,7 +814,7 @@ class Query extends Command
             if scope.scoped
               if (parent = engine.getScopeElement(scope.parentNode)) == engine.scope
                 return
-              return parent
+              return parent._gss_id
             return scope._gss_id
         if scope = engine.scope
           return scope.gss_id

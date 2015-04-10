@@ -32,7 +32,10 @@ class Exporter
         pathSelector = '#' + that.id + (if pathSelector then '>' + pathSelector else '')
         break
       else
-        pathSelector = that.localName + ':nth-of-type(' + getIndex(that) + ')' + (if pathSelector then '>' + pathSelector else '')
+        tag = that.localName
+        if tag != 'body' && tag != 'html'
+          tag += ':nth-of-type(' + getIndex(that) + ')'
+        pathSelector = tag + (if pathSelector then '>' + pathSelector else '')
         that = that.parentNode
     pathSelector
 
@@ -280,8 +283,8 @@ class Exporter
             document.documentElement.classList.remove(state)
             @engine.then =>
               @next()
-          , 10
-      , 10
+          , 100
+      , 100
       return true
 
 
