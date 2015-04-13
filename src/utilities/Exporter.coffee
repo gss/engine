@@ -9,14 +9,177 @@ class Exporter
       @states = states
 
 
+
+
+
     if @command.indexOf('x') > -1
-      @sizes = @command.split(',')
+      if (@sizes = @command.split(',')).length
+        @sizes = @sizes.map((size) -> size.split('x').map((v) -> parseInt(v)))
+        last = @sizes[@sizes.length - 1]
+        @engine.precomputing = true
+        @engine.once 'compile', =>
+          console.error('pre-resized to', last)
+          @override('::window[width]', last[0])
+          @override('::window[height]', last[1])
+          # Nothing's visible initially
+          @override('::document[height]', -10000)
+          @override('::document[scroll-top]', -10000)
 
     window.addEventListener 'load', =>
       @nextSize()
 
   text: ''
   states: []
+  overriden: {}
+
+  handlers:
+    animations: (height, scroll) ->
+      @initial = {}
+      for property, value in @engine.values
+        @initial[property] = value
+
+      @override '::document[scroll-top]', scroll ? 0
+      @override '::document[height]', height ? document.documentElement.scrollHeight
+
+      console.error('overring', height)
+      debugger
+      callback = =>
+        console.error(arguments)
+        if @frequency
+          @engine.precomputing.timestamp ||= 0  
+        else
+          @engine.precomputing.timestamp = @engine.console.getTime()
+
+        frames = 0
+        while @engine.ranges
+          if ++frames > 100
+            # Animations are taking too many frames to finish :'(
+            debugger
+            break
+
+          @record()
+
+          @engine.solve 'Transition', ->
+            @updating.ranges = true
+            return
+
+        @stop()
+
+      @record()
+      @engine.then(callback)
+      @engine.solve ->
+        debugger
+        @data.verify '::document[height]'
+        @data.verify '::document[scroll-top]'
+        @data.commit()
+      #@engine.triggerEvent('resize')
+
+
+      console.log('animations', this.phase)
+
+  frequency: 64
+  threshold: 0
+
+  record: ->
+    old = @engine.precomputing
+
+    console.log('frame', @engine.precomputing, @engine.ranges)
+    @engine.precomputing = {
+      timestamp: @frequency
+    }
+    if @frequency && old?.timestamp?
+      @engine.precomputing.timestamp = old.timestamp + @frequency
+
+    (@frames ||= []).push @engine.precomputing
+
+  stop: ->
+    unless @appeared
+
+      @appeared = true
+
+      @animate()
+
+      @record()
+
+      @phase = 'disappearance'
+      setTimeout =>
+        @handlers.animations.call(@, -10000, -10000)
+      , 10
+    else
+      @animate()
+      document.documentElement.classList.remove('animations')
+      @phase = @appeared = undefined
+      @next()
+    console.log('stop', @frames)
+
+  sequence: (id, frames, prefix = '')->
+    h = document.documentElement.scrollHeight
+    y = Math.floor((1000 * @engine.values[id + '[absolute-y]'] / h).toFixed(4))
+    h = Math.floor((1000 * @engine.values[id + '[computed-height]'] / h).toFixed(4))
+
+    phase = @phase || 'appearance'
+    name = phase + '-' + id.substring(1) + '-' + h + '-' + y
+    text = '@' + prefix + 'keyframes ' + name + ' {'
+    last = null
+    for frame in frames
+      if !last? || frame.progress - last.progress > @threshold || frame.progress == 1
+        last = frame
+        text += parseFloat((frame.progress * 100).toFixed(3)) + '% {'
+        properties = {}
+        for property, value of frame
+          if property != 'timestamp' && property != 'progress' && property != 'duration'
+            if property == 'transform'
+              property = prefix + property
+            text += property + ':' + value + ';'
+        text += '}\n'
+    text += '}\n'
+
+    selector = getSelector(engine.identity[id]) 
+    text += '.' + name + ' ' + selector + ' {\n' 
+    text += prefix + 'animation: ' + name + ' ' + Math.round(last.duration) + 'ms'
+    if @phase == 'disappearance'
+      text += ' forwards'
+    text += ';\n'
+    text += prefix + 'animation-play-state: paused;\n'
+    text += '}\n'
+
+    text += '.' + name + '-running ' + selector + ' {\n' 
+    text += prefix + 'animation-play-state: running\n'
+    text += '}\n'
+
+    return text
+
+
+  animate: ->
+    animations = {}
+    for frame in @frames
+      for id, properties of frame
+        if id != 'timestamp' && id != 'duration' && id != 'frequency'
+          (animations[id] ||= []).push properties
+          properties.timestamp = frame.timestamp
+
+    @frames = undefined
+
+
+    for id, keyframes of animations
+      first = keyframes[0]
+      last = keyframes[keyframes.length - 1]
+      start = first.timestamp - @frequency
+      duration = last.timestamp - start
+      for keyframe in keyframes
+        keyframe.duration = duration
+        keyframe.progress = (keyframe.timestamp - start) / duration
+      initial = {timestamp: start, progress: 0, duration: duration}
+      keyframes.unshift initial
+
+      for property of first
+        if property != 'timestamp' && property != 'duration' && property != 'progress'
+          initial[property] = engine.values[engine.getPath(id, property)]
+ 
+      @text += @sequence(id, keyframes)
+      @text += '\n'
+      @text += @sequence(id, keyframes, '-webkit-')
+      @text += '\n'
 
   getSelector = (_context) ->
     index = undefined
@@ -57,12 +220,15 @@ class Exporter
       if child.nodeType == 1
         if child.tagName == 'STYLE'
           if child.assignments #type.indexOf('gss') == -1
-            if child.getAttribute('scoped') != null && !element.id
+            if child.hasOwnProperty('scoping') && !element.id
               selector = getSelector(element) + ' '
+            else if element.id
+              selector = '#' + element.id + ' '
             else
               selector = ''
 
             text += Array.prototype.map.call child.sheet.cssRules, (rule) ->
+              text = rule.cssText
               return selector + rule.cssText + '\n'
             .join('\n')
         else unless child.tagName == 'SCRIPT'
@@ -79,9 +245,9 @@ class Exporter
                 if m == '1px'
                   return m
                 else if unit == 'em'
-                  return (parseFloat(m) / childFontSize).toFixed(4) + unit;
+                  return parseFloat((parseFloat(m) / childFontSize).toFixed(4)) + unit;
                 else
-                  return (parseFloat(m) / baseFontSize).toFixed(4) + unit;
+                  return parseFloat((parseFloat(m) / baseFontSize).toFixed(4)) + unit;
               style += ';'
             else
               style = ''
@@ -90,9 +256,9 @@ class Exporter
 
           if fontSize != childFontSize
             if unit == 'em'
-              style += 'font-size: ' + (childFontSize / fontSize).toFixed(4) + unit + ';'
+              style += 'font-size: ' + parseFloat((childFontSize / fontSize).toFixed(4)) + unit + ';'
             else
-              style += 'font-size: ' + (childFontSize / baseFontSize).toFixed(4) + unit + ';'
+              style += 'font-size: ' + parseFloat((childFontSize / baseFontSize).toFixed(4)) + unit + ';'
 
 
 
@@ -150,10 +316,9 @@ class Exporter
 
   nextSize: ->
     if size = @sizes.pop()
-      [width, height] = size.split('x')
+      [width, height] = size
 
-
-      @engine.then =>
+      callback = =>
         text = ''
         if @previous
           if @sizes.length
@@ -164,9 +329,8 @@ class Exporter
           text += '\n@media (max-width: ' + width + 'px) {\n'
 
         @base = @serialize()
-        console.error('BASIS', width, height)
         text += @base
-        @previous = parseInt(width)
+        @previous = width
         @text += text
 
         if @states.length
@@ -174,7 +338,10 @@ class Exporter
 
         @next()
 
-      @resize(parseInt(width), parseInt(height))
+      @engine.then callback
+
+      if @text
+        @resize(width, height)
       return true
 
   endRule: (rule, text) ->
@@ -223,6 +390,9 @@ class Exporter
 
       setTimeout =>
         document.documentElement.classList.add(state)
+        if handler = @handlers[state]
+          #@engine.once 'finish', =>
+          return handler.apply(@, arguments)
 
         @engine.then =>
           result = @serialize()
@@ -230,8 +400,6 @@ class Exporter
 
           diff = @differ.diff_main(@base, result)
           @differ.diff_cleanupSemantic(diff)
-
-          console.log(diff)
 
           selector = undefined
           property = undefined
@@ -287,14 +455,18 @@ class Exporter
       , 100
       return true
 
+  override: (property, value) ->
+    @overriden[property] ||= @engine.data.properties[property]
+
+    @engine.data.properties[property] = ->
+      return value
+
 
   resize: (width, height) ->
-
-    console.log('resize', height, width)
-    @engine.data.properties['::window[height]'] = ->
-      return height
-    @engine.data.properties['::window[width]'] = ->
-      return width
+    @override '::window[height]', height
+    @override '::window[width]', width
+    @width = width
+    @height = height
     #document.documentElement.style.width = width + 'px'
     @engine.triggerEvent('resize')
 
