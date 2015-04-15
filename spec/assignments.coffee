@@ -111,4 +111,79 @@ describe 'Assignments', ->
             ['==', ['get', 'c'], 20]
           ])).to.eql({a: 22, b: 21, c: 20})
 
+  describe 'conditional assignments', ->
+    it 'should compute and update', ->
+      operations = GSS.Parser.parse """
+
+      base = 72;
+
+      // Leigh Taylor's Screen Resolution is the base screen
+
+      taylorW = 1440;
+
+      // If your screen is the same width as LT's, you see what he saw when designing 1:1
+
+      scaleFactor = 1;
+
+      @if full-width <= taylorW / 2 {
+        // YF: gss bug with double centering while exporting
+        scaleFactor = full-width/taylorW * 2;
+      } @else {
+        scaleFactor = full-width/taylorW;
+      };
+
+      md = base * scaleFactor;
+      g = base / 9 * scaleFactor;
+      """
+
+      engine = new GSS({
+        'full-width': 1080
+      });
+      
+      expect(engine.solve(operations.commands)).to.eql({
+        base: 72,
+        scaleFactor: 0.75,
+        g: 6,
+        md: 54,
+        taylorW: 1440
+      })
+
+      expect(engine.solve({
+        'full-width': 1440
+      })).to.eql({
+        'full-width': 1440,
+        scaleFactor: 1,
+        g: 8,
+        md: 72
+      }) 
+
+
+      expect(engine.solve({
+        'full-width': 720
+      })).to.eql({
+        'full-width': 720,
+        scaleFactor: 1,
+        g: 8,
+        md: 72
+      })
+
+      expect(engine.solve({
+        'full-width': 360
+      })).to.eql({
+        'full-width': 360,
+        scaleFactor: 0.5,
+        g: 4,
+        md: 36
+      })
+
+
+      expect(engine.solve({
+        'full-width': 1080
+      })).to.eql({
+        'full-width': 1080,
+        scaleFactor: 0.75,
+        g: 6,
+        md: 54
+      })
+
 

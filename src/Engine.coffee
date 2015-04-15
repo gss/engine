@@ -342,6 +342,7 @@ class Engine
     # Dispatch remove command
     remove: (path) ->
       @output.remove(path)
+      @data.remove(path)
       @updating?.remove(path)
 
       if @ranges

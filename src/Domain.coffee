@@ -167,7 +167,9 @@ class Domain
     path = @getPath(object, property)
     old = @values[path]
 
-    if continuation
+    if continuation?
+      console.error('set', property, value, continuation)
+
       for op, i in stack = (@stacks ||= {})[path] ||= [] by 3
         if op == operation && stack[i + 1] == continuation
           if value?
@@ -313,6 +315,13 @@ class Domain
     for path in arguments
       if stacks = @stacks
         for property, stack of @stacks
+          if @updating && @ == @data && stack.indexOf(path) > -1
+            unstacked = (@updating.unstacked ||= {})[property] ||= []
+            if unstacked.indexOf(path) == -1
+              unstacked.push(path)
+            else
+              break
+              
           while (i = stack.indexOf(path)) > -1
             stack.splice(i - 1, 3)
             if stack.length < i
