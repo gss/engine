@@ -9,14 +9,11 @@ class Exporter
       @states = states
 
 
-
-
-
     if @command.indexOf('x') > -1
       if (@sizes = @command.split(',')).length
         @sizes = @sizes.map((size) -> size.split('x').map((v) -> parseInt(v)))
         last = @sizes[@sizes.length - 1]
-        @engine.precomputing = true
+        @record()
         @engine.once 'compile', =>
           console.error('pre-resized to', last)
           @override('::window[width]', last[0])
@@ -34,10 +31,6 @@ class Exporter
 
   handlers:
     animations: (height, scroll) ->
-      @initial = {}
-      for property, value in @engine.values
-        @initial[property] = value
-
       @override '::document[scroll-top]', scroll ? 0
       @override '::document[height]', height ? document.documentElement.scrollHeight
 
@@ -51,6 +44,18 @@ class Exporter
           @engine.precomputing.timestamp = @engine.console.getTime()
 
         frames = 0
+
+        @record()
+        debugger
+
+        @initial = {}
+        for property, value in @engine.values
+          @initial[property] = value
+
+        #@engine.solve 'Transition', ->
+        #  @updating.ranges = false
+        #  return
+
         while @engine.ranges
           if ++frames > 100
             # Animations are taking too many frames to finish :'(
@@ -65,7 +70,6 @@ class Exporter
 
         @stop()
 
-      @record()
       @engine.then(callback)
       @engine.solve ->
         debugger
@@ -80,12 +84,13 @@ class Exporter
   frequency: 64
   threshold: 0
 
-  record: ->
+  record: (soft) ->
     old = @engine.precomputing
 
     console.log('frame', @engine.precomputing, @engine.ranges)
+
     @engine.precomputing = {
-      timestamp: @frequency
+      timestamp: 0#@frequency
     }
     if @frequency && old?.timestamp?
       @engine.precomputing.timestamp = old.timestamp + @frequency
@@ -99,6 +104,7 @@ class Exporter
 
       @animate()
 
+      @engine.precomputing = undefined
       @record()
 
       @phase = 'disappearance'
@@ -109,6 +115,7 @@ class Exporter
       @animate()
       document.documentElement.classList.remove('animations')
       @phase = @appeared = undefined
+      # @final = undefined
       @next()
     console.log('stop', @frames)
 
@@ -118,8 +125,9 @@ class Exporter
     h = Math.floor((1000 * @engine.values[id + '[computed-height]'] / h).toFixed(4))
 
     phase = @phase || 'appearance'
-    name = phase + '-' + id.substring(1) + '-' + h + '-' + y
-    text = '@' + prefix + 'keyframes ' + name + ' {'
+    name = phase + '-' + id.substring(1) + '-' + h + '-' + y + '-' + @engine.values['::window[width]']
+
+    text = ''
     last = null
     for frame in frames
       if !last? || frame.progress - last.progress > @threshold || frame.progress == 1
@@ -134,17 +142,23 @@ class Exporter
         text += '}\n'
     text += '}\n'
 
+    if other = @keyframes?[prefix + text]
+      text = ''
+    else
+      (@keyframes || = {})[prefix + text] = name
+      text = '@' + prefix + 'keyframes ' + name + ' {' + text
+
     selector = getSelector(engine.identity[id]) 
     text += '.' + name + ' ' + selector + ' {\n' 
-    text += prefix + 'animation: ' + name + ' ' + Math.round(last.duration) + 'ms'
-    if @phase == 'disappearance'
-      text += ' forwards'
+    text += prefix + 'animation: ' + (other || name) + ' ' + Math.round(last.duration) + 'ms'
+    #if @phase == 'disappearance'
+    text += ' forwards'
     text += ';\n'
     text += prefix + 'animation-play-state: paused;\n'
     text += '}\n'
 
     text += '.' + name + '-running ' + selector + ' {\n' 
-    text += prefix + 'animation-play-state: running\n'
+    text += prefix + 'animation-play-state: running;\n'
     text += '}\n'
 
     return text
@@ -152,35 +166,54 @@ class Exporter
 
   animate: ->
     animations = {}
+    final = {}
     for frame in @frames
       for id, properties of frame
         if id != 'timestamp' && id != 'duration' && id != 'frequency'
           (animations[id] ||= []).push properties
+          for property, value of properties
+            (final[id] ||= {})[property] = value
           properties.timestamp = frame.timestamp
 
     @frames = undefined
 
-
     for id, keyframes of animations
+      continue if  keyframes.length == 1
       first = keyframes[0]
       last = keyframes[keyframes.length - 1]
-      start = first.timestamp - @frequency
+
+      start = first.timestamp# - @frequency
       duration = last.timestamp - start
+      if @frequency
+        index = 0
+        while ++index < keyframes.length
+          if (prev = keyframes[index - 1])?.timestamp < (keyframes[index].timestamp - @frequency)
+            subframe = {}
+            for property, value of prev
+              subframe[property] = value
+            subframe.timestamp = prev.timestamp + @frequency
+            keyframes.splice(index, 0, subframe)
       for keyframe in keyframes
         keyframe.duration = duration
         keyframe.progress = (keyframe.timestamp - start) / duration
       initial = {timestamp: start, progress: 0, duration: duration}
-      keyframes.unshift initial
+      if (props = @final?[id]) && @phase != 'disappearance'
+        for property, value of props
+          initial[property] = value
+        keyframes.unshift initial
 
-      for property of first
-        if property != 'timestamp' && property != 'duration' && property != 'progress'
-          initial[property] = engine.values[engine.getPath(id, property)]
+      #for property of first
+      #  if property != 'timestamp' && property != 'duration' && property != 'progress'
+      #    initial[property] = engine.identity[id].style[property]
  
       @text += @sequence(id, keyframes)
       @text += '\n'
       @text += @sequence(id, keyframes, '-webkit-')
       @text += '\n'
 
+    @final = final
+
+    @keyframes = undefined
   getSelector = (_context) ->
     index = undefined
     localName = undefined
@@ -338,10 +371,16 @@ class Exporter
 
         @next()
 
-      @engine.then callback
-
       if @text
-        @resize(width, height)
+        @engine.then callback
+        if @text
+          @resize(width, height)
+      else if @engine.updating
+        @engine.then callback
+      else
+        setTimeout =>
+          callback()
+        , 10
       return true
 
   endRule: (rule, text) ->
