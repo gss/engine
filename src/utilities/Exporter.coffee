@@ -3,6 +3,13 @@
 
 class Exporter
   constructor: (@engine) ->
+    @engine.export = (callback) =>
+      if @result
+        return callback(@result)
+      else
+        @engine.once('export', callback)
+
+
     return unless command = location?.search.match(/export=([a-z0-9,]+)/)?[1]
 
     states = location?.search.match(/export-states=([a-z0-9,_-]+)/)?[1]
@@ -25,6 +32,8 @@ class Exporter
 
     window.addEventListener 'load', =>
       @nextSize()
+
+
 
 
 
@@ -348,7 +357,9 @@ class Exporter
     return text
 
   output: (text) ->
-    document.write(text.split(/\n/g).join('<br>'))
+    @result = text
+    @engine.triggerEvent('export', text)
+    #document.write(text.split(/\n/g).join('<br>'))
 
   nextSize: ->
     if size = @sizes.pop()
