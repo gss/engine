@@ -3,27 +3,30 @@
 
 class Exporter
   constructor: (@engine) ->
-    return unless @command = location?.search.match(/export=([a-z0-9,]+)/)?[1]
+    return unless command = location?.search.match(/export=([a-z0-9,]+)/)?[1]
 
-    if states = location?.search.match(/export-states=([a-z0-9,_-]+)/)?[1].split(',')
-      @states = states
+    states = location?.search.match(/export-states=([a-z0-9,_-]+)/)?[1]
+    @schedule(command, states)
 
 
-    if @command.indexOf('x') > -1
-      if (@sizes = @command.split(',')).length
-        @sizes = @sizes.map((size) -> size.split('x').map((v) -> parseInt(v)))
-        last = @sizes[@sizes.length - 1]
-        @record()
-        @engine.once 'compile', =>
-          console.error('pre-resized to', last)
-          @override('::window[width]', last[0])
-          @override('::window[height]', last[1])
-          # Nothing's visible initially
-          @override('::document[height]', -10000)
-          @override('::document[scroll-top]', -10000)
+  schedule: (query, states = 'animations')->
+    if (@sizes = query.split(',')).length
+      @states = states.split(',')
+      @sizes = @sizes.map((size) -> size.split('x').map((v) -> parseInt(v)))
+      last = @sizes[@sizes.length - 1]
+      @record()
+      @engine.once 'compile', =>
+        console.error('pre-resized to', last)
+        @override('::window[width]', last[0])
+        @override('::window[height]', last[1])
+        # Nothing's visible initially
+        @override('::document[height]', -10000)
+        @override('::document[scroll-top]', -10000)
 
     window.addEventListener 'load', =>
       @nextSize()
+
+
 
   text: ''
   states: []

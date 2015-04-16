@@ -168,8 +168,6 @@ class Domain
     old = @values[path]
 
     if continuation?
-      console.error('set', property, value, continuation)
-
       for op, i in stack = (@stacks ||= {})[path] ||= [] by 3
         if op == operation && stack[i + 1] == continuation
           if value?
