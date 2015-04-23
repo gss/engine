@@ -237,7 +237,8 @@ class Exporter
     index = getIndex(that)
     while that.tagName
       if that.id
-        pathSelector = '#' + that.id + (if pathSelector then '>' + pathSelector else '')
+        unless pathSelector.substring(0, that.id.length + 2) == '#' + that.id + ' '
+          pathSelector = '#' + that.id + (if pathSelector then '>' + pathSelector else '')
         break
       else
         tag = that.localName
@@ -360,6 +361,7 @@ class Exporter
     @result = text
     @engine.triggerEvent('export', text)
     #document.write(text.split(/\n/g).join('<br>'))
+
 
   nextSize: ->
     if size = @sizes.pop()
