@@ -23,7 +23,6 @@ class Exporter
       last = @sizes[@sizes.length - 1]
       @record()
       @engine.once 'compile', =>
-        console.error('pre-resized to', last)
         @override('::window[width]', last[0])
         @override('::window[height]', last[1])
         # Nothing's visible initially
@@ -46,10 +45,7 @@ class Exporter
       @override '::document[scroll-top]', scroll ? 0
       @override '::document[height]', height ? document.documentElement.scrollHeight
 
-      console.error('overring', height)
-      debugger
       callback = =>
-        console.error(arguments)
         if @frequency
           @engine.precomputing.timestamp ||= 0  
         else
@@ -58,7 +54,6 @@ class Exporter
         frames = 0
 
         @record()
-        debugger
 
         @initial = {}
         for property, value in @engine.values
@@ -71,7 +66,6 @@ class Exporter
         while @engine.ranges
           if ++frames > 100
             # Animations are taking too many frames to finish :'(
-            debugger
             break
 
           @record()
@@ -84,22 +78,18 @@ class Exporter
 
       @engine.then(callback)
       @engine.solve ->
-        debugger
         @data.verify '::document[height]'
         @data.verify '::document[scroll-top]'
         @data.commit()
       #@engine.triggerEvent('resize')
 
 
-      console.log('animations', this.phase)
 
   frequency: 64
   threshold: 0
 
   record: (soft) ->
     old = @engine.precomputing
-
-    console.log('frame', @engine.precomputing, @engine.ranges)
 
     @engine.precomputing = {
       timestamp: 0#@frequency
@@ -129,7 +119,6 @@ class Exporter
       @phase = @appeared = undefined
       # @final = undefined
       @next()
-    console.log('stop', @frames)
 
   sequence: (id, frames, prefix = '')->
     h = document.documentElement.scrollHeight
@@ -237,8 +226,7 @@ class Exporter
     index = getIndex(that)
     while that.tagName
       if that.id
-        unless pathSelector.substring(0, that.id.length + 2) == '#' + that.id + ' '
-          pathSelector = '#' + that.id + (if pathSelector then '>' + pathSelector else '')
+        pathSelector = '#' + that.id + (if pathSelector then '>' + pathSelector else '')
         break
       else
         tag = that.localName
@@ -268,8 +256,8 @@ class Exporter
           if child.assignments #type.indexOf('gss') == -1
             if child.hasOwnProperty('scoping') && !element.id
               selector = getSelector(element) + ' '
-            else if element.id
-              selector = '#' + element.id + ' '
+            #else if element.id
+            #  selector = '#' + element.id + ' '
             else
               selector = ''
 

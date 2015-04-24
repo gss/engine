@@ -4455,8 +4455,8 @@ Update.prototype = {
       if (last[property] === value) {
         if (Math.abs(now - value) < 2) {
           (this.changes || (this.changes = {}))[property] = solution[property] = now;
+          continue;
         }
-        continue;
       }
       if (now !== value) {
         if (solution === this.solution && (value != null)) {
@@ -6875,7 +6875,6 @@ Exporter = (function() {
       this.record();
       this.engine.once('compile', (function(_this) {
         return function() {
-          console.error('pre-resized to', last);
           _this.override('::window[width]', last[0]);
           _this.override('::window[height]', last[1]);
           _this.override('::document[height]', -10000);
@@ -6901,12 +6900,9 @@ Exporter = (function() {
       var callback;
       this.override('::document[scroll-top]', scroll != null ? scroll : 0);
       this.override('::document[height]', height != null ? height : document.documentElement.scrollHeight);
-      console.error('overring', height);
-      debugger;
       callback = (function(_this) {
         return function() {
           var frames, property, value, _base, _i, _len, _ref;
-          console.error(arguments);
           if (_this.frequency) {
             (_base = _this.engine.precomputing).timestamp || (_base.timestamp = 0);
           } else {
@@ -6914,7 +6910,6 @@ Exporter = (function() {
           }
           frames = 0;
           _this.record();
-          debugger;
           _this.initial = {};
           _ref = _this.engine.values;
           for (value = _i = 0, _len = _ref.length; _i < _len; value = ++_i) {
@@ -6923,7 +6918,6 @@ Exporter = (function() {
           }
           while (_this.engine.ranges) {
             if (++frames > 100) {
-              debugger;
               break;
             }
             _this.record();
@@ -6935,13 +6929,11 @@ Exporter = (function() {
         };
       })(this);
       this.engine.then(callback);
-      this.engine.solve(function() {
-        debugger;
+      return this.engine.solve(function() {
         this.data.verify('::document[height]');
         this.data.verify('::document[scroll-top]');
         return this.data.commit();
       });
-      return console.log('animations', this.phase);
     }
   };
 
@@ -6952,7 +6944,6 @@ Exporter = (function() {
   Exporter.prototype.record = function(soft) {
     var old;
     old = this.engine.precomputing;
-    console.log('frame', this.engine.precomputing, this.engine.ranges);
     this.engine.precomputing = {
       timestamp: 0
     };
@@ -6969,7 +6960,7 @@ Exporter = (function() {
       this.engine.precomputing = void 0;
       this.record();
       this.phase = 'disappearance';
-      setTimeout((function(_this) {
+      return setTimeout((function(_this) {
         return function() {
           return _this.handlers.animations.call(_this, -10000, -10000);
         };
@@ -6978,9 +6969,8 @@ Exporter = (function() {
       this.animate();
       document.documentElement.classList.remove('animations');
       this.phase = this.appeared = void 0;
-      this.next();
+      return this.next();
     }
-    return console.log('stop', this.frames);
   };
 
   Exporter.prototype.sequence = function(id, frames, prefix) {
@@ -7115,9 +7105,7 @@ Exporter = (function() {
     index = getIndex(that);
     while (that.tagName) {
       if (that.id) {
-        if (pathSelector.substring(0, that.id.length + 2) !== '#' + that.id + ' ') {
-          pathSelector = '#' + that.id + (pathSelector ? '>' + pathSelector : '');
-        }
+        pathSelector = '#' + that.id + (pathSelector ? '>' + pathSelector : '');
         break;
       } else {
         tag = that.localName;
@@ -7170,8 +7158,6 @@ Exporter = (function() {
           if (child.assignments) {
             if (child.hasOwnProperty('scoping') && !element.id) {
               selector = getSelector(element) + ' ';
-            } else if (element.id) {
-              selector = '#' + element.id + ' ';
             } else {
               selector = '';
             }

@@ -379,10 +379,11 @@ Update.prototype =
     for property, value of result
       now = solution[property]
 
+
       if last[property] == value
         if Math.abs(now - value) < 2
           (@changes ||= {})[property] = solution[property] = now
-        continue
+          continue
 
       if now != value
         if solution == @solution && value?
