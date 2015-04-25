@@ -22876,7 +22876,7 @@ Exporter = (function() {
           return _this.stop();
         };
       })(this);
-      this.engine.then(callback);
+      this.engine.once('finish', callback);
       return this.engine.solve(function() {
         this.data.verify('::document[height]');
         this.data.verify('::document[scroll-top]');
@@ -23232,12 +23232,12 @@ Exporter = (function() {
         };
       })(this);
       if (this.text) {
-        this.engine.then(callback);
+        this.engine.once('finish', callback);
         if (this.text) {
           this.resize(width, height);
         }
       } else if (this.engine.updating) {
-        this.engine.then(callback);
+        this.engine.once('finish', callback);
       } else {
         setTimeout((function(_this) {
           return function() {
@@ -23308,7 +23308,7 @@ Exporter = (function() {
           if (handler = _this.handlers[state]) {
             return handler.apply(_this, arguments);
           }
-          return _this.engine.then(function() {
+          return _this.engine.once('finish', function() {
             var change, diff, end, match, overlay, prefix, property, rest, result, rule, selector, start, text, value, z, _i, _len;
             result = _this.serialize();
             prefix = 'html.' + state + ' ';
@@ -23364,7 +23364,7 @@ Exporter = (function() {
             _this.text += overlay;
             return setTimeout(function() {
               document.documentElement.classList.remove(state);
-              return _this.engine.then(function() {
+              return _this.engine.once('finish', function() {
                 return _this.next();
               });
             }, 100);

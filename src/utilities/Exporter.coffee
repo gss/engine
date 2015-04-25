@@ -76,7 +76,7 @@ class Exporter
 
         @stop()
 
-      @engine.then(callback)
+      @engine.once('finish', callback)
       @engine.solve ->
         @data.verify '::document[height]'
         @data.verify '::document[scroll-top]'
@@ -376,11 +376,11 @@ class Exporter
         @next()
 
       if @text
-        @engine.then callback
+        @engine.once 'finish', callback
         if @text
           @resize(width, height)
       else if @engine.updating
-        @engine.then callback
+        @engine.once 'finish', callback
       else
         setTimeout =>
           callback()
@@ -437,7 +437,7 @@ class Exporter
           #@engine.once 'finish', =>
           return handler.apply(@, arguments)
 
-        @engine.then =>
+        @engine.once 'finish', =>
           result = @serialize()
           prefix = 'html.' + state + ' '
 
@@ -492,7 +492,7 @@ class Exporter
 
           setTimeout =>
             document.documentElement.classList.remove(state)
-            @engine.then =>
+            @engine.once 'finish', =>
               @next()
           , 100
       , 100
