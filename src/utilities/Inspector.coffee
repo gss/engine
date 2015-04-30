@@ -36,6 +36,7 @@ class Inspector
         z-index: 999999;
         top: 0;
         left: 0;
+        font-size: 13px;
         background: rgba(255,255,255,0.76);
         font-family: Helvetica, Arial;
       }
@@ -51,6 +52,7 @@ class Inspector
         left: 0;
         max-height: 800px;
         overflow: auto;
+        font-size: 13px;
       }
       panel strong, panel b{
         font-weight: normal;
