@@ -16,7 +16,7 @@ Pull requests should be issued from dedicated branches, as opposed to `master`.
 
 It may be worth opening an issue to discuss feature requests and major changes before attemping to implement them.
 
-Prefixing a pull request will `[WIP]` and committing early is a good way to get feedback without too much investment.
+Prefixing a pull request with `[WIP]` and committing early is a good way to get feedback without too much investment.
 
 
 ## Questions
