@@ -21,7 +21,7 @@ class Exporter
       @states = states.split(',')
       @sizes = @sizes.map((size) -> size.split('x').map((v) -> parseInt(v)))
       last = @sizes[@sizes.length - 1]
-      @record()
+      #@record()
       @engine.once 'compile', =>
         @override('::window[width]', last[0])
         @override('::window[height]', last[1])
@@ -46,6 +46,7 @@ class Exporter
       @override '::document[height]', height ? document.documentElement.scrollHeight
 
       callback = =>
+        @engine.precomputing ||= {}
         if @frequency
           @engine.precomputing.timestamp ||= 0  
         else
@@ -115,10 +116,13 @@ class Exporter
       , 10
     else
       @animate()
+
       document.documentElement.classList.remove('animations')
       @phase = @appeared = undefined
-      # @final = undefined
-      @next()
+
+      @engine.once 'finish', =>
+        # @final = undefined
+        @next()
 
   sequence: (id, frames, prefix = '')->
     h = document.documentElement.scrollHeight
@@ -431,71 +435,70 @@ class Exporter
 
     if state = @uncomputed.pop()
 
-      setTimeout =>
-        document.documentElement.classList.add(state)
+      document.documentElement.classList.add(state)
+      @record()
+      @engine.once 'finish', =>
         if handler = @handlers[state]
           #@engine.once 'finish', =>
-          return handler.apply(@, arguments)
+          return handler.call(@)
 
-        @engine.once 'finish', =>
-          result = @serialize()
-          prefix = 'html.' + state + ' '
+        result = @serialize()
+        prefix = 'html.' + state + ' '
 
-          diff = @differ.diff_main(@base, result)
-          @differ.diff_cleanupSemantic(diff)
+        diff = @differ.diff_main(@base, result)
+        @differ.diff_cleanupSemantic(diff)
 
-          selector = undefined
-          property = undefined
-          value = undefined
-          rule = ''
-          overlay = ''
+        selector = undefined
+        property = undefined
+        value = undefined
+        rule = ''
+        overlay = ''
 
-          z = 0;
-          for change in diff
-            text = change[1]
-            if change[0] == 0
-              if rule
-                rule = @endRule(rule, text)
-                if text.indexOf('}') > -1
-                  overlay += rule
-                  rule = ''
-                  z++
-              if (end = text.lastIndexOf('{')) > -1
-                #if (start = text.lastIndexOf('}')) > -1 && start < end
-                start = text.lastIndexOf('}')
-                selector = text.substring(start + 1, end).trim()
-                rest = text.substring(end + 1)
-                if match = rest.match(/(?:;|^)\s*([^;{]+):\s*([^;}]+)$/)
-                  property = match[1]
-                  value = match[2]
-                start = end = undefined
-
-            else if change[0] == 1
-              if selector
-                rule = prefix + selector + '{'
-                selector = undefined
-
-              if property
-                rule += property + ':'
-                property = undefined
-
-              if value?
-                rule += value
-                value = undefined
-
-              rule += change[1].trim()
-
-              if rule.charAt(rule.length - 1) == '}'
+        z = 0;
+        for change in diff
+          text = change[1]
+          if change[0] == 0
+            if rule
+              rule = @endRule(rule, text)
+              if text.indexOf('}') > -1
+                overlay += rule
                 rule = ''
+                z++
+            if (end = text.lastIndexOf('{')) > -1
+              #if (start = text.lastIndexOf('}')) > -1 && start < end
+              start = text.lastIndexOf('}')
+              selector = text.substring(start + 1, end).trim()
+              rest = text.substring(end + 1)
+              if match = rest.match(/(?:;|^)\s*([^;{]+):\s*([^;}]+)$/)
+                property = match[1]
+                value = match[2]
+              start = end = undefined
 
-          @text += overlay
+          else if change[0] == 1
+            if selector
+              rule = prefix + selector + '{'
+              selector = undefined
 
-          setTimeout =>
-            document.documentElement.classList.remove(state)
-            @engine.once 'finish', =>
-              @next()
-          , 100
-      , 100
+            if property
+              rule += property + ':'
+              property = undefined
+
+            if value?
+              rule += value
+              value = undefined
+
+            rule += change[1].trim()
+
+            if rule.charAt(rule.length - 1) == '}'
+              rule = ''
+
+        @text += overlay
+
+        setTimeout =>
+          document.documentElement.classList.remove(state)
+          @engine.once 'finish', =>
+            @next()
+        , 100
       return true
 
   override: (property, value) ->
