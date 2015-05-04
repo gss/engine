@@ -513,9 +513,7 @@ class Exporter
     @width = width
     @height = height
     #document.documentElement.style.width = width + 'px'
-    setTimeout ->
-      @engine.triggerEvent('resize')
-    , 10
+    @engine.triggerEvent('resize')
 
 
 module.exports = Exporter
