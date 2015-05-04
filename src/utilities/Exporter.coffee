@@ -434,7 +434,6 @@ class Exporter
       return true
 
     if state = @uncomputed.pop()
-
       document.documentElement.classList.add(state)
       @record()
       @engine.once 'finish', =>
@@ -514,7 +513,9 @@ class Exporter
     @width = width
     @height = height
     #document.documentElement.style.width = width + 'px'
-    @engine.triggerEvent('resize')
+    setTimeout ->
+      @engine.triggerEvent('resize')
+    , 10
 
 
 module.exports = Exporter
