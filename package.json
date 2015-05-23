@@ -1,7 +1,7 @@
 {
   "name": "gss-engine",
   "description": "GSS styling engine",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "repository": {
     "type": "git",
     "url": "git://github.com/gss/engine.git"
@@ -41,5 +41,11 @@
     "ccss-compiler": "~1.1.2",
     "vfl-compiler": "~1.1.3",
     "cassowary": "git://github.com/slightlyoff/cassowary.js.git#829729cb602d4a17341b4d1a5dba6767bf1cfd5c"
+  },
+  "browserify": {
+    "name": "gss-engine",
+    "transform": [
+      "coffeeify"
+    ]
   }
 }
