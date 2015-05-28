@@ -13,6 +13,7 @@ class Exporter
     return unless command = location?.search.match(/export=([a-z0-9,]+)/)?[1]
 
     states = location?.search.match(/export-states=([a-z0-9,_-]+)/)?[1]
+    @deinherit = location?.search.match(/export-deinherit=([a-z0-9,_-]+)/)?[1]?.split(',')
     @schedule(command, states)
 
 
@@ -249,11 +250,21 @@ class Exporter
         i++
     i
 
-  serialize: (element = @engine.scope, prefix = '', fontSize, unit = 'rem', baseFontSize = 100, linebreaks) ->
+  serialize: (element = @engine.scope, prefix = '', inherited = {}, unit = 'rem', baseFontSize = 100, linebreaks) ->
     if element.nodeType == 9
       element = element.documentElement
 
     text = ""
+    
+    unless (fontSize = inherited.fontSize)?
+      styles = window.getComputedStyle(element, null)
+      inherited.fontSize = fontSize = parseFloat(styles['font-size'])
+      if @deinherit
+        for property in @deinherit
+          inherited[property] = styles[property]
+            
+
+
     for child in element.childNodes
       if child.nodeType == 1
         if child.tagName == 'STYLE'
@@ -270,10 +281,7 @@ class Exporter
               return selector + rule.cssText + '\n'
             .join('\n')
         else unless child.tagName == 'SCRIPT'
-          if child.offsetParent
-            unless fontSize?
-              styles = window.getComputedStyle(element, null)
-              fontSize = parseFloat(styles['font-size'])
+          if child.offsetParent || child.tagName == 'svg'
 
             styles = window.getComputedStyle(child, null)
             childFontSize = parseFloat(styles['font-size'])
@@ -289,15 +297,24 @@ class Exporter
               style += ';'
             else
               style = ''
-          else
-            childFontSize = fontSize
 
-          if fontSize != childFontSize
-            if unit == 'em'
-              style += 'font-size: ' + parseFloat((childFontSize / fontSize).toFixed(4)) + unit + ';'
-            else
-              style += 'font-size: ' + parseFloat((childFontSize / baseFontSize).toFixed(4)) + unit + ';'
 
+            if fontSize != childFontSize && style.indexOf('font-size:') == -1
+              if unit == 'em'
+                style += 'font-size: ' + parseFloat((childFontSize / fontSize).toFixed(4)) + unit + ';'
+              else
+                style += 'font-size: ' + parseFloat((childFontSize / baseFontSize).toFixed(4)) + unit + ';'
+
+
+            if @deinherit
+              for property in @deinherit
+                if child.style[property] == ''
+                  if inherited[property] != styles[property]
+                    value = styles[property]
+                    if parseFloat(value) + 'px' == value
+                      value = (parseFloat(value) / baseFontSize).toFixed(4) + unit + ';'
+                    style += property + ': ' + value + ';'
+                    inherited[property] = styles[property]
 
 
           if !linebreaks && child.className.indexOf('layout-system') > -1
@@ -305,10 +322,11 @@ class Exporter
             linebreaks = []
             linebreaks.counter = 0
 
-          if unit == 'em'
-            exported = @serialize(child, prefix, childFontSize, unit, baseFontSize, linebreaks)
-          else
-            exported = @serialize(child, prefix, baseFontSize, unit, baseFontSize, linebreaks)
+          if child.tagName != 'svg'
+            inherited.fontSize = childFontSize
+            exported = @serialize(child, prefix, inherited, unit, baseFontSize, linebreaks)
+
+
 
 
           if style
@@ -326,7 +344,7 @@ class Exporter
           if breaking
             linebreaks = breaking = undefined
 
-          text += exported
+          text += exported || ''
 
       # Text node
       else if linebreaks && child.nodeType == 3 && child.parentNode.tagName != 'STYLE' && child.parentNode.tagName != 'SCRIPT'
@@ -366,8 +384,10 @@ class Exporter
             text += '\n@media (max-width: ' + width + 'px) and (min-width: ' + (@previous + 1) + 'px) {\n'
           else
             text += '\n@media (min-width: ' + (@previous + 1) + 'px) {\n'
-        else 
+        else if @sizes.length
           text += '\n@media (max-width: ' + width + 'px) {\n'
+        else
+          @plain = true
 
         @base = @serialize()
         text += @base
@@ -381,14 +401,15 @@ class Exporter
 
       if @text
         @engine.once 'finish', callback
-        if @text
-          @resize(width, height)
+        @resize(width, height)
       else if @engine.updating
         @engine.once 'finish', callback
       else
-        setTimeout =>
+        if @engine.updated || !@engine.scope.querySelectorAll('style[type*="gss"]').length
           callback()
-        , 10
+        else
+          @engine.once 'solve', callback
+
       return true
 
   endRule: (rule, text) ->
@@ -417,7 +438,8 @@ class Exporter
 
   next: ->
     unless @nextState()
-      @text += '\n}'
+      unless @plain
+        @text += '\n}'
       unless @nextSize()
         @output(@text)
 
