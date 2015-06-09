@@ -673,7 +673,7 @@ class Query extends Command
         result.push value
       result.single = true
       return result
-    else if value?.splice
+    else if value?.splice && value.slice
       return value.slice()
     else
       return value || []
