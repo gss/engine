@@ -50,7 +50,8 @@ Input::Remove = Command.extend {
 },
   remove: (args..., engine)->
     for path in args
-      engine.triggerEvent('remove', path)
+      engine.Query::.unobserve(engine, path)
+      engine.Query::.clean(engine, path)
     return true
 
 
