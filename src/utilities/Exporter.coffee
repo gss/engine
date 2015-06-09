@@ -3,11 +3,14 @@
 
 class Exporter
   constructor: (@engine) ->
-    @engine.export = (callback) =>
-      if @result
-        return callback(@result)
-      else
-        @engine.once('export', callback)
+    @logs = ['init']
+    @engine.export = (callback) ->
+      @exporter.logs.push('export()')
+      if callback
+        if @result
+          return callback(@result)
+        else
+          @once('export', callback)
 
 
     return unless command = location?.search.match(/export=([a-z0-9,]+)/)?[1]
@@ -18,6 +21,7 @@ class Exporter
 
 
   schedule: (query, states = 'animations')->
+    @logs.push('schedule')
     if (@sizes = query.split(',')).length
       @states = states.split(',')
       @sizes = @sizes.map((size) -> size.split('x').map((v) -> parseInt(v)))
@@ -30,8 +34,15 @@ class Exporter
         @override('::document[height]', -10000)
         @override('::document[scroll-top]', -10000)
 
-    window.addEventListener 'load', =>
+    if document.readyState == 'complete'
+      @logs.push('complete')
       @nextSize()
+    else
+      @logs.push('wait')
+      document.addEventListener 'readystatechange', =>
+        @logs.push('loaded')
+        if document.readyState == 'complete'
+          @nextSize()
 
 
 
@@ -262,9 +273,7 @@ class Exporter
       if @deinherit
         for property in @deinherit
           inherited[property] = styles[property]
-            
-
-
+        
     for child in element.childNodes
       if child.nodeType == 1
         if child.tagName == 'STYLE'
@@ -316,18 +325,20 @@ class Exporter
                     style += property + ': ' + value + ';'
                     inherited[property] = styles[property]
 
-
-          if !linebreaks && child.className.indexOf('layout-system') > -1
+          # Record information about linebreaks in elements as pseudo-element
+          if child.className.indexOf('export-linebreaks') > -1
             breaking = true
             linebreaks = []
             linebreaks.counter = 0
 
           if child.tagName != 'svg'
             inherited.fontSize = childFontSize
-            exported = @serialize(child, prefix, inherited, unit, baseFontSize, linebreaks)
 
-
-
+            # Dont count linebreaks in foreign elements that are hidden 
+            if child.className.indexOf('foreign') > -1 && !child.offsetParent
+              exported = @serialize(child, prefix, inherited, unit, baseFontSize)
+            else
+              exported = @serialize(child, prefix, inherited, unit, baseFontSize, linebreaks)
 
           if style
             if child.id
@@ -338,10 +349,8 @@ class Exporter
               text += '\n'
             text += selector + '{' + style + '}\n'
 
-            if breaking
-              text += selector + ':before{content: "' + linebreaks.join(',') + '"; display: none;}\n'
-
           if breaking
+            text += selector + ':before{content: "' + linebreaks.join(',') + '"; display: none;}\n'
             linebreaks = breaking = undefined
 
           text += exported || ''
@@ -350,17 +359,16 @@ class Exporter
       else if linebreaks && child.nodeType == 3 && child.parentNode.tagName != 'STYLE' && child.parentNode.tagName != 'SCRIPT'
         counter = 0
         content = child.textContent
-        top = 0
         while counter < content.length
           char = content.charAt(counter)
           range = document.createRange()
           range.setStart(child, counter)
           range.setEnd(child, counter + 1)
           rect = range.getBoundingClientRect()
-          if rect.width && rect.top && rect.top != top
-            if top
+          if rect.width && rect.top && rect.top != linebreaks.position
+            if linebreaks.position
               linebreaks.push(linebreaks.counter)
-            top = rect.top
+            linebreaks.position = rect.top
 
           counter++
           linebreaks.counter++
@@ -375,9 +383,11 @@ class Exporter
 
   nextSize: ->
     if size = @sizes.pop()
+      @logs.push('nextSize')
       [width, height] = size
 
       callback = =>
+        @logs.push('success')
         text = ''
         if @previous
           if @sizes.length
@@ -399,13 +409,15 @@ class Exporter
 
         @next()
 
-      if @text
+      if @text || !@engine.updating
         @engine.once 'finish', callback
         @resize(width, height)
       else if @engine.updating
+        @logs.push('wait')
         @engine.once 'finish', callback
       else
-        if @engine.updated || !@engine.scope.querySelectorAll('style[type*="gss"]').length
+        if !@engine.scope.querySelectorAll('style[type*="gss"]').length
+          @logs.push('abort')
           callback()
         else
           @engine.once 'solve', callback
@@ -441,6 +453,7 @@ class Exporter
       unless @plain
         @text += '\n}'
       unless @nextSize()
+        @logs.push('done')
         @output(@text)
 
   nextState: ->
@@ -456,9 +469,11 @@ class Exporter
       return true
 
     if state = @uncomputed.pop()
+      @logs.push('nextState')
       document.documentElement.classList.add(state)
       @record()
       @engine.once 'finish', =>
+        @logs.push('state:' + state)
         if handler = @handlers[state]
           #@engine.once 'finish', =>
           return handler.call(@)
@@ -530,6 +545,7 @@ class Exporter
 
 
   resize: (width, height) ->
+    @logs.push('resize:' + width + 'x' + height)
     @override '::window[height]', height
     @override '::window[width]', width
     @width = width
