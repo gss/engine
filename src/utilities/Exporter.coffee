@@ -325,17 +325,17 @@ class Exporter
                     style += property + ': ' + value + ';'
                     inherited[property] = styles[property]
 
-          # Record information about linebreaks in elements as pseudo-element
-          if child.className.indexOf('export-linebreaks') > -1
-            breaking = true
-            linebreaks = []
-            linebreaks.counter = 0
-
           if child.tagName != 'svg'
-            inherited.fontSize = childFontSize
 
+            # Record information about linebreaks in elements as pseudo-element
+            if child.className?.indexOf('export-linebreaks') > -1
+              breaking = true
+              linebreaks = []
+              linebreaks.counter = 0
+              
+            inherited.fontSize = childFontSize
             # Dont count linebreaks in foreign elements that are hidden 
-            if child.className.indexOf('foreign') > -1 && !child.offsetParent
+            if child.className?.indexOf('foreign') > -1 && !child.offsetParent
               exported = @serialize(child, prefix, inherited, unit, baseFontSize)
             else
               exported = @serialize(child, prefix, inherited, unit, baseFontSize, linebreaks)
