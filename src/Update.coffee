@@ -379,13 +379,17 @@ Update.prototype =
     for property, value of result
       now = solution[property]
 
-
+      if @repeating?[property]?[value] >= 3 # dont let value appear more than 3 times
+        @changes = @repeating = undefined
+        return
       if last[property] == value
         if Math.abs(now - value) < 2
           (@changes ||= {})[property] = solution[property] = now
           continue
 
       if now != value
+        obj = ((@repeating ||= {})[property] ||= {})
+        obj[value] = ((obj[value]) || 0) + 1
         if solution == @solution && value?
           last[property] = now
         (@changes ||= {})[property] = value
