@@ -259,7 +259,18 @@ class Exporter
       node = node.previousSibling
       if node.nodeType == 1 and tagName.toLowerCase() == node.tagName.toLowerCase()
         i++
-    i
+    return i
+
+  prepareLinebreaks: (linebreaks, id)->
+    if id
+      object = {}
+      for property, value of linebreaks
+        if property.substring(0, id.length) == id
+          object['$' + property.substring(id.length)] = value
+        else
+          object[property] = value
+      linebreaks = object
+    return JSON.stringify(linebreaks).replace(/"/g, '\\"')
 
   serialize: (element = @engine.scope, prefix = '', inherited = {}, unit = 'rem', baseFontSize = 100, linebreaks) ->
     if element.nodeType == 9
@@ -330,19 +341,34 @@ class Exporter
             # Record information about linebreaks in elements as pseudo-element
             if child.className?.indexOf('export-linebreaks') > -1
               breaking = true
-              linebreaks = []
-              linebreaks.counter = 0
+              linebreaks = {
+                current: []
+                result: {}
+                counter: 0,
+                position: 0
+              }
               
             inherited.fontSize = childFontSize
             # Dont count linebreaks in foreign elements that are hidden 
-            if child.className?.indexOf('foreign') > -1 && !child.offsetParent
+            if !child.offsetParent || !linebreaks
               exported = @serialize(child, prefix, inherited, unit, baseFontSize)
-            else
+            else 
+              if child.id
+                {current,counter,position} = linebreaks
+                linebreaks.counter = 0
+                linebreaks.position = 0
+                linebreaks.current = linebreaks.result[child.id] = []
               exported = @serialize(child, prefix, inherited, unit, baseFontSize, linebreaks)
-
+              if child.id
+                unless linebreaks.current.length
+                  delete linebreaks.result[child.id]
+                linebreaks.current = current
+                linebreaks.counter = counter
+                linebreaks.position = position
           if style
             if child.id
-              selector = prefix + '#' + child.id
+              # Double ID to make it more specific than anything else
+              selector = prefix + '#' + child.id + '#' + child.id
             else
               selector = prefix + getSelector(child)
             if text
@@ -350,7 +376,7 @@ class Exporter
             text += selector + '{' + style + '}\n'
 
           if breaking
-            text += selector + ':before{content: "' + linebreaks.join(',') + '"; display: none;}\n'
+            text += selector + ':before{content: "' + @prepareLinebreaks(linebreaks.result, child.id) + '"; display: none;}\n'
             linebreaks = breaking = undefined
 
           text += exported || ''
@@ -365,9 +391,10 @@ class Exporter
           range.setStart(child, counter)
           range.setEnd(child, counter + 1)
           rect = range.getBoundingClientRect()
-          if rect.width && rect.top && rect.top != linebreaks.position
+          if rect.width && rect.top && Math.abs(rect.top - linebreaks.position) > rect.height / 5
             if linebreaks.position
-              linebreaks.push(linebreaks.counter)
+              linebreaks.current.push(linebreaks.counter)
+          if rect.top
             linebreaks.position = rect.top
 
           counter++
