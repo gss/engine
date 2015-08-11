@@ -12,11 +12,14 @@ class Exporter
         else
           @once('export', callback)
 
+    try
+      command = location?.search.match(/export=([a-z0-9,]+)/)?[1] ? window.parent?.params?.export
+    catch e
+    
+    return unless command
 
-    return unless command = location?.search.match(/export=([a-z0-9,]+)/)?[1]
-
-    states = location?.search.match(/export-states=([a-z0-9,_-]+)/)?[1]
-    @deinherit = location?.search.match(/export-deinherit=([a-z0-9,_-]+)/)?[1]?.split(',')
+    states = location?.search.match(/export-states=([a-z0-9,_-]+)/)?[1] ? window.parent?.params?['export-states']
+    @deinherit = (location?.search.match(/export-deinherit=([a-z0-9,_-]+)/)?[1] ? window.parent?.params?['export-states'])?.split(',')
     @schedule(command, states)
 
 
