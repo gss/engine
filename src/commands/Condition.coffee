@@ -128,7 +128,12 @@ class Condition extends Query
 
 
       if result?.push && result.valueOf != Array::valueOf
-        result = result.valueOf() || false
+        result = result.valueOf()
+        # Zero is truthy for ranges
+        if result == 0
+          result = true
+        else
+          result ||= false
   
       value = engine.queries[path]
 

@@ -103,9 +103,13 @@ class Range.Modifier extends Range
   valueOf: ->
     if (value = @[2])?
       if ((start = @[0]) == false || value > 0)
-        if ((end = @[1]) == false || value < 1)
-          return value * ((end - start) || 1) + start
-
+        if (end = @[1]) == false
+          if value != 1 || start == 0 #YF: Ambiguous (A=1)>0 and (A=50)>50
+            return value * ((end - start) || 1) + start
+        else
+          if value < 1
+            return value * ((end - start) || 1) + start
+            
   # Scale range to given start/end, update progress, register overshooting
   scale: (range, start, finish) ->
     unless range.push
