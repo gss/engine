@@ -19,7 +19,7 @@ class Exporter
     return unless command
 
     states = location?.search.match(/export-states=([a-z0-9,_-]+)/)?[1] ? window.parent?.params?['export-states']
-    @deinherit = (location?.search.match(/export-deinherit=([a-z0-9,_-]+)/)?[1] ? window.parent?.params?['export-states'])?.split(',')
+    @deinherit = (location?.search.match(/export-deinherit=([a-z0-9,_-]+)/)?[1] ? window.parent?.params?['export-deinherit'])?.split(',')
     @schedule(command, states)
 
 
@@ -291,7 +291,7 @@ class Exporter
     for child in element.childNodes
       if child.nodeType == 1
         if child.tagName == 'STYLE'
-          if child.assignments #type.indexOf('gss') == -1
+          if child.assignments && !child.classList.contains('inlinable')
             if child.hasOwnProperty('scoping') && !element.id
               selector = getSelector(element) + ' '
             #else if element.id
@@ -489,7 +489,7 @@ class Exporter
   nextState: ->
     return unless @uncomputed
     # Load diff match patch library
-    if !@differ
+    if @states?.length && (@states.length > 2 || @states[0] != 'animations')
       script = document.createElement('script')
       script.onload = =>
         @differ = new diff_match_patch();

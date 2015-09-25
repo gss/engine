@@ -54,9 +54,6 @@ class Engine
     @stylesheets  = []
     @imported     = {}
 
-    # Initialize utilities
-    @inspector    = new @Inspector(@)
-    @exporter     = new @Exporter(@)
 
     # Subclass Update and Domains to point to this engine
     @update = @Update.compile(@)
@@ -66,6 +63,10 @@ class Engine
     @data.setup()
     @output.setup()
 
+    # Initialize utilities
+    @inspector    = new @Inspector(@)
+    @exporter     = new @Exporter(@)
+    
     # Link solved values and use given data
     @values = @output.values
     if data
