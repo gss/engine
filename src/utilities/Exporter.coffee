@@ -135,9 +135,14 @@ class Exporter
       document.documentElement.classList.remove('animations')
       @phase = @appeared = undefined
 
-      @engine.once 'finish', =>
-        # @final = undefined
+      callback = =>
+        clearTimeout(@timeout)
         @next()
+
+      @timeout = setTimeout(callback, 100)
+      @engine.once 'finish', callback
+
+      
 
   sequence: (id, frames, prefix = '')->
     h = document.documentElement.scrollHeight
@@ -291,18 +296,25 @@ class Exporter
     for child in element.childNodes
       if child.nodeType == 1
         if child.tagName == 'STYLE'
-          if child.assignments && !child.classList.contains('inlinable')
-            if child.hasOwnProperty('scoping') && !element.id
-              selector = getSelector(element) + ' '
-            #else if element.id
-            #  selector = '#' + element.id + ' '
-            else
-              selector = ''
+          if child.className?.indexOf('inlinable') > -1
+            if child.assignments
+              if child.hasOwnProperty('scoping') && !element.id
+                selector = getSelector(element) + ' '
+              #else if element.id
+              #  selector = '#' + element.id + ' '
+              else
+                selector = ''
 
-            text += Array.prototype.map.call child.sheet.cssRules, (rule) ->
-              text = rule.cssText
-              return selector + rule.cssText + '\n'
-            .join('\n')
+              text += Array.prototype.map.call child.sheet.cssRules, (rule) ->
+                text = rule.cssText
+                return selector + rule.cssText + '\n'
+              .join('\n')
+            else if child.sheet
+              text += Array.prototype.map.call child.sheet.cssRules, (rule) ->
+                if element.id
+                  selector = '#' + element.id
+                return (selector || '') + rule.cssText + '\n'
+              .join('\n')
         else unless child.tagName == 'SCRIPT'
           if child.offsetParent || child.tagName == 'svg'
 
