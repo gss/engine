@@ -24,7 +24,6 @@ class Exporter
 
 
   schedule: (query, states = 'animations')->
-    @logs.push('schedule')
     if (@sizes = query.split(',')).length
       @states = states.split(',')
       @sizes = @sizes.map((size) -> size.split('x').map((v) -> parseInt(v)))
@@ -37,15 +36,18 @@ class Exporter
         @override('::document[height]', -10000)
         @override('::document[scroll-top]', -10000)
 
-    if document.readyState == 'complete'
+    if document.readyState == 'complete' || document.documentElement.classList.contains('wf-active')
       @logs.push('complete')
       @nextSize()
     else
-      @logs.push('wait')
-      document.addEventListener 'readystatechange', =>
+      @logs.push('waiting')
+      callback = =>
         @logs.push('loaded')
-        if document.readyState == 'complete'
-          @nextSize()
+        @engine.removeEventListener('solved', callback)
+        @engine.removeEventListener('load', callback)
+        @nextSize()
+      @engine.once 'load', callback
+      @engine.once 'solved', callback
 
 
 
@@ -132,15 +134,12 @@ class Exporter
     else
       @animate()
 
-      document.documentElement.classList.remove('animations')
+      document.documentElement.setAttribute('class', @previousClass)
       @phase = @appeared = undefined
 
-      callback = =>
-        clearTimeout(@timeout)
-        @next()
 
-      @timeout = setTimeout(callback, 100)
-      @engine.once 'finish', callback
+      #@timeout = setTimeout(callback, 100)
+      @engine.once 'finish', @next.bind(@)
 
       
 
@@ -285,7 +284,6 @@ class Exporter
       element = element.documentElement
 
     text = ""
-    
     unless (fontSize = inherited.fontSize)?
       styles = window.getComputedStyle(element, null)
       inherited.fontSize = fontSize = parseFloat(styles['font-size'])
@@ -295,9 +293,11 @@ class Exporter
         
     for child in element.childNodes
       if child.nodeType == 1
+        inherits = Object.create(inherited)
         if child.tagName == 'STYLE'
-          if child.className?.indexOf('inlinable') > -1
-            if child.assignments
+          # Ignore GSS stylesheets with inlinable class
+          if child.assignments
+            if child.className?.indexOf('inlinable') == -1
               if child.hasOwnProperty('scoping') && !element.id
                 selector = getSelector(element) + ' '
               #else if element.id
@@ -309,7 +309,9 @@ class Exporter
                 text = rule.cssText
                 return selector + rule.cssText + '\n'
               .join('\n')
-            else if child.sheet
+          # Glue in CSS stylesheets with inlinable class
+          else if child.sheet
+            if child.className?.indexOf('inlinable') > -1
               text += Array.prototype.map.call child.sheet.cssRules, (rule) ->
                 if element.id
                   selector = '#' + element.id
@@ -329,7 +331,8 @@ class Exporter
                   return parseFloat((parseFloat(m) / childFontSize).toFixed(4)) + unit;
                 else
                   return parseFloat((parseFloat(m) / baseFontSize).toFixed(4)) + unit;
-              style += ';'
+              if style.charAt(style.length - 1) != ';'
+                style += ';'
             else
               style = ''
 
@@ -344,12 +347,12 @@ class Exporter
             if @deinherit
               for property in @deinherit
                 if child.style[property] == ''
-                  if inherited[property] != styles[property]
+                  if inherits[property] != styles[property]
                     value = styles[property]
                     if parseFloat(value) + 'px' == value
                       value = (parseFloat(value) / baseFontSize).toFixed(4) + unit + ';'
                     style += property + ': ' + value + ';'
-                    inherited[property] = styles[property]
+                    inherits[property] = styles[property]
 
           if child.tagName != 'svg'
 
@@ -363,17 +366,17 @@ class Exporter
                 position: 0
               }
               
-            inherited.fontSize = childFontSize
+            inherits.fontSize = childFontSize
             # Dont count linebreaks in foreign elements that are hidden 
             if !child.offsetParent || !linebreaks
-              exported = @serialize(child, prefix, inherited, unit, baseFontSize)
+              exported = @serialize(child, prefix, inherits, unit, baseFontSize)
             else 
               if child.id
                 {current,counter,position} = linebreaks
                 linebreaks.counter = 0
                 linebreaks.position = 0
                 linebreaks.current = linebreaks.result[child.id] = []
-              exported = @serialize(child, prefix, inherited, unit, baseFontSize, linebreaks)
+              exported = @serialize(child, prefix, inherits, unit, baseFontSize, linebreaks)
               if child.id
                 unless linebreaks.current.length
                   delete linebreaks.result[child.id]
@@ -388,7 +391,7 @@ class Exporter
               selector = prefix + getSelector(child)
             if text
               text += '\n'
-            text += selector + '{' + style + '}\n'
+            text += selector + '{' + style.replace(/;;+/g, ';') + '}\n'
 
           if breaking
             text += selector + ':before{content: "' + @prepareLinebreaks(linebreaks.result, child.id) + '"; display: none;}\n'
@@ -405,12 +408,12 @@ class Exporter
           range = document.createRange()
           range.setStart(child, counter)
           range.setEnd(child, counter + 1)
-          rect = range.getBoundingClientRect()
-          if rect.width && rect.top && Math.abs(rect.top - linebreaks.position) > rect.height / 5
-            if linebreaks.position
-              linebreaks.current.push(linebreaks.counter)
-          if rect.top
-            linebreaks.position = rect.top
+          if rect = range.getBoundingClientRect()
+            if rect.width && rect.top && Math.abs(rect.top - linebreaks.position) > rect.height / 5
+              if linebreaks.position
+                linebreaks.current.push(linebreaks.counter)
+            if rect.top
+              linebreaks.position = rect.top
 
           counter++
           linebreaks.counter++
@@ -440,16 +443,15 @@ class Exporter
           text += '\n@media (max-width: ' + width + 'px) {\n'
         else
           @plain = true
-
         @base = @serialize()
         text += @base
         @previous = width
         @text += text
 
-        if @states.length
-          @uncomputed = @states.slice()
-
-        @next()
+      if @states.length
+        @uncomputed = @states.slice()
+      @logs.push('serialized')
+      @next()
 
       if @text || !@engine.updating
         @engine.once 'finish', callback
@@ -512,71 +514,76 @@ class Exporter
 
     if state = @uncomputed.pop()
       @logs.push('nextState')
-      document.documentElement.classList.add(state)
-      @record()
-      @engine.once 'finish', =>
-        @logs.push('state:' + state)
-        if handler = @handlers[state]
-          #@engine.once 'finish', =>
-          return handler.call(@)
+      html = document.documentElement
+      @previousClass = html.getAttribute('class') 
+      setTimeout =>
+        html.setAttribute('class', @previousClass + ' ' + state)
+        @logs.push(state)
+        @record()
+        @engine.once 'finish', =>
+          @logs.push('state:' + state)
+          if handler = @handlers[state]
+            #@engine.once 'finish', =>
+            return handler.call(@)
 
-        result = @serialize()
-        prefix = 'html.' + state + ' '
+          result = @serialize()
+          prefix = 'html.' + state + ' '
 
-        diff = @differ.diff_main(@base, result)
-        @differ.diff_cleanupSemantic(diff)
+          diff = @differ.diff_main(@base, result)
+          @differ.diff_cleanupSemantic(diff)
 
-        selector = undefined
-        property = undefined
-        value = undefined
-        rule = ''
-        overlay = ''
+          selector = undefined
+          property = undefined
+          value = undefined
+          rule = ''
+          overlay = ''
 
-        z = 0;
-        for change in diff
-          text = change[1]
-          if change[0] == 0
-            if rule
-              rule = @endRule(rule, text)
-              if text.indexOf('}') > -1
-                overlay += rule
+          z = 0;
+          for change in diff
+            text = change[1]
+            if change[0] == 0
+              if rule
+                rule = @endRule(rule, text)
+                if text.indexOf('}') > -1
+                  overlay += rule
+                  rule = ''
+                  z++
+              if (end = text.lastIndexOf('{')) > -1
+                #if (start = text.lastIndexOf('}')) > -1 && start < end
+                start = text.lastIndexOf('}')
+                selector = text.substring(start + 1, end).trim()
+                rest = text.substring(end + 1)
+                if match = rest.match(/(?:;|^)\s*([^;{]+):\s*([^;}]+)$/)
+                  property = match[1]
+                  value = match[2]
+                start = end = undefined
+
+            else if change[0] == 1
+              if selector
+                rule = prefix + selector + '{'
+                selector = undefined
+
+              if property
+                rule += property + ':'
+                property = undefined
+
+              if value?
+                rule += value
+                value = undefined
+
+              rule += change[1].trim()
+
+              if rule.charAt(rule.length - 1) == '}'
                 rule = ''
-                z++
-            if (end = text.lastIndexOf('{')) > -1
-              #if (start = text.lastIndexOf('}')) > -1 && start < end
-              start = text.lastIndexOf('}')
-              selector = text.substring(start + 1, end).trim()
-              rest = text.substring(end + 1)
-              if match = rest.match(/(?:;|^)\s*([^;{]+):\s*([^;}]+)$/)
-                property = match[1]
-                value = match[2]
-              start = end = undefined
 
-          else if change[0] == 1
-            if selector
-              rule = prefix + selector + '{'
-              selector = undefined
+          @text += overlay
 
-            if property
-              rule += property + ':'
-              property = undefined
-
-            if value?
-              rule += value
-              value = undefined
-
-            rule += change[1].trim()
-
-            if rule.charAt(rule.length - 1) == '}'
-              rule = ''
-
-        @text += overlay
-
-        setTimeout =>
-          document.documentElement.classList.remove(state)
-          @engine.once 'finish', =>
-            @next()
-        , 100
+          setTimeout =>
+            html.setAttribute('class', @previousClass)
+            @engine.once 'finish', =>
+              @next()
+          , 100
+      , 10
       return true
 
   override: (property, value) ->
