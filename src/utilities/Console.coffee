@@ -7,7 +7,7 @@ class Console
       @level = 0
     @stack = []
     @buffer = []
-    self?.addEventListener 'error', @onError, true
+    self?.addEventListener 'error', @onError, false
 
   methods: ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd']
   groups: 0
@@ -48,7 +48,7 @@ class Console
       object + Array(length - object.length).join(' ') 
 
   openGroup: (name, reason = '', time, result = '') ->
-    if @level < 0.5
+    if !@level
       return
 
     fmt = '%c%s'
@@ -80,7 +80,7 @@ class Console
     @[method || 'group'](fmt, 'font-weight: normal', name, reason, result, 'color: #999; font-weight: normal; font-style: italic;', time)
 
   closeGroup: ->
-    if @level >= 0.5
+    if @level
       @groupEnd()
 
   stringify: (obj) ->

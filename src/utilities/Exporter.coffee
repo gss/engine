@@ -29,33 +29,47 @@ class Exporter
       @sizes = @sizes.map((size) -> size.split('x').map((v) -> parseInt(v)))
       last = @sizes[@sizes.length - 1]
       #@record()
-      @engine.once 'compile', =>
+      overriders = =>
         @override('::window[width]', last[0])
         @override('::window[height]', last[1])
         # Nothing's visible initially
         @override('::document[height]', -10000)
         @override('::document[scroll-top]', -10000)
+      if @engine.running
+        overriders()
+      else
+        (@engine.listeners['compile'] ||= []).unshift overriders
 
-    if document.readyState == 'complete' || document.documentElement.classList.contains('wf-active')
+    if document.readyState == 'complete' || document.readyState == 'loaded' || 
+        (document.documentElement.classList.contains('wf-active'))
       @logs.push('complete')
       @nextSize()
     else
       @logs.push('waiting')
-      callback = =>
-        @logs.push('loaded')
-        @engine.removeEventListener('solved', callback)
-        @engine.removeEventListener('load', callback)
-        @nextSize()
-      @engine.once 'load', callback
-      @engine.once 'solved', callback
+
+      timeout = 0
+      # Throttle state changes
+      onStateChange = (title) =>
+        return =>
+          clearTimeout(timeout)
+          timeout = setTimeout =>
+            @nextSize()
+          , 200
+
+      onInteractive = onStateChange('ready')
+      onSolve       = onStateChange('solved')
+
+      @engine.addEventListener 'interactive', onInteractive
+      @engine.addEventListener 'solve', onSolve
 
 
-
+    
 
 
   text: ''
   states: []
   overriden: {}
+  inheritable: ['font-size', 'font-weight', 'line-height', 'color']
 
   handlers:
     animations: (height, scroll) ->
@@ -134,7 +148,7 @@ class Exporter
     else
       @animate()
 
-      document.documentElement.setAttribute('class', @previousClass)
+      document.documentElement.classList.remove('animations')
       @phase = @appeared = undefined
 
 
@@ -291,7 +305,7 @@ class Exporter
         for property in @deinherit
           inherited[property] = styles[property]
         
-    for child in element.childNodes
+    for child, index in element.childNodes
       if child.nodeType == 1
         inherits = Object.create(inherited)
         if child.tagName == 'STYLE'
@@ -321,13 +335,38 @@ class Exporter
           if child.offsetParent || child.tagName == 'svg'
 
             styles = window.getComputedStyle(child, null)
+
+            # Record line breaks between inline tags or inline tag & text
+            if linebreaks
+              if styles.display == 'inline' || styles.display == 'inline-block'
+                if prev = child.previousSibling
+                  pstyles = prev.nodeType == 1 && window.getComputedStyle(prev)
+                  if !pstyles || pstyles.display == 'inline' || pstyles.display == 'inline-block'
+                    if prev.offsetTop? && child.offsetTop?
+                      broken = prev.offsetTop < child.offsetTop && prev.offsetLeft > child.offsetLeft
+                    else
+                      rect = child.getBoundingClientRect()
+                      if prev.nodeType == 1
+                        r = prev.getBoundingClientRect()
+                        broken = Math.abs(r.top - rect.top) > rect.height / 5 && r.left > rect.left
+                      else if linebreaks.last == prev
+                        broken = Math.abs(linebreaks.position - rect.top) > rect.height / 5 && linebreaks.left > rect.left
+
+                    if broken
+                      offset = -1
+                      if linebreaks.current.indexOf(linebreaks.counter - 1) == -1
+                        if linebreaks.counter == 682 || linebreaks.counter == 683
+                          debugger
+                        linebreaks.current.push(linebreaks.counter - 1)
+
             childFontSize = parseFloat(styles['font-size'])
 
             if style = child.getAttribute('style')
-              style = style.replace /\d+(?:.?\d*?)px/g, (m) -> 
+              style = style.replace /(\d+|\.\d+|\d+\.\d+)px/g, (m) -> 
+                # Bump 1px lines to account for rounding error
                 if m == '1px'
-                  return m
-                else if unit == 'em'
+                  m = '1.49px';
+                if unit == 'em'
                   return parseFloat((parseFloat(m) / childFontSize).toFixed(4)) + unit;
                 else
                   return parseFloat((parseFloat(m) / baseFontSize).toFixed(4)) + unit;
@@ -349,7 +388,7 @@ class Exporter
                 if child.style[property] == ''
                   if inherits[property] != styles[property]
                     value = styles[property]
-                    if parseFloat(value) + 'px' == value
+                    if value.substring(value.length - 2) == 'px'
                       value = (parseFloat(value) / baseFontSize).toFixed(4) + unit + ';'
                     style += property + ': ' + value + ';'
                     inherits[property] = styles[property]
@@ -403,6 +442,7 @@ class Exporter
       else if linebreaks && child.nodeType == 3 && child.parentNode.tagName != 'STYLE' && child.parentNode.tagName != 'SCRIPT'
         counter = 0
         content = child.textContent
+        chrs = 0
         while counter < content.length
           char = content.charAt(counter)
           range = document.createRange()
@@ -410,10 +450,14 @@ class Exporter
           range.setEnd(child, counter + 1)
           if rect = range.getBoundingClientRect()
             if rect.width && rect.top && Math.abs(rect.top - linebreaks.position) > rect.height / 5
-              if linebreaks.position
-                linebreaks.current.push(linebreaks.counter)
-            if rect.top
+              if linebreaks.position && chrs
+                if linebreaks.current.indexOf(linebreaks.counter) == -1
+                  linebreaks.current.push(linebreaks.counter)
+            if rect.top && rect.width
+              linebreaks.last = child
               linebreaks.position = rect.top
+              linebreaks.left = rect.left
+              chrs++
 
           counter++
           linebreaks.counter++
@@ -432,6 +476,13 @@ class Exporter
       [width, height] = size
 
       callback = =>
+        # Wait for web fonts
+        if document.documentElement.className.indexOf('wf-') > -1 && document.documentElement.className.indexOf('wf-active') == -1
+          return
+        if document.readyState == 'loading'
+          return
+
+        @engine.removeEventListener('finish', callback)
         @logs.push('success')
         text = ''
         if @previous
@@ -443,28 +494,21 @@ class Exporter
           text += '\n@media (max-width: ' + width + 'px) {\n'
         else
           @plain = true
+        window.parent?.params?.onSerialize?(width + 'x' + height)
         @base = @serialize()
         text += @base
         @previous = width
         @text += text
 
-      if @states.length
-        @uncomputed = @states.slice()
-      @logs.push('serialized')
-      @next()
+        if @states.length
+          @uncomputed = @states.slice()
+        @logs.push('serialized')
+        @next()
 
-      if @text || !@engine.updating
-        @engine.once 'finish', callback
-        @resize(width, height)
-      else if @engine.updating
-        @logs.push('wait')
-        @engine.once 'finish', callback
-      else
-        if !@engine.scope.querySelectorAll('style[type*="gss"]').length
-          @logs.push('abort')
-          callback()
-        else
-          @engine.once 'solve', callback
+        
+
+      @engine.addEventListener 'finish', callback
+      @resize(width, height)
 
       return true
 
@@ -515,9 +559,8 @@ class Exporter
     if state = @uncomputed.pop()
       @logs.push('nextState')
       html = document.documentElement
-      @previousClass = html.getAttribute('class') 
       setTimeout =>
-        html.setAttribute('class', @previousClass + ' ' + state)
+        html.classList.add(state)
         @logs.push(state)
         @record()
         @engine.once 'finish', =>
@@ -579,7 +622,7 @@ class Exporter
           @text += overlay
 
           setTimeout =>
-            html.setAttribute('class', @previousClass)
+            html.classList.remove(state)
             @engine.once 'finish', =>
               @next()
           , 100

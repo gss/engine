@@ -57,6 +57,10 @@ class Command
   # Evaluate operation arguments in order, break on undefined
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
     length = operation.length - 1 + @padding
+    if length < 0
+      console.warn('Empty rule: ', operation.parent[1].command.selector || operation.parent[1].command.path, 'in', scope)
+      length = 0
+
     args = Array(length)
     index = 0
     shift = @contextualize(args, engine, operation, continuation, scope, ascender, ascending)

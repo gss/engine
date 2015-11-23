@@ -22,7 +22,7 @@ class Inspector
       return operation ? ''
     
   update: () ->
-    if @engine.console.level > 0
+    if @engine.console.level > 0.1
       @domains(@engine.domains)
     if @engine.console.level > 1.5 || @rulers
       @refresh()

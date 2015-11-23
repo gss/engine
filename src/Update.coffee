@@ -67,6 +67,10 @@ Update.prototype =
   # Merge given problem-domain pair or update
   push: (problems, domain, reverse) ->
     if domain == undefined
+      unless problems?.domains
+        error = new Error('Can\'t constraint suggested variable: ')
+        error.meta = problems
+        throw error
       for domain, index in problems.domains
         @push problems.problems[index], domain
       return @
@@ -394,6 +398,25 @@ Update.prototype =
           last[property] = now
         (@changes ||= {})[property] = value
         solution[property] = value
+
+    timeout = (window.GSS_TIMEOUT || 30000)
+    if @engine.console.getTime(@started) > timeout
+      error = new Error('GSS Update takes more than ' + timeout / 1000 + 's')
+      repeating = {}
+      for property, value of @repeating
+        repeating[property] = 0
+        for val, length of value
+          repeating[property] += length
+
+      error.meta = {
+        top: Object.keys(repeating).sort((a, b) =>
+          @repeating[b].length - @repeating[a].length
+        ).slice(0, 15).reduce (object, name) ->
+          object[name] = repeating[name]
+          return object
+        , {}
+      }
+      throw error
 
     return solution
 
