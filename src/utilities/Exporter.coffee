@@ -351,12 +351,11 @@ class Exporter
                         broken = Math.abs(r.top - rect.top) > rect.height / 5 && r.left > rect.left
                       else if linebreaks.last == prev
                         broken = Math.abs(linebreaks.position - rect.top) > rect.height / 5 && linebreaks.left > rect.left
-
+                      else
+                        broken = true
                     if broken
                       offset = -1
                       if linebreaks.current.indexOf(linebreaks.counter - 1) == -1
-                        if linebreaks.counter == 682 || linebreaks.counter == 683
-                          debugger
                         linebreaks.current.push(linebreaks.counter - 1)
 
             childFontSize = parseFloat(styles['font-size'])
@@ -412,16 +411,18 @@ class Exporter
             else 
               if child.id
                 {current,counter,position} = linebreaks
-                linebreaks.counter = 0
-                linebreaks.position = 0
-                linebreaks.current = linebreaks.result[child.id] = []
+                unless current.length
+                  linebreaks.counter = 0
+                  linebreaks.position = 0
+                  linebreaks.current = linebreaks.result[child.id] = []
               exported = @serialize(child, prefix, inherits, unit, baseFontSize, linebreaks)
               if child.id
-                unless linebreaks.current.length
-                  delete linebreaks.result[child.id]
-                linebreaks.current = current
-                linebreaks.counter = counter
-                linebreaks.position = position
+                unless current.length
+                  unless linebreaks.current.length
+                    delete linebreaks.result[child.id]
+                  linebreaks.current = current
+                  linebreaks.counter = counter
+                  linebreaks.position = position
           if style
             if child.id
               # Double ID to make it more specific than anything else
