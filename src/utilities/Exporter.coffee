@@ -259,7 +259,7 @@ class Exporter
     that = _context
     node = undefined
     if that == 'null'
-      throw 'not an  dom reference'
+      throw new Error 'not an dom reference'
     index = getIndex(that)
     while that.tagName
       if that.id
