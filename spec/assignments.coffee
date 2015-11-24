@@ -138,7 +138,7 @@ describe 'Assignments', ->
 
       engine = new GSS({
         'full-width': 1080
-      });
+      })
       
       expect(engine.solve(operations.commands)).to.eql({
         base: 72,
