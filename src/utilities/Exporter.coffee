@@ -259,7 +259,7 @@ class Exporter
     that = _context
     node = undefined
     if that == 'null'
-      throw 'not an  dom reference'
+      throw new Error 'not an dom reference'
     index = getIndex(that)
     while that.tagName
       if that.id
@@ -366,11 +366,11 @@ class Exporter
               style = style.replace /(\d+|\.\d+|\d+\.\d+)px/g, (m) -> 
                 # Bump 1px lines to account for rounding error
                 if m == '1px'
-                  m = '1.49px';
+                  m = '1.49px'
                 if unit == 'em'
-                  return parseFloat((parseFloat(m) / childFontSize).toFixed(4)) + unit;
+                  return parseFloat((parseFloat(m) / childFontSize).toFixed(4)) + unit
                 else
-                  return parseFloat((parseFloat(m) / baseFontSize).toFixed(4)) + unit;
+                  return parseFloat((parseFloat(m) / baseFontSize).toFixed(4)) + unit
               if style.charAt(style.length - 1) != ';'
                 style += ';'
             else
@@ -557,7 +557,7 @@ class Exporter
     if @states?.length && (@states.length > 2 || @states[0] != 'animations')
       script = document.createElement('script')
       script.onload = =>
-        @differ = new diff_match_patch();
+        @differ = new diff_match_patch()
         @nextState()
       script.src = 'http://cdn.rawgit.com/tanaka-de-silva/google-diff-match-patch-js/master/diff_match_patch.js'
       document.body.appendChild(script)
@@ -588,7 +588,7 @@ class Exporter
           rule = ''
           overlay = ''
 
-          z = 0;
+          z = 0
           for change in diff
             text = change[1]
             if change[0] == 0

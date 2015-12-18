@@ -399,7 +399,7 @@ Update.prototype =
         (@changes ||= {})[property] = value
         solution[property] = value
 
-    timeout = (window.GSS_TIMEOUT || 30000)
+    timeout = (window?.GSS_TIMEOUT || 30000)
     if @engine.console.getTime(@started) > timeout
       error = new Error('GSS Update takes more than ' + timeout / 1000 + 's')
       repeating = {}

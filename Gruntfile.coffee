@@ -142,9 +142,9 @@ module.exports = ->
           ,
             browserName: 'internet explorer'
             version: '10'
-          ,
-            browserName: 'internet explorer'
-            version: '9'
+          #,
+          #  browserName: 'internet explorer'
+          #  version: '9'
           ,
             browserName: 'iPhone'
             platform: "OS X 10.10"

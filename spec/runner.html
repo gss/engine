@@ -27,6 +27,9 @@
       expect = chai.expect
     </script>
     <script>
+      if (window.initMochaPhantomJS) {
+        window.initMochaPhantomJS();
+      }
       mocha.setup('bdd');
       chai.config.includeStack = true;
       chai.config.showDiff = true;
