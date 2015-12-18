@@ -298,6 +298,7 @@ class Exporter
       element = element.documentElement
 
     text = ""
+    chrs = 0
     unless (fontSize = inherited.fontSize)?
       styles = window.getComputedStyle(element, null)
       inherited.fontSize = fontSize = parseFloat(styles['font-size'])
@@ -320,8 +321,9 @@ class Exporter
                 selector = ''
 
               text += Array.prototype.map.call child.sheet.cssRules, (rule) ->
-                text = rule.cssText
-                return selector + rule.cssText + '\n'
+                text = rule.cssText.replace /\[matches~="(.*?)"\]/g, (m, selector) ->
+                  prefix + selector.replace(/@[^↓]+/g, '').replace(/↓&/g, '').replace(/↓/g, ' ')
+                return selector + text + '\n'
               .join('\n')
           # Glue in CSS stylesheets with inlinable class
           else if child.sheet
@@ -332,7 +334,7 @@ class Exporter
                 return (selector || '') + rule.cssText + '\n'
               .join('\n')
         else unless child.tagName == 'SCRIPT'
-          if child.offsetParent || child.tagName == 'svg'
+          if child.offsetParent || child.offsetWidth || child.offsetHeight || child.tagName == 'svg'
 
             styles = window.getComputedStyle(child, null)
 
@@ -406,7 +408,7 @@ class Exporter
               
             inherits.fontSize = childFontSize
             # Dont count linebreaks in foreign elements that are hidden 
-            if !child.offsetParent || !linebreaks
+            if (!child.offsetParent && !child.offsetWidth && !child.offsetHeight) || !linebreaks
               exported = @serialize(child, prefix, inherits, unit, baseFontSize)
             else 
               if child.id
@@ -443,7 +445,6 @@ class Exporter
       else if linebreaks && child.nodeType == 3 && child.parentNode.tagName != 'STYLE' && child.parentNode.tagName != 'SCRIPT'
         counter = 0
         content = child.textContent
-        chrs = 0
         while counter < content.length
           char = content.charAt(counter)
           range = document.createRange()
@@ -452,8 +453,13 @@ class Exporter
           if rect = range.getBoundingClientRect()
             if rect.width && rect.top && Math.abs(rect.top - linebreaks.position) > rect.height / 5
               if linebreaks.position && chrs
-                if linebreaks.current.indexOf(linebreaks.counter) == -1
-                  linebreaks.current.push(linebreaks.counter)
+                # Phantomjs exports dash-broken words 1 character ahead - offset it
+                index = linebreaks.counter
+                if !content.charAt(counter - 1).match(/[\s\n]/) && content.charAt(counter - 2).match(/-|\u2013|\u2014/)
+                  index--
+
+                if linebreaks.current.indexOf(index) == -1
+                  linebreaks.current.push(index)
             if rect.top && rect.width
               linebreaks.last = child
               linebreaks.position = rect.top
