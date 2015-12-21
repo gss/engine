@@ -298,7 +298,6 @@ class Exporter
       element = element.documentElement
 
     text = ""
-    chrs = 0
     unless (fontSize = inherited.fontSize)?
       styles = window.getComputedStyle(element, null)
       inherited.fontSize = fontSize = parseFloat(styles['font-size'])
@@ -337,28 +336,6 @@ class Exporter
           if child.offsetParent || child.offsetWidth || child.offsetHeight || child.tagName == 'svg'
 
             styles = window.getComputedStyle(child, null)
-
-            # Record line breaks between inline tags or inline tag & text
-            if linebreaks
-              if styles.display == 'inline' || styles.display == 'inline-block'
-                if prev = child.previousSibling
-                  pstyles = prev.nodeType == 1 && window.getComputedStyle(prev)
-                  if !pstyles || pstyles.display == 'inline' || pstyles.display == 'inline-block'
-                    if prev.offsetTop? && child.offsetTop?
-                      broken = prev.offsetTop < child.offsetTop && prev.offsetLeft > child.offsetLeft
-                    else
-                      rect = child.getBoundingClientRect()
-                      if prev.nodeType == 1
-                        r = prev.getBoundingClientRect()
-                        broken = Math.abs(r.top - rect.top) > rect.height / 5 && r.left > rect.left
-                      else if linebreaks.last == prev
-                        broken = Math.abs(linebreaks.position - rect.top) > rect.height / 5 && linebreaks.left > rect.left
-                      else
-                        broken = true
-                    if broken
-                      offset = -1
-                      if linebreaks.current.indexOf(linebreaks.counter - 1) == -1
-                        linebreaks.current.push(linebreaks.counter - 1)
 
             childFontSize = parseFloat(styles['font-size'])
 
@@ -452,7 +429,7 @@ class Exporter
           range.setEnd(child, counter + 1)
           if rect = range.getBoundingClientRect()
             if rect.width && rect.top && Math.abs(rect.top - linebreaks.position) > rect.height / 5
-              if linebreaks.position && chrs
+              if linebreaks.position
                 # Phantomjs exports dash-broken words 1 character ahead - offset it
                 index = linebreaks.counter
                 if !content.charAt(counter - 1).match(/[\s\n]/) && content.charAt(counter - 2).match(/-|\u2013|\u2014/)
@@ -464,7 +441,6 @@ class Exporter
               linebreaks.last = child
               linebreaks.position = rect.top
               linebreaks.left = rect.left
-              chrs++
 
           counter++
           linebreaks.counter++
