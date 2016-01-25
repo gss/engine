@@ -340,14 +340,27 @@ class Exporter
             childFontSize = parseFloat(styles['font-size'])
 
             if style = child.getAttribute('style')
-              style = style.replace /(\d+|\.\d+|\d+\.\d+)px/g, (m) -> 
+              style = style.replace /([a-z_-]+)(\:[^;]*)(\d+|\.\d+|\d+\.\d+px)/g, (m, property, pre, value) -> 
+                if property == 'width'
+                  if Math.abs(child.offsetWidth - parent.offsetWidth) < 2.9
+                    value = parent.offsetWidth
+
+                else if property == 'height'
+                  if Math.abs(child.offsetHeight - parent.offsetHeight) < 2.9
+                    value = parent.offsetHeight
+
+                if property == 'left' || property == 'top'
+                  if Math.abs(parseFloat(value)) < 2
+                    value = '0'
+                    
                 # Bump 1px lines to account for rounding error
-                if m == '1px'
-                  m = '1.49px'
+                else if value == '1px'
+                  value = '1.49px'
+
                 if unit == 'em'
-                  return parseFloat((parseFloat(m) / childFontSize).toFixed(4)) + unit
+                  return property + pre + parseFloat((parseFloat(value) / childFontSize).toFixed(4)) + unit
                 else
-                  return parseFloat((parseFloat(m) / baseFontSize).toFixed(4)) + unit
+                  return property + pre + parseFloat((parseFloat(value) / baseFontSize).toFixed(4)) + unit
               if style.charAt(style.length - 1) != ';'
                 style += ';'
             else
