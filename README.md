@@ -8,6 +8,6 @@ Compiles and runs Grid Style Sheet (GSS) rules. GSS is an implementation of Badr
 GSS supports the following syntaxes for defining layout rules:
 
 * [CCSS](https://github.com/gss/ccss-compiler#readme) - direct constraints related to position and size of DOM elements
-* [VFL](https://github.com/gss/vfl-compiler#readme) - horizontal and vertical spacing constraints based on [Apple's Visual Format Language](https://developer.apple.com/library/ios/documentation/userexperience/conceptual/AutolayoutPG/VisualFormatLanguage/VisualFormatLanguage.html)
+* [VFL](https://github.com/gss/vfl-compiler#readme) - horizontal and vertical spacing constraints based on [Apple's Visual Format Language](https://developer.apple.com/library/ios/documentation/UserExperience/Conceptual/AutolayoutPG/VisualFormatLanguage.html)
 
 Please refer to <http://gridstylesheets.org/> for documentation and usage instructions.
