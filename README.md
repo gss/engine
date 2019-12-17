@@ -10,4 +10,4 @@ GSS supports the following syntaxes for defining layout rules:
 * [CCSS](https://github.com/gss/ccss-compiler#readme) - direct constraints related to position and size of DOM elements
 * [VFL](https://github.com/gss/vfl-compiler#readme) - horizontal and vertical spacing constraints based on [Apple's Visual Format Language](https://developer.apple.com/library/ios/documentation/UserExperience/Conceptual/AutolayoutPG/VisualFormatLanguage.html)
 
-Please refer to <http://gridstylesheets.org/> for documentation and usage instructions.
+Please refer to <http://gss.github.io/> for documentation and usage instructions.
